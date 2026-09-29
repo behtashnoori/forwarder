@@ -1,5 +1,6 @@
 """Versioned reference durations; no ETA, SLA or automatic plan rewrite."""
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from sqlalchemy import func, select
 from backend.extensions import db
 from backend.models import ExpertUser
@@ -8,7 +9,7 @@ from backend.route_time_models import OrganizationRouteTime as Reference, Organi
 from backend.services import operational_service as base, route_orchestration_service as routes
 from backend.services.admin_authorization_service import AdminAuthorizationError, has_organization_admin_capability, organization_context_for_authenticated_user
 
-VALUES = {"movement_min_minutes", "movement_max_minutes", "stop_min_minutes", "stop_max_minutes", "effective_from"}
+VALUES = {"movement_min_minutes", "movement_max_minutes", "stop_min_minutes", "stop_max_minutes", "planned_distance_km", "effective_from"}
 KEYS = {"origin", "destination", "transport_mode"}
 SOURCES = {"province", "city", "country", "international_city", "iran_port", "customs_office", "logistics_point"}
 
@@ -62,6 +63,17 @@ def _fields(payload):
         result.update({f"{prefix}_min_minutes": lower, f"{prefix}_max_minutes": upper})
     if result["movement_min_minutes"] is None and result["stop_min_minutes"] is None:
         fail("حداقل یک بازه حرکت یا توقف لازم است؛ مقدار پیش‌فرض ساخته نمی‌شود.")
+    distance = payload.get("planned_distance_km")
+    if distance is None or distance == "":
+        result["planned_distance_km"] = None
+    else:
+        try:
+            parsed = Decimal(str(distance))
+        except (InvalidOperation, ValueError):
+            fail("فاصله برنامه‌ریزی‌شده معتبر نیست.")
+        if not parsed.is_finite() or parsed <= 0 or parsed.as_tuple().exponent < -3 or parsed >= Decimal("1000000000"):
+            fail("فاصله برنامه‌ریزی‌شده باید عدد مثبت با دقت حداکثر سه رقم اعشار باشد.")
+        result["planned_distance_km"] = parsed
     return result
 
 
@@ -88,7 +100,8 @@ def project_version(row, end=None):
         ).order_by(Version.version).limit(1))
     actor = db.session.get(ExpertUser, row.actor_user_id)
     return {"public_id": row.public_id, "version": row.version,
-        **{key: getattr(row, key) for key in VALUES - {"effective_from"}},
+        **{key: getattr(row, key) for key in VALUES - {"effective_from", "planned_distance_km"}},
+        "planned_distance_km": str(row.planned_distance_km) if row.planned_distance_km is not None else None,
         "effective_from": aware(row.effective_from).isoformat(),
         "effective_until": aware(end).isoformat() if end else None,
         "recorded_at": aware(row.recorded_at).isoformat(), "actor_user_id": row.actor_user_id,

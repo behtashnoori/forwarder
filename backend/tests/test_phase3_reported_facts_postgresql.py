@@ -20,6 +20,7 @@ from backend.tests.test_phase3_transport_execution_postgresql import _seed_runti
 URL = os.environ.get("P3_REPORTED_FACTS_POSTGRES_URL", "")
 PARENT = "20261006_customer_entitlement"
 HEAD = "20261007_phase3_reported_facts"
+CURRENT = "20261013_structured_route_progress_eta"
 pytestmark = pytest.mark.skipif(not URL, reason="requires owned P3_REPORTED_FACTS_POSTGRES_URL")
 
 
@@ -70,6 +71,10 @@ def test_postgresql18_report_history_constraints_migration_and_races():
         assert inherited == connection.execute(sa.text("SELECT organization_id FROM execution_unit WHERE id=:unit"), {"unit": unit_pk}).scalar_one()
     command.downgrade(config, PARENT)
     command.upgrade(config, HEAD)
+    # Current report projection includes the additive structured-progress
+    # extension. Complete the historical migration checks first, then exercise
+    # current services against the current integrated schema.
+    command.upgrade(config, CURRENT)
     payload = {"scope": "EXECUTION_UNIT", "target_public_id": unit_id, "kind": "LOCATION",
         "source": "DRIVER_REPORT", "occurred_at": "2026-09-20T07:00:00Z", "location": {"location_text": "م" * 255}}
     barrier = Barrier(2)
@@ -126,5 +131,5 @@ def test_postgresql18_report_history_constraints_migration_and_races():
     with pytest.raises(RuntimeError, match="rollback would erase"):
         command.downgrade(config, PARENT)
     with engine.connect() as connection:
-        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD
+        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == CURRENT
     engine.dispose()

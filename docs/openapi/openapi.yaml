@@ -137,6 +137,7 @@ components:
       - movement_max_minutes
       - stop_min_minutes
       - stop_max_minutes
+      - planned_distance_km
       - effective_from
       - effective_until
       - recorded_at
@@ -167,6 +168,10 @@ components:
           nullable: true
           minimum: 0
           maximum: 525600
+        planned_distance_km:
+          type: string
+          nullable: true
+          pattern: '^\d+(\.\d{1,3})?$'
         effective_from:
           type: string
           format: date-time
@@ -352,6 +357,10 @@ components:
           nullable: true
           minimum: 1
           maximum: 525600
+        planned_distance_km:
+          type: number
+          nullable: true
+          exclusiveMinimum: 0
         movement_max_minutes:
           type: integer
           nullable: true
@@ -433,6 +442,10 @@ components:
           nullable: true
           minimum: 1
           maximum: 525600
+        planned_distance_km:
+          type: number
+          nullable: true
+          exclusiveMinimum: 0
         movement_max_minutes:
           type: integer
           nullable: true
@@ -5681,6 +5694,15 @@ paths:
                     logistics_point_public_id: { type: string, format: uuid }
                     canonical_location_public_id: { type: string, format: uuid }
                     tracking_location_reference_id: { type: integer }
+                route_progress:
+                  type: object
+                  nullable: true
+                  additionalProperties: false
+                  required: [stage_execution_public_id, distance_remaining_km]
+                  description: Structured progress only for a PROGRESS report scoped to the selected ExecutionUnit. The stage must belong to the exact current active RoutePlan revision and RouteLeg. Human location text is never parsed into this value.
+                  properties:
+                    stage_execution_public_id: { type: string, format: uuid }
+                    distance_remaining_km: { type: number, minimum: 0, multipleOf: 0.001 }
                 internal_note: { type: string, nullable: true, maxLength: 4000 }
                 customer_message: { type: string, nullable: true, maxLength: 1000, description: Explicit safe text only; absence uses approved fixed generic or DELAY fallback. Never synthesized from internal content. }
                 customer_effect: { type: string, enum: [CHANGE, DELAY], default: CHANGE }

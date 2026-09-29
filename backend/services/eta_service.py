@@ -5,6 +5,7 @@ Reference stops belong to a leg's arrival point before the next movement.
 Only governed completion facts consume components; elapsed time never does.
 """
 from datetime import timedelta
+from decimal import Decimal, ROUND_CEILING
 import hashlib
 import json
 
@@ -16,18 +17,20 @@ from backend.eta_models import CargoEtaSnapshot as Snapshot, CargoEtaInput as In
 from backend.operational_models import (Milestone, OperationalCheckpoint,
     OperationalShipment as Shipment, RouteLeg, RoutePlan,
     RouteStageExecution, RouteTraversalFact, utcnow)
-from backend.reported_fact_models import OperationalEventReportContext as Context, OperationalEventCargoImpact as Impact
+from backend.reported_fact_models import (OperationalEventReportContext as Context,
+    OperationalEventCargoImpact as Impact, OperationalEventRouteProgress as RouteProgress)
+from backend.route_time_models import RouteLegTimeBasis as TimeBasis, OrganizationRouteTimeVersion as TimeVersion
 from backend.services import operational_service as base, route_time_service as times
 from backend.services import occurrence_projection_service as occurrences, customer_shipment_service as customers
 from backend.services.cargo_route_service import CargoRouteError, resolve_cargo_route
 from backend.services.customer_entitlement_service import authorized_customer_ids
 
-RULESET = "ETA_RULESET_V1"
+RULESET = "ETA_RULESET_V2"
 REASONS = {
     "ROUTE_UNDEFINED": "مسیر این کالا کامل تعریف نشده است.",
     "PROGRESS_UNDEFINED": "موقعیت یا پیشرفت عملیاتی کافی ثبت نشده است.",
     "PROGRESS_AMBIGUOUS": "پیشرفت کل این کالا به‌طور روشن مشخص نیست.",
-    "REFERENCE_UNDEFINED": "زمان مرجع بخش باقی‌مانده تعریف نشده است.",
+    "ROUTE_BASELINE_UNDEFINED": "مبنای فاصله یا زمان برنامه مسیر تعریف نشده است.",
     "DEPARTURE_UNDEFINED": "زمان شروع حرکت هنوز مشخص نیست.",
     "NEXT_POINT_AMBIGUOUS": "مبنای زمان نقطه مهم بعدی مشخص نیست.",
     "DESTINATION_REACHED": "رسیدن ثبت شده است؛ برآورد رسیدن آینده ارائه نمی‌شود.",
@@ -163,6 +166,24 @@ def _observations(shipment, cargo, plan, legs, customer, whole_units):
         sources.append({"operational_event_id": event.id})
         if row.kind in {"EFFECT", "TRANSPORT_CHANGE"}:
             effects = True
+        progress = db.session.get(RouteProgress, event.id)
+        if progress is not None:
+            index = next((i for i, leg in enumerate(legs) if leg.id == progress.route_leg_id), None)
+            if progress.route_plan_id != plan.id or index is None:
+                candidates.append({"source": "STRUCTURED_PROGRESS", "id": event.id, "node": None,
+                    "phase": "IN_LEG", "occurred_at": stamp(event.occurred_at),
+                    "recorded_at": stamp(event.recorded_at)})
+                continue
+            remaining = Decimal(progress.distance_remaining_km)
+            at_destination = remaining == 0
+            candidates.append({"source": "STRUCTURED_PROGRESS", "id": event.id,
+                "node": index + 1 if at_destination else index,
+                "phase": "AT_NODE" if at_destination else "IN_LEG",
+                "leg_index": index, "route_leg_time_basis_id": progress.route_leg_time_basis_id,
+                "distance_remaining_km": str(remaining),
+                "planned_distance_km": str(progress.planned_distance_km) if progress.planned_distance_km is not None else None,
+                "occurred_at": stamp(event.occurred_at), "recorded_at": stamp(event.recorded_at)})
+            continue
         if row.kind != "LOCATION":
             continue
         node = _position(event.location_evidence, legs)
@@ -238,7 +259,7 @@ def _observations(shipment, cargo, plan, legs, customer, whole_units):
                     "node": index + 1, "phase": "STOP_COMPLETE",
                     "completion_ids": sorted(row.id for row in completed),
                     "occurred_at": stamp(last.occurred_at), "recorded_at": stamp(last.recorded_at)})
-    phase_order = {"AT_NODE": 0, "STOP_COMPLETE": 1, "DEPARTED": 2}
+    phase_order = {"AT_NODE": 0, "IN_LEG": 1, "STOP_COMPLETE": 2, "DEPARTED": 3}
     candidates.sort(key=lambda row: (row["occurred_at"], phase_order[row["phase"]], row["source"], row["id"]))
     return candidates, sources, effects
 
@@ -288,12 +309,21 @@ def _calculate(shipment, cargo, *, customer=False, at=None):
         return plan, basis, result, sources
     basis["anchor"] = anchor
     node = anchor["node"]
+    structured = anchor if anchor["source"] == "STRUCTURED_PROGRESS" and anchor["phase"] == "IN_LEG" else None
+    if anchor["source"] == "STRUCTURED_PROGRESS" and not customer:
+        result["planned_distance"] = anchor.get("planned_distance_km")
+    if anchor["source"] == "STRUCTURED_PROGRESS":
+        basis_label = "گزارش موقعیت عملیاتی" if customer else "پیشرفت ساختاریافته مسیر"
+    elif anchor["source"] == "REPORT":
+        basis_label = "گزارش موقعیت عملیاتی"
+    else:
+        basis_label = "رخداد ثبت‌شده مسیر"
     result.update(as_of=anchor["occurred_at"], recorded_at=anchor["recorded_at"],
-                  basis_label="گزارش موقعیت عملیاتی" if anchor["source"] == "REPORT" else "رخداد ثبت‌شده مسیر")
+                  basis_label=basis_label)
     if node == len(legs):
         result.update(next=missing("DESTINATION_REACHED"), final=missing("DESTINATION_REACHED", _label(shipment, legs[-1], customer)))
         return plan, basis, result, sources
-    if node == 0 and anchor["phase"] != "DEPARTED":
+    if node == 0 and anchor["phase"] not in {"DEPARTED", "IN_LEG"}:
         result.update(next=missing("DEPARTURE_UNDEFINED", _label(shipment, legs[0], customer)),
                       final=missing("DEPARTURE_UNDEFINED", _label(shipment, legs[-1], customer)))
         return plan, basis, result, sources
@@ -303,10 +333,29 @@ def _calculate(shipment, cargo, *, customer=False, at=None):
         row["node"] == node and row["phase"] in {"STOP_COMPLETE", "DEPARTED"}
         and row["occurred_at"] <= anchor["occurred_at"] for row in observations)
     reference_start = node - 1 if node > 0 and not completed_stop else node
-    references = [times.applicable(leg, shipment.organization_id, at) for leg in legs[reference_start:]]
+    basis_rows = []
+    references = []
+    for leg in legs[reference_start:]:
+        selected = db.session.scalar(select(TimeBasis).where(
+            TimeBasis.organization_id == shipment.organization_id,
+            TimeBasis.route_plan_id == plan.id, TimeBasis.route_leg_id == leg.id,
+        ).order_by(TimeBasis.selection_revision.desc()).limit(1))
+        if selected is not None and selected.leg_basis != times.fingerprint(leg):
+            selected = None
+        reference = db.session.get(TimeVersion, selected.reference_version_id) if selected else None
+        basis_rows.append(selected)
+        references.append(reference)
+    if structured is not None:
+        current_offset = structured["leg_index"] - reference_start
+        selected = basis_rows[current_offset] if 0 <= current_offset < len(basis_rows) else None
+        if selected is None or selected.id != structured.get("route_leg_time_basis_id"):
+            references[current_offset] = None
     basis["references"] = [{"id": ref.id, "version": ref.version,
         "movement_min": ref.movement_min_minutes, "movement_max": ref.movement_max_minutes,
-        "stop_min": ref.stop_min_minutes, "stop_max": ref.stop_max_minutes} if ref else None for ref in references]
+        "stop_min": ref.stop_min_minutes, "stop_max": ref.stop_max_minutes,
+        "planned_distance_km": str(ref.planned_distance_km) if ref.planned_distance_km is not None else None,
+        "route_leg_time_basis_id": basis_rows[index].id if basis_rows[index] else None}
+        if ref else None for index, ref in enumerate(references)]
     sources += [{"reference_version_id": ref.id} for ref in references if ref]
     checkpoints = [] if customer else db.session.scalars(select(OperationalCheckpoint).where(
         OperationalCheckpoint.route_plan_id == plan.id,
@@ -325,20 +374,28 @@ def _calculate(shipment, cargo, *, customer=False, at=None):
         components += [(index, "stop") for index in range(node, node + count - 1)]
         if reference_start < node:
             components.append((node - 1, "stop"))
-        lower = upper = 0
+        lower_seconds = upper_seconds = Decimal(0)
         for index, kind in components:
             ref = references[index - reference_start]
             minimum = getattr(ref, kind + "_min_minutes", None)
             maximum = getattr(ref, kind + "_max_minutes", None)
             if minimum is None or maximum is None:
-                return missing("REFERENCE_UNDEFINED", label)
-            lower += minimum
-            upper += maximum
+                return missing("ROUTE_BASELINE_UNDEFINED", label)
+            fraction = Decimal(1)
+            if structured is not None and kind == "movement" and index == structured["leg_index"]:
+                planned = ref.planned_distance_km
+                if planned is None or structured.get("planned_distance_km") is None or Decimal(structured["planned_distance_km"]) != planned:
+                    return missing("ROUTE_BASELINE_UNDEFINED", label)
+                fraction = Decimal(structured["distance_remaining_km"]) / Decimal(planned)
+            lower_seconds += (Decimal(minimum) * Decimal(60) * fraction).to_integral_value(rounding=ROUND_CEILING)
+            upper_seconds += (Decimal(maximum) * Decimal(60) * fraction).to_integral_value(rounding=ROUND_CEILING)
         origin = times.instant(anchor["occurred_at"])
         return {"available": True, "reason": None, "message": None, "target": label,
-                "earliest": stamp(origin + timedelta(minutes=lower)), "latest": stamp(origin + timedelta(minutes=upper))}
+                "earliest": stamp(origin + timedelta(seconds=int(lower_seconds))),
+                "latest": stamp(origin + timedelta(seconds=int(upper_seconds)))}
     basis["remaining"] = {"node": node, "anchor_stop_complete": completed_stop,
-                          "reference_start": reference_start}
+                          "reference_start": reference_start,
+                          "distance_remaining_km": structured.get("distance_remaining_km") if structured else None}
     result.update(next=missing("NEXT_POINT_AMBIGUOUS") if uncertain_next else estimate(1), final=estimate(len(legs) - node))
     return plan, basis, result, sources
 

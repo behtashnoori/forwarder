@@ -10,7 +10,7 @@ import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { useI18n } from "@/i18n";
 
 export function ReferenceRanges({ value }: {value: TimeVersion | null}) {
-  return <dl className="grid gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-2"><div><dt className="text-sm text-slate-500">حرکت</dt><dd className="mt-1 font-semibold">{timeRange(value?.movement_min_minutes,value?.movement_max_minutes)}</dd></div><div><dt className="text-sm text-slate-500">توقف / عملیات / انتظار</dt><dd className="mt-1 font-semibold">{timeRange(value?.stop_min_minutes,value?.stop_max_minutes)}</dd></div></dl>;
+  return <dl className="grid gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-3"><div><dt className="text-sm text-slate-500">حرکت</dt><dd className="mt-1 font-semibold">{timeRange(value?.movement_min_minutes,value?.movement_max_minutes)}</dd></div><div><dt className="text-sm text-slate-500">توقف / عملیات / انتظار</dt><dd className="mt-1 font-semibold">{timeRange(value?.stop_min_minutes,value?.stop_max_minutes)}</dd></div><div><dt className="text-sm text-slate-500">فاصله برنامه‌ریزی‌شده</dt><dd className="mt-1 font-semibold">{value?.planned_distance_km == null ? "تعریف نشده" : `${Number(value.planned_distance_km).toLocaleString("fa-IR", {maximumFractionDigits:3})} کیلومتر`}</dd></div></dl>;
 }
 
 function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | null; saved: () => void; cancel: () => void}) {
@@ -22,6 +22,7 @@ function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | nul
   const previous=reference?.versions[0];
   const hours = (value: number | null | undefined) => value == null ? "" : String(value/60);
   const [ranges,setRanges] = useState([hours(previous?.movement_min_minutes),hours(previous?.movement_max_minutes),hours(previous?.stop_min_minutes),hours(previous?.stop_max_minutes)]);
+  const [distance,setDistance] = useState(previous?.planned_distance_km ?? "");
   const [effective,setEffective] = useState("");
   const [error,setError] = useState("");
   const [busy,setBusy] = useState(false);
@@ -41,7 +42,10 @@ function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | nul
     if(!date || values.some(value=>value!==null && (!Number.isFinite(value) || Math.abs(value-Math.round(value))>0.000001))) {setError("تاریخ اعتبار و بازه‌ها را بررسی کنید؛ دقت زمان تا دقیقه است.");return;}
     const [movement_min_minutes,movement_max_minutes,stop_min_minutes,stop_max_minutes]=values.map(value=>value===null?null:Math.round(value));
     if((values[0]===null)!==(values[1]===null) || (values[2]===null)!==(values[3]===null) || (values[0]===null&&values[2]===null)) {setError("حداقل یک بازه کامل حرکت یا توقف لازم است.");return;}
-    const durations={movement_min_minutes,movement_max_minutes,stop_min_minutes,stop_max_minutes,effective_from:date};
+    const distanceText=distance.trim();
+    if(distanceText!=="" && (!Number.isFinite(Number(distanceText)) || Number(distanceText)<=0 || !/^\d+(\.\d{1,3})?$/.test(distanceText))){setError("فاصله برنامه‌ریزی‌شده باید عدد مثبت با حداکثر سه رقم اعشار باشد.");return;}
+    const planned_distance_km=distanceText===""?null:Number(distanceText);
+    const durations={movement_min_minutes,movement_max_minutes,stop_min_minutes,stop_max_minutes,planned_distance_km,effective_from:date};
     if(!reference && (!origin||!destination||!mode)){setError("مبدأ، مقصد و روش حمل را انتخاب کنید.");return;}
     const payload=reference?{...durations,expected_version:reference.latest_version}:{...durations,origin:origin!,destination:destination!,transport_mode:mode};
     const signature=JSON.stringify(payload);
@@ -62,6 +66,8 @@ function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | nul
       <label className="block space-y-2">روش حمل مرجع<select aria-label="روش حمل مرجع" className={routeSelectClass} value={mode} onChange={event=>setMode(event.target.value)}><option value="">انتخاب روش حمل</option>{["road","rail","sea","air","multimodal_transfer","customs_handling"].map(value=><option key={value} value={value}>{transportLabel(value)}</option>)}</select></label>
     </>}
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{labels.map((label,index)=><label key={label} className="block space-y-2">{label}<Input aria-label={label} type="number" step="any" value={ranges[index]} onChange={event=>setRanges(old=>old.map((value,i)=>i===index?event.target.value:value))}/></label>)}</div>
+    <label className="block max-w-md space-y-2">فاصله برنامه‌ریزی‌شده (کیلومتر)<Input aria-label="فاصله برنامه‌ریزی‌شده" type="number" min="0.001" step="0.001" value={distance} onChange={event=>setDistance(event.target.value)}/></label>
+    <p className="text-sm text-slate-600">فاصله اختیاری است. اگر تعریف نشود، پیشرفت مسافتی نمی‌تواند زمان رسیدن بسازد.</p>
     <p className="text-sm text-slate-600">حرکت و توقف جدا ثبت می‌شوند. برای بازه نامشخص، هر دو کادر را خالی بگذارید.</p>
     <label className="block max-w-md space-y-2">شروع اعتبار<Input aria-label="شروع اعتبار" type="datetime-local" value={effective} onChange={event=>setEffective(event.target.value)}/></label>
     <p className="text-sm text-slate-600">زمان با منطقه زمانی دستگاه شما ثبت می‌شود. نسخه تازه باید در آینده معتبر شود؛ برنامه‌های قبلی تغییر نمی‌کنند.</p>

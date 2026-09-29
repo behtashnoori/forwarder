@@ -53,7 +53,7 @@ def test_postgresql18_concurrent_apply_is_atomic_and_idempotent(
         ) < 190000
         assert connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
-        ).scalar_one() == "20261012_phase3_cargo_eta"
+        ).scalar_one() == "20261013_structured_route_progress_eta"
 
     app, context = repair_app
     with app.app_context():

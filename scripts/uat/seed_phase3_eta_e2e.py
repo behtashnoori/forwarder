@@ -54,7 +54,7 @@ def main():
         db.session.commit()
         basis = datetime.now(timezone.utc).replace(second=0, microsecond=0) - timedelta(hours=2)
         cases = {}
-        for case_index, name in enumerate(("departure", "arrived", "complete", "next_departure", "zero", "unknown", "missing_later", "origin", "destination", "split")):
+        for case_index, name in enumerate(("departure", "arrived", "complete", "next_departure", "zero", "unknown", "missing_later", "origin", "destination", "split", "structured")):
             shipment = OperationalShipment(organization_id=template.organization_id, project_id=template.project_id,
                 source_type="direct", customer_id=customer.id, lifecycle_status="planned",
                 created_by_user_id=owner.id, primary_responsible_expert_id=owner.id)
@@ -111,6 +111,7 @@ def main():
                     "destination": {"source_type": "province", "source_id": places[index+1].id},
                     "transport_mode": "road", "movement_min_minutes": 60, "movement_max_minutes": 120,
                     "stop_min_minutes": stop[0], "stop_max_minutes": stop[1],
+                    "planned_distance_km": "100.000" if name == "structured" else None,
                     "effective_from": (basis-timedelta(days=1)).isoformat()}, str(uuid4()))
                 db.session.commit()
                 source_leg = db.session.get(RouteLeg, leg["id"])
@@ -121,6 +122,21 @@ def main():
                 references.append({"public_id": version.reference.public_id if hasattr(version, "reference") else None,
                                    "id": version.id, "reference_id": version.reference_id})
             routes.activate_plan(shipment.id, plan["id"], {"expected_version": 1}, actor)
+            progress_unit = progress_stage = None
+            if name == "structured":
+                from backend.services import cargo_allocation_service as allocations
+                from backend.services import transport_execution_service as executions
+                cargo.actual_quantity = cargo.quantity
+                db.session.commit()
+                progress_stage, _ = executions.create(shipment.public_id, plan["id"], legs[0]["id"],
+                    {"transport_means_type_public_id": truck.public_id,
+                     "means_identifier": "P311-STRUCTURED", "equipment": []}, actor, str(uuid4()))
+                db.session.commit()
+                allocations.set_allocation(shipment.public_id, cargo.public_id, progress_stage.public_id,
+                    {"dimension": "ACTUAL", "quantity": str(cargo.actual_quantity), "expected_version": 0},
+                    actor, str(uuid4()))
+                db.session.commit()
+                progress_unit = progress_stage.execution_unit
             if name == "split":
                 from backend.services import cargo_allocation_service as allocations
                 from backend.services import transport_execution_service as executions
@@ -141,7 +157,7 @@ def main():
             if name in {"departure", "next_departure"}:
                 milestone = Milestone.query.filter_by(route_leg_id=legs[0 if name == "departure" else 1]["id"], milestone_type="departure").one()
                 operations.record_event(shipment.id, milestone.id, {"occurred_at": basis.isoformat()}, actor, str(uuid4()))
-            else:
+            elif name != "structured":
                 report, _ = reports.create(shipment.public_id, actor, {"scope": "CARGO", "target_public_id": cargo.public_id,
                     "kind": "LOCATION", "source": "CARRIER_REPORT", "occurred_at": basis.isoformat(),
                     "location": {"canonical_location_public_id": location.public_id},
@@ -158,7 +174,9 @@ def main():
             cases[name] = {"shipment": shipment.public_id, "cargo": cargo.public_id, "plan": plan["id"],
                 "private_cargo": private_cargo.public_id if private_cargo else None,
                 "report": report.event.public_id if report else None, "location": location.public_id,
-                "references": references, "basis": basis.isoformat(), "checkpoint": checkpoint["id"] if checkpoint else None}
+                "references": references, "basis": basis.isoformat(), "checkpoint": checkpoint["id"] if checkpoint else None,
+                "progress_unit": progress_unit.public_id if progress_unit else None,
+                "progress_stage": progress_stage.public_id if progress_stage else None}
         fixture.update(p311_cases=cases, p311_accounts=accounts)
         path.write_text(json.dumps(fixture), encoding="utf-8")
 

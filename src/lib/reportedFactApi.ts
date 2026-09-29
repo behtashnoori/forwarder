@@ -10,6 +10,7 @@ export interface ReportDraft {
   source: ReportSource;
   occurred_at: string;
   location?: { location_text: string } | null;
+  route_progress?: { stage_execution_public_id: string; distance_remaining_km: string } | null;
   internal_note: string | null;
   customer_message: string | null;
   customer_effect: "CHANGE" | "DELAY";
@@ -26,6 +27,8 @@ export interface ReportFact extends Omit<ReportDraft, "location"> {
   actor_user_id: number;
   actor_label: string;
   status: "CURRENT" | "SUPERSEDED";
+  route_progress: ({ stage_execution_public_id: string; distance_remaining_km: string; planned_distance_km: string | null;
+    kind: "DISTANCE_REMAINING_KM"; route_plan_revision: number; route_leg_sequence: number; route_label: string }) | null;
 }
 export interface ReportList {
   items: ReportFact[];
@@ -33,7 +36,9 @@ export interface ReportList {
   page: number;
   total: number;
   can_manage: boolean;
-  options: Record<ReportScope | "cargo", Array<{ public_id: string; label: string }>>;
+  options: Record<ReportScope | "cargo", Array<{ public_id: string; label: string }>> & {
+    progress_stages: Record<string, Array<{ public_id: string; label: string; route_plan_revision: number; route_leg_sequence: number }>>;
+  };
 }
 const path = (shipment: string) => `/api/operational-shipments/${encodeURIComponent(shipment)}/reported-facts`;
 export const listReportedFacts = (shipment: string, page = 1) => request<{ data: ReportList }>(`${path(shipment)}?page=${page}`, { cache: "no-store" });

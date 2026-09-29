@@ -21,7 +21,7 @@ class CargoEtaSnapshot(db.Model):
             ["route_plan.id", "route_plan.operational_shipment_id"], name="fk_cargo_eta_plan", ondelete="RESTRICT"),
         db.CheckConstraint("audience IN ('INTERNAL','CUSTOMER')", name="ck_cargo_eta_audience"),
         db.CheckConstraint("sequence >= 1", name="ck_cargo_eta_sequence"),
-        db.CheckConstraint("ruleset = 'ETA_RULESET_V1'", name="ck_cargo_eta_ruleset"),
+        db.CheckConstraint("ruleset IN ('ETA_RULESET_V1','ETA_RULESET_V2')", name="ck_cargo_eta_ruleset"),
         db.Index("ix_cargo_eta_history", "organization_id", "cargo_item_id", "audience", "sequence"),
     )
     id = db.Column(BIGINT, primary_key=True)
@@ -32,7 +32,7 @@ class CargoEtaSnapshot(db.Model):
     route_plan_id = db.Column(BIGINT)
     audience = db.Column(db.String(12), nullable=False)
     sequence = db.Column(db.Integer, nullable=False)
-    ruleset = db.Column(db.String(32), nullable=False, default="ETA_RULESET_V1")
+    ruleset = db.Column(db.String(32), nullable=False, default="ETA_RULESET_V2")
     source_fingerprint = db.Column(db.String(64), nullable=False)
     calculated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     # Immutable typed-service output and exact versioned input values, not rules.

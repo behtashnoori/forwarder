@@ -21,7 +21,7 @@ from backend.tests.test_phase3_document_context import _as_customer
 from backend.tests.test_phase3_customer_shipment import new_cargo
 
 
-def setup(app, *, final_reference=True, stop_range=(0, 0), checkpoint=False, reference_effective_from=None):
+def setup(app, *, final_reference=True, stop_range=(0, 0), checkpoint=False, reference_effective_from=None, planned_distance_km=None):
     shipment, plan, root, branch_b, branch_a = _branched_draft(app)
     cargo_a = _cargo_lines(app, shipment, count=1)[0]
     ids = app.config["phase1a"]
@@ -61,6 +61,7 @@ def setup(app, *, final_reference=True, stop_range=(0, 0), checkpoint=False, ref
             "destination": {"source_type": b.source_type, "source_id": b.source_id}, "transport_mode": "road",
             "movement_min_minutes": 60, "movement_max_minutes": 120,
             "stop_min_minutes": stop_range[0], "stop_max_minutes": stop_range[1],
+            "planned_distance_km": planned_distance_km,
             "effective_from": reference_effective_from or (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()}, str(uuid4()))
         db.session.commit(); references.append(ref.id)
         times.select_basis(shipment.public_id, plan.id, leg.id, _user(app), {
@@ -136,7 +137,7 @@ def test_next_can_exist_when_final_reference_missing_and_newer_ambiguity_is_not_
         ctx = setup(app, final_reference=False)
         occurrence(app, ctx)
         first = ensure(app, ctx)
-        assert first.result["next"]["available"] and first.result["final"]["reason"] == "REFERENCE_UNDEFINED"
+        assert first.result["next"]["available"] and first.result["final"]["reason"] == "ROUTE_BASELINE_UNDEFINED"
         report(app, ctx, location={"location_text": "somewhere along the route"}, occurred="2026-09-21T08:00:00Z")
         second = ensure(app, ctx)
         assert second.result["next"]["reason"] == "PROGRESS_AMBIGUOUS"
@@ -171,7 +172,7 @@ def test_correction_uses_corrected_occurrence_and_preserves_old_estimate(operati
         db.session.rollback()
 
 
-def test_future_reference_becomes_applicable_without_rewriting_history(operational_app, monkeypatch):
+def test_future_reference_does_not_reinterpret_a_pinned_route_plan(operational_app, monkeypatch):
     app = operational_app
     with app.app_context():
         ctx = setup(app)
@@ -189,8 +190,8 @@ def test_future_reference_becomes_applicable_without_rewriting_history(operation
         assert ensure(app, ctx).id == old.id
         monkeypatch.setattr(eta, "utcnow", lambda: future + timedelta(seconds=1))
         new = ensure(app, ctx)
-        assert new.id != old.id and new.result["next"]["earliest"] > old.result["next"]["earliest"]
-        assert any(row["id"] == updated.id for row in new.source_basis["references"])
+        assert new.id == old.id
+        assert not any(row and row["id"] == updated.id for row in new.source_basis["references"])
         assert old.source_basis["references"][0]["id"] == first.id
         from backend.route_time_models import RouteLegTimeBasis
         assert RouteLegTimeBasis.query.filter_by(route_leg_id=ctx["root"]).one().reference_version_id == first.id

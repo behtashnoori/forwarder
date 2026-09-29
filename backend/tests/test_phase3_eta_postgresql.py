@@ -14,16 +14,18 @@ from backend import create_app
 from backend.extensions import db
 from backend.migration_runtime import alembic_config
 from backend.models import CargoType, UnitOfMeasure, ExpertUser, Province
-from backend.cargo_models import ShipmentCargoItem as Cargo
+from backend.cargo_models import ExecutionUnitCargoAllocation, ShipmentCargoItem as Cargo
 from backend.eta_models import CargoEtaSnapshot as Snapshot, CargoEtaInput as Input
-from backend.operational_models import OperationalShipment, OperationalMembership, RouteCargoDestination, Milestone
+from backend.operational_models import (ExecutionUnit, OperationalEvent, OperationalShipment, OperationalMembership,
+    RouteCargoDestination, RouteLeg, RoutePlan, RouteStageExecution, Milestone)
+from backend.reported_fact_models import OperationalEventRouteProgress
 from backend.services import eta_service as eta, reported_fact_service as reports, route_time_service as times
 from backend.tests.test_phase3_transport_execution_postgresql import _seed_runtime
 from backend.tests.test_operational_vertical_slice import _auth
 
 URL = os.environ.get("P3_ETA_POSTGRES_URL", "")
 PREVIOUS = "20261011_phase3_owner_transfer"
-HEAD = "20261012_phase3_cargo_eta"
+HEAD = "20261013_structured_route_progress_eta"
 pytestmark = pytest.mark.skipif(not URL, reason="requires explicit owned P3_ETA_POSTGRES_URL")
 
 
@@ -39,10 +41,16 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": URL, "SECRET_KEY": "synthetic-p311-owned"}, skip_startup=True)
     with app.app_context():
         ctx = _seed_runtime(app)
+        # The current service/model includes the additive v2 route-distance
+        # column; bring the owned database to the exact candidate before using it.
+        command.upgrade(config, HEAD)
         membership = OperationalMembership.query.filter_by(user_id=ctx["owner"]).one()
-        membership.permissions = [*membership.permissions, "operational_shipment.create", "milestone_event.create", "milestone.correct"]
+        membership.permissions = [*membership.permissions, "operational_shipment.create", "milestone_event.create",
+                                  "milestone.correct", "route_leg.manage", "route_plan.activate"]
         shipment = OperationalShipment.query.filter_by(public_id=ctx["shipment"]).one()
         ctx.update(org=shipment.organization_id, shipment_id=shipment.id)
+        plan = db.session.get(RoutePlan, ctx["plan"])
+        plan.status = "draft"; plan.is_active = False
         admin = ExpertUser(username="p311-admin", password_hash="unused", full_name="Admin", role="admin", authority="ORGANIZATION_ADMIN", is_active=True)
         kind = CargoType(immutable_code="P311", fa_name="آزمایشی", en_name="Synthetic", is_active=True)
         uom = UnitOfMeasure(immutable_code="P311", fa_name="عدد", en_name="Each", symbol="ea", measurement_dimension="COUNT", is_active=True)
@@ -58,12 +66,7 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
         db.session.add(RouteCargoDestination(route_plan_id=ctx["plan"], operational_shipment_id=shipment.id,
             shipment_cargo_item_id=cargo.id, destination_route_leg_id=ctx["leg"], created_by_user_id=ctx["owner"]))
         db.session.commit()
-        reference, _ = times.save({"id": admin.id}, {"origin": {"source_type": "province", "source_id": 800001},
-            "destination": {"source_type": "province", "source_id": 800002}, "transport_mode": "road",
-            "movement_min_minutes": 60, "movement_max_minutes": 120, "stop_min_minutes": 0, "stop_max_minutes": 0,
-            "effective_from": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()}, str(uuid4()))
-        db.session.commit()
-        ctx.update(cargo=cargo.public_id, cargo_id=cargo.id, reference=reference.id)
+        ctx.update(cargo=cargo.public_id, cargo_id=cargo.id, admin=admin.id)
         milestone = Milestone(organization_id=ctx["org"], operational_shipment_id=ctx["shipment_id"],
             route_plan_id=ctx["plan"], route_leg_id=ctx["leg"], milestone_type="departure",
             planned_at=datetime(2026, 9, 20, 8, tzinfo=timezone.utc))
@@ -72,13 +75,37 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
     def source_rows():
         with engine.connect() as c:
             return {t: c.execute(sa.text(f"SELECT row_to_json(t)::text FROM {t} t ORDER BY id")).scalars().all() for t in tables}
-    before = source_rows()
+    migration_before = source_rows()
     command.upgrade(config, HEAD)
-    assert source_rows() == before
+    assert source_rows() == migration_before
     with engine.connect() as c:
         assert c.execute(sa.text("SELECT count(*) FROM cargo_eta_snapshot")).scalar_one() == 0
     command.downgrade(config, PREVIOUS); command.upgrade(config, HEAD)
-    assert source_rows() == before
+    assert source_rows() == migration_before
+
+    with app.app_context():
+        reference, _ = times.save({"id": ctx["admin"]}, {
+            "origin": {"source_type": "province", "source_id": 800001},
+            "destination": {"source_type": "province", "source_id": 800002}, "transport_mode": "road",
+            "movement_min_minutes": 60, "movement_max_minutes": 120,
+            "stop_min_minutes": 0, "stop_max_minutes": 0,
+            "planned_distance_km": "100.000",
+            "effective_from": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
+        }, str(uuid4()))
+        db.session.commit()
+        plan = db.session.get(RoutePlan, ctx["plan"])
+        leg = db.session.get(RouteLeg, ctx["leg"])
+        times.select_basis(ctx["shipment"], plan.id, leg.id, {"id": ctx["owner"]}, {
+            "expected_version": leg.version, "expected_selection_revision": 0,
+            "reference_version_public_id": reference.public_id,
+        }, str(uuid4()))
+        # The shared synthetic seed starts with an already-active plan and has
+        # no complete publish-time schedule. Temporarily drafting it above is
+        # only test-fixture setup so a real immutable basis can be selected.
+        plan.status = "active"; plan.is_active = True
+        db.session.commit()
+        ctx["reference"] = reference.id
+    before = source_rows()
 
     app.config["phase1a"] = {"user": ctx["owner"], "outsider": ctx["outsider"]}
     headers = _auth(app)
@@ -156,6 +183,63 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
         history = client.get(path + "/history", headers=headers).get_json()["items"]
         assert len(history) == 4 and history[-2]["next"] == first["next"]
 
+    # The new fact is qualified on PostgreSQL itself: exact stage/unit/plan
+    # binding, Decimal proration, and database-enforced immutability.
+    with app.app_context():
+        current_shipment = db.session.get(OperationalShipment, ctx["shipment_id"])
+        unit = ExecutionUnit(organization_id=ctx["org"], project_id=current_shipment.project_id,
+            operational_shipment_id=ctx["shipment_id"], unit_code=f"P311-{uuid4().hex[:8]}",
+            unit_type="road", display_name="PostgreSQL ETA unit", lifecycle_status="in_progress",
+            created_by_user_id=ctx["owner"])
+        db.session.add(unit); db.session.flush()
+        stage = RouteStageExecution(organization_id=ctx["org"], operational_shipment_id=ctx["shipment_id"],
+            route_plan_id=ctx["plan"], route_leg_id=ctx["leg"], execution_unit_id=unit.id,
+            idempotency_key=f"p311-stage-{uuid4()}", request_hash="b" * 64,
+            created_by_user_id=ctx["owner"])
+        db.session.add(stage); db.session.flush()
+        db.session.add(ExecutionUnitCargoAllocation(execution_unit_id=unit.id,
+            shipment_cargo_item_id=ctx["cargo_id"], operational_shipment_id=ctx["shipment_id"],
+            project_id=current_shipment.project_id, route_stage_execution_id=stage.id, dimension="ACTUAL",
+            allocated_quantity=1, created_by=ctx["owner"], updated_by=ctx["owner"]))
+        db.session.commit()
+        occurred = datetime.now(timezone.utc).replace(microsecond=0)
+        report, _ = reports.create(ctx["shipment"], {"id": ctx["owner"]}, {
+            "scope": "EXECUTION_UNIT", "target_public_id": unit.public_id,
+            "kind": "PROGRESS", "source": "DRIVER_REPORT", "occurred_at": occurred.isoformat(),
+            "route_progress": {"stage_execution_public_id": stage.public_id,
+                               "distance_remaining_km": "50.000"},
+            "impacted_cargo_public_ids": [ctx["cargo"]],
+        }, str(uuid4()))
+        db.session.commit()
+        progress_event_id = report.operational_event_id
+        value = eta.ensure_current_eta(ctx["shipment"], ctx["cargo"], user={"id": ctx["owner"]})
+        db.session.commit()
+        assert value.ruleset == "ETA_RULESET_V2" and value.result["planned_distance"] == "100.000"
+        assert eta.times.instant(value.result["next"]["earliest"]) == occurred + timedelta(minutes=30)
+        assert eta.times.instant(value.result["next"]["latest"]) == occurred + timedelta(minutes=60)
+        assert db.session.get(OperationalEventRouteProgress, progress_event_id).route_stage_execution_id == stage.id
+        unrelated = OperationalEvent(organization_id=ctx["org"], project_id=current_shipment.project_id,
+            execution_unit_id=unit.id, event_type="legacy", source="expert", occurred_at=occurred,
+            actor_user_id=ctx["owner"], visibility="internal", attention_required=False, delayed=False,
+            idempotency_key=f"p311-unrelated-{uuid4()}", request_hash="c" * 64)
+        db.session.add(unrelated); db.session.commit(); unrelated_event_id = unrelated.id
+    with pytest.raises(sa.exc.DBAPIError), engine.begin() as connection:
+        connection.execute(sa.text("""INSERT INTO operational_event_route_progress(
+            operational_event_id,organization_id,operational_shipment_id,route_plan_id,route_leg_id,
+            route_stage_execution_id,execution_unit_id,route_leg_time_basis_id,progress_kind,
+            distance_remaining_km,planned_distance_km)
+            SELECT :event,organization_id,operational_shipment_id,route_plan_id,route_leg_id,
+            route_stage_execution_id,execution_unit_id,route_leg_time_basis_id,progress_kind,
+            distance_remaining_km,planned_distance_km
+            FROM operational_event_route_progress WHERE operational_event_id=:progress"""),
+            {"event": unrelated_event_id, "progress": progress_event_id})
+    for statement in (
+        "UPDATE operational_event_route_progress SET distance_remaining_km=1",
+        "DELETE FROM operational_event_route_progress",
+    ):
+        with pytest.raises(sa.exc.DBAPIError), engine.begin() as connection:
+            connection.execute(sa.text(statement))
+
     # Composite identities reject another Cargo/Shipment or RoutePlan before a
     # snapshot can be attached. Tenant FK cannot be forged by a caller.
     template = """INSERT INTO cargo_eta_snapshot(public_id,organization_id,operational_shipment_id,
@@ -182,7 +266,7 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
     with pytest.raises(sa.exc.DBAPIError, match="sealed"), engine.begin() as c:
         c.execute(sa.text("INSERT INTO cargo_eta_input(snapshot_id,organization_id,reference_version_id) VALUES(:s,:org,:ref)"),
                   {"s": snap, "org": ctx["org"], "ref": ctx["reference"]})
-    with pytest.raises(RuntimeError, match="history exists"):
+    with pytest.raises(RuntimeError, match="Structured route progress exists"):
         command.downgrade(config, PREVIOUS)
     with engine.connect() as c:
         assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD

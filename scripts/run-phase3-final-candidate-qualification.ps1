@@ -197,7 +197,7 @@ try {
     throw 'Final qualification requires the exact clean Product SHA'
   }
   $schemaHead = (python -m scripts.browser_migration_contract repository-head).Trim()
-  if ($LASTEXITCODE -ne 0 -or $schemaHead -ne '20261012_phase3_cargo_eta') {
+  if ($LASTEXITCODE -ne 0 -or $schemaHead -ne '20261013_structured_route_progress_eta') {
     throw "Unexpected migration head: $schemaHead"
   }
   foreach ($tool in @('initdb.exe', 'pg_ctl.exe', 'createdb.exe')) {

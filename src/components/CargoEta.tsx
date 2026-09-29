@@ -8,7 +8,7 @@ type Estimate = { available: boolean; target: string | null; earliest: string | 
 export type EtaSnapshot = {
   public_id: string; sequence: number; ruleset: string; calculated_at: string;
   next: Estimate; final: Estimate; as_of: string | null; recorded_at: string | null;
-  basis_label: string | null; unquantified_effect: boolean; planned_distance: null;
+  basis_label: string | null; unquantified_effect: boolean; planned_distance: string | null;
   authorization_revision?: string;
 };
 type History = { items: EtaSnapshot[]; page: number; has_next: boolean; authorization_revision?: string };
@@ -39,6 +39,7 @@ function Result({ value, historical = false }: { value: EtaSnapshot; historical?
       <p>زمان ثبت گزارش: {time(value.recorded_at)}</p>
       <p>عمر داده: {age(value.as_of, value.calculated_at)}</p>
     </div>}
+    <p className="text-slate-600">فاصله برنامه‌ریزی‌شده: {value.planned_distance == null ? "تعریف نشده" : `${Number(value.planned_distance).toLocaleString("fa-IR", {maximumFractionDigits:3})} کیلومتر`}</p>
     <p className="text-xs text-slate-600">زمان محاسبه: {time(value.calculated_at)}</p>
     {value.unquantified_effect && <p className="rounded-lg bg-amber-50 p-3 text-amber-900">مدت اثر عملیاتی ثبت‌شده مشخص نیست و به برآورد اضافه نشده است.</p>}
   </article>;
@@ -99,7 +100,6 @@ export default function CargoEta({ shipmentId, cargoId, customer = false }: { sh
     <p className="text-xs text-slate-600">برآورد عملیاتی است؛ تعهد زمانی یا موقعیت لحظه‌ای نیست.</p>
     <p className="text-xs text-slate-600">زمان رسیدن است؛ مدت عملیات پس از رسیدن به مقصد نهایی در آن حساب نمی‌شود.</p>
     {!active || state.loading ? <p role="status">در حال دریافت برآورد…</p> : state.error ? <p role="alert">{state.error}</p> : state.current && <Result value={state.current} />}
-    <p className="text-sm text-slate-600">فاصله برنامه‌ریزی‌شده: تعریف نشده</p>
     <Button size="sm" variant="ghost" onClick={() => setPage(value => value ? 0 : 1)}>{page ? "بستن تاریخچه برآورد" : "برآوردهای قبلی"}</Button>
     {active && !state.loading && state.history && <div className="space-y-4 border-t pt-3">
       {state.history.items.map(value => <Result key={value.public_id} value={value} historical />)}

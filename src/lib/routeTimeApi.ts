@@ -2,12 +2,12 @@ import { request, type OperationalLocationRef } from "@/lib/api";
 
 export type TimeVersion = {
   public_id: string; version: number; movement_min_minutes: number | null; movement_max_minutes: number | null;
-  stop_min_minutes: number | null; stop_max_minutes: number | null; effective_from: string; effective_until: string | null;
+  stop_min_minutes: number | null; stop_max_minutes: number | null; planned_distance_km: string | null; effective_from: string; effective_until: string | null;
   recorded_at: string; actor_user_id: number; recorded_by: string | null;
 };
 export type RouteTime = { public_id: string; origin_label: string; destination_label: string; transport_mode: string;
   latest_version: number; current: TimeVersion | null; versions: TimeVersion[] };
-export type ReferenceValues = Pick<TimeVersion, "movement_min_minutes" | "movement_max_minutes" | "stop_min_minutes" | "stop_max_minutes" | "effective_from">;
+export type ReferenceValues = Pick<TimeVersion, "movement_min_minutes" | "movement_max_minutes" | "stop_min_minutes" | "stop_max_minutes" | "effective_from"> & { planned_distance_km: number | null };
 export type TimeSelection = { public_id: string; selection_revision: number; reference_at: string; recorded_at: string;
   actor_user_id: number; reference: TimeVersion };
 export type LegTime = { leg_id: number; leg_version: number; sequence_number: number; origin_label: string; destination_label: string;

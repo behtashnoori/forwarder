@@ -47,6 +47,7 @@ class OrganizationRouteTimeVersion(db.Model):
         db.CheckConstraint("(movement_min_minutes IS NULL AND movement_max_minutes IS NULL) OR (movement_min_minutes IS NOT NULL AND movement_max_minutes IS NOT NULL AND movement_min_minutes >= 1 AND movement_max_minutes >= movement_min_minutes AND movement_max_minutes <= 525600)", name="ck_route_time_movement_range"),
         db.CheckConstraint("(stop_min_minutes IS NULL AND stop_max_minutes IS NULL) OR (stop_min_minutes IS NOT NULL AND stop_max_minutes IS NOT NULL AND stop_min_minutes >= 0 AND stop_max_minutes >= stop_min_minutes AND stop_max_minutes <= 525600)", name="ck_route_time_stop_range"),
         db.CheckConstraint("movement_min_minutes IS NOT NULL OR stop_min_minutes IS NOT NULL", name="ck_route_time_defined"),
+        db.CheckConstraint("planned_distance_km IS NULL OR planned_distance_km > 0", name="ck_route_time_planned_distance"),
     )
     id = db.Column(BIGINT, primary_key=True)
     public_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid4()))
@@ -57,6 +58,7 @@ class OrganizationRouteTimeVersion(db.Model):
     movement_max_minutes = db.Column(db.Integer)
     stop_min_minutes = db.Column(db.Integer)
     stop_max_minutes = db.Column(db.Integer)
+    planned_distance_km = db.Column(db.Numeric(12, 3))
     effective_from = db.Column(db.DateTime(timezone=True), nullable=False)
     actor_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
     recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
@@ -67,6 +69,7 @@ class RouteLegTimeBasis(db.Model):
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_route_time_basis_public"),
         db.UniqueConstraint("route_leg_id", "selection_revision", name="uq_route_time_basis_revision"),
+        db.UniqueConstraint("id", "route_leg_id", "organization_id", name="uq_route_time_basis_exact_progress"),
         db.CheckConstraint("selection_revision >= 1", name="ck_route_time_basis_revision"),
         db.ForeignKeyConstraint(["operational_shipment_id", "organization_id"], ["operational_shipment.id", "operational_shipment.organization_id"], name="fk_route_time_basis_shipment", ondelete="RESTRICT"),
         db.ForeignKeyConstraint(["route_plan_id", "operational_shipment_id"], ["route_plan.id", "route_plan.operational_shipment_id"], name="fk_route_time_basis_plan", ondelete="RESTRICT"),

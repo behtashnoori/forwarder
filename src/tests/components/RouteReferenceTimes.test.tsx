@@ -6,7 +6,7 @@ import { timeRange, type LegTime, type TimeVersion } from "@/lib/routeTimeApi";
 const api=vi.hoisted(()=>({get:vi.fn(),select:vi.fn(),list:vi.fn(),revise:vi.fn()}));
 vi.mock("@/i18n",()=>({useI18n:()=>({transportLabel:(value:string)=>value,businessLabel:(value:string)=>value})}));
 vi.mock("@/lib/routeTimeApi",async()=>({...await vi.importActual<typeof import("@/lib/routeTimeApi")>("@/lib/routeTimeApi"),getPlanTimes:api.get,selectPlanTime:api.select,listRouteTimes:api.list,reviseRouteTime:api.revise}));
-const version:TimeVersion={public_id:"version-1",version:1,movement_min_minutes:1200,movement_max_minutes:1440,stop_min_minutes:240,stop_max_minutes:480,effective_from:"2026-09-01T00:00:00Z",effective_until:null,recorded_at:"2026-09-01T00:00:00Z",actor_user_id:2,recorded_by:"مدیر سازمان"};
+const version:TimeVersion={public_id:"version-1",version:1,movement_min_minutes:1200,movement_max_minutes:1440,stop_min_minutes:240,stop_max_minutes:480,planned_distance_km:"1250.000",effective_from:"2026-09-01T00:00:00Z",effective_until:null,recorded_at:"2026-09-01T00:00:00Z",actor_user_id:2,recorded_by:"مدیر سازمان"};
 const leg:LegTime={leg_id:3,leg_version:1,sequence_number:1,origin_label:"خورگوس",destination_label:"آکتائو",transport_mode:"rail",reference_at:"2027-10-01T00:00:00Z",time_basis:"PLANNED_DEPARTURE",applicable:version,selected:null,selection_matches_leg:false,history:[],can_select:true};
 const plans=[{id:1,revision_number:1,status:"draft"}];
 const response=(item:LegTime)=>({data:{plan_id:1,plan_revision:1,plan_status:"draft",items:[item]}});
@@ -15,7 +15,7 @@ describe("explicit route reference basis",()=>{
   it("shows undefined without invented zero and keeps movement separate from stop",async()=>{
     api.get.mockResolvedValue(response({...leg,applicable:null}));render(<RouteReferenceTimes shipmentId="shipment" plans={plans}/>);
     expect(await screen.findByText("مرجع قابل استفاده")).toBeInTheDocument();
-    expect(screen.getAllByText("تعریف نشده")).toHaveLength(4);
+    expect(screen.getAllByText("تعریف نشده")).toHaveLength(6);
     expect(screen.getByRole("button",{name:"ثبت این نسخه برای برنامه"})).toBeDisabled();
     expect(timeRange(1200,1440)).toBe("۲۰ ساعت تا ۲۴ ساعت");
     expect(timeRange(0,0)).toBe("۰ ساعت");

@@ -78,6 +78,8 @@ def test_separate_ranges_future_version_and_old_new_plan_basis(operational_app):
 @pytest.mark.parametrize("change", [
     {"movement_min_minutes":1441}, {"movement_min_minutes":True}, {"stop_max_minutes":None},
     {"movement_min_minutes":None, "movement_max_minutes":None, "stop_min_minutes":None, "stop_max_minutes":None},
+    {"planned_distance_km":0}, {"planned_distance_km":-1}, {"planned_distance_km":"1.2345"},
+    {"planned_distance_km":True},
     {"effective_from":"2026-10-01T12:00:00"}, {"transport_mode":"invented"}, {"organization_id":999},
 ])
 def test_invalid_reference_never_creates_partial_configuration(operational_app, change):
@@ -147,10 +149,12 @@ def test_selection_replay_and_published_plan_cannot_be_rebound(operational_app):
 
 def test_explicit_zero_stop_is_distinct_from_undefined_movement(operational_app):
     with operational_app.app_context():
-        version,_=save(operational_app,payload(operational_app,movement_min_minutes=None,movement_max_minutes=None,stop_min_minutes=0,stop_max_minutes=0))
+        version,_=save(operational_app,payload(operational_app,movement_min_minutes=None,movement_max_minutes=None,
+            stop_min_minutes=0,stop_max_minutes=0,planned_distance_km="321.125"))
         value=svc.project_version(version)
         assert value["movement_min_minutes"] is None and value["movement_max_minutes"] is None
         assert value["stop_min_minutes"]==value["stop_max_minutes"]==0
+        assert value["planned_distance_km"] == "321.125"
 
 
 def test_live_role_tenant_and_parent_boundaries_for_http(operational_app):

@@ -12,7 +12,7 @@ from backend.migration_runtime import alembic_config
 
 PREVIOUS = "20261001_phase3_cargo_lineage"
 HEAD = "20261002_phase3_branched_route"
-REPOSITORY_HEAD = "20261012_phase3_cargo_eta"
+REPOSITORY_HEAD = "20261013_structured_route_progress_eta"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 

@@ -17,7 +17,7 @@ from backend.services import operational_service as base, route_time_service as 
 
 URL=os.environ.get("P3_ROUTE_TIME_POSTGRES_URL", "")
 PREVIOUS="20261008_phase3_cargo_delivery"
-HEAD="20261009_phase3_route_time"
+HEAD="20261013_structured_route_progress_eta"
 pytestmark=pytest.mark.skipif(not URL,reason="requires explicit P3_ROUTE_TIME_POSTGRES_URL")
 
 

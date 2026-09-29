@@ -279,6 +279,10 @@ class RouteStageExecution(db.Model):
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_route_stage_execution_public_id"),
         db.UniqueConstraint(
+            "id", "route_plan_id", "route_leg_id", "execution_unit_id",
+            name="uq_route_stage_execution_exact_progress",
+        ),
+        db.UniqueConstraint(
             "route_leg_id",
             "execution_unit_id",
             name="uq_route_stage_execution_leg_unit",

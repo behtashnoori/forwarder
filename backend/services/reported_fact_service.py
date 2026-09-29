@@ -1,5 +1,6 @@
 """Owner commands and deliberately separate, allowlisted report projections."""
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 
@@ -11,7 +12,9 @@ from backend.models import Customer, ExpertUser
 from backend.operational_models import (ExecutionTransportRevision, ExecutionUnit, OperationalEvent,
     OperationalIdempotency, OperationalShipment, RouteCargoDestination, RouteLeg, RoutePlan, RouteStageExecution)
 from backend.reported_fact_models import (OperationalEventCargoImpact as Impact,
-    OperationalEventReportContext as Context, REPORTED_EVENT_TYPE, SOURCES, KINDS, SCOPES)
+    OperationalEventReportContext as Context, OperationalEventRouteProgress as RouteProgress,
+    REPORTED_EVENT_TYPE, SOURCES, KINDS, SCOPES)
+from backend.route_time_models import RouteLegTimeBasis, OrganizationRouteTimeVersion
 from backend.services.assigned_work_authorization import authorize_document_management
 from backend.services.customer_entitlement_service import authorized_customer_ids
 from backend.services.execution_unit_service import _event_location_evidence
@@ -20,12 +23,13 @@ from backend.services.operational_service import OperationalError, require_permi
 
 GENERIC_MESSAGE = "در روند حمل این محموله یک تغییر عملیاتی ثبت شده است."
 DELAY_MESSAGE = "به دلیل شرایط عملیاتی، حرکت محموله با تأخیر مواجه شده است."
-FIELDS = {"scope", "target_public_id", "kind", "source", "occurred_at", "location",
+FIELDS = {"scope", "target_public_id", "kind", "source", "occurred_at", "location", "route_progress",
           "internal_note", "customer_message", "impacted_cargo_public_ids", "customer_effect",
           "corrects_public_id", "reason"}
 
 
 from backend.services import closure_commands as closure_guard
+from backend.services import route_time_service as route_times
 
 
 def fail(message, status=422, code="REPORT_INVALID"):
@@ -96,6 +100,61 @@ def _target(shipment, scope, identity):
     return values
 
 
+def _distance(value):
+    if isinstance(value, bool):
+        fail("فاصله باقی‌مانده معتبر نیست.")
+    try:
+        result = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        fail("فاصله باقی‌مانده معتبر نیست.")
+    if not result.is_finite() or result < 0 or result.as_tuple().exponent < -3 or result >= Decimal("1000000000"):
+        fail("فاصله باقی‌مانده باید عدد نامنفی با دقت حداکثر سه رقم اعشار باشد.")
+    return result
+
+
+def _route_progress(shipment, targets, kind, payload, occurred):
+    value = payload.get("route_progress")
+    if value is None:
+        return None
+    if kind != "PROGRESS" or targets["execution_unit_id"] is None:
+        fail("پیشرفت ساختاریافته فقط برای گزارش پیشرفت یک اجرای حمل ثبت می‌شود.")
+    allowed = {"stage_execution_public_id", "distance_remaining_km"}
+    if not isinstance(value, dict) or set(value) != allowed or not isinstance(value.get("stage_execution_public_id"), str):
+        fail("پیشرفت ساختاریافته معتبر نیست.")
+    stage = db.session.scalar(select(RouteStageExecution).where(
+        RouteStageExecution.public_id == value["stage_execution_public_id"],
+        RouteStageExecution.organization_id == shipment.organization_id,
+        RouteStageExecution.operational_shipment_id == shipment.id,
+        RouteStageExecution.execution_unit_id == targets["execution_unit_id"],
+    ))
+    if stage is None:
+        fail("اجرای مرحله مسیر برای این گزارش یافت نشد.", 404, "REPORT_PROGRESS_STAGE_NOT_FOUND")
+    plan = db.session.get(RoutePlan, stage.route_plan_id)
+    leg = db.session.get(RouteLeg, stage.route_leg_id)
+    if plan is None or leg is None or plan.status != "active" or not plan.is_active:
+        fail("پیشرفت فقط برای نسخه فعال برنامه مسیر ثبت می‌شود.", 409, "REPORT_PROGRESS_PLAN_INACTIVE")
+    if plan.effective_at is not None and occurred < route_times.aware(plan.effective_at):
+        fail("زمان پیشرفت پیش از اعتبار این نسخه برنامه مسیر است.", 409, "REPORT_PROGRESS_REVISION_MISMATCH")
+    remaining = _distance(value.get("distance_remaining_km"))
+    basis = db.session.scalar(select(RouteLegTimeBasis).where(
+        RouteLegTimeBasis.route_leg_id == leg.id,
+        RouteLegTimeBasis.route_plan_id == plan.id,
+        RouteLegTimeBasis.organization_id == shipment.organization_id,
+    ).order_by(RouteLegTimeBasis.selection_revision.desc()).limit(1))
+    reference = db.session.get(OrganizationRouteTimeVersion, basis.reference_version_id) if basis else None
+    if basis is not None and basis.leg_basis != route_times.fingerprint(leg):
+        basis = reference = None
+    planned = reference.planned_distance_km if reference is not None else None
+    if planned is None:
+        basis = None
+    # A measurable observation may exist before a baseline is defined.  Keep it
+    # honest and immutable; ETA will report ROUTE_BASELINE_UNDEFINED.
+    if planned is not None and remaining > planned:
+        fail("فاصله باقی‌مانده از فاصله برنامه‌ریزی‌شده این بخش بیشتر است.")
+    return {"stage": stage, "plan": plan, "leg": leg, "basis": basis,
+            "remaining": remaining, "planned": planned}
+
+
 def create(shipment_public_id, user, payload, key):
     shipment = scoped_shipment(shipment_public_id, user)
     if not _can_manage(user, shipment):
@@ -125,6 +184,7 @@ def create(shipment_public_id, user, payload, key):
     targets = _target(shipment, scope, payload.get("target_public_id"))
     occurred = instant(payload.get("occurred_at"))
     closure_guard.prior_fact(shipment, occurred)
+    progress = _route_progress(shipment, targets, kind, payload, occurred)
     effect = payload.get("customer_effect", "CHANGE")
     if not isinstance(effect, str) or effect not in {"CHANGE", "DELAY"}:
         fail("اثر ثبت‌شده معتبر نیست.")
@@ -187,6 +247,20 @@ def create(shipment_public_id, user, payload, key):
         correction_reason=reason, **targets)
     db.session.add(row)
     db.session.flush()
+    if progress is not None:
+        stage, plan, leg, basis = (progress[key] for key in ("stage", "plan", "leg", "basis"))
+        db.session.add(RouteProgress(
+            operational_event_id=event.id,
+            organization_id=shipment.organization_id,
+            operational_shipment_id=shipment.id,
+            route_plan_id=plan.id,
+            route_leg_id=leg.id,
+            route_stage_execution_id=stage.id,
+            execution_unit_id=stage.execution_unit_id,
+            route_leg_time_basis_id=basis.id if basis else None,
+            distance_remaining_km=progress["remaining"],
+            planned_distance_km=progress["planned"],
+        ))
     db.session.add_all([Impact(operational_event_id=event.id, cargo_item_id=c.id,
         operational_shipment_id=shipment.id) for c in cargo])
     db.session.add(OperationalIdempotency(organization_id=shipment.organization_id,
@@ -208,6 +282,25 @@ def _target_identity(row):
     return None
 
 
+def _progress_value(row):
+    progress = db.session.get(RouteProgress, row.operational_event_id)
+    if progress is None:
+        return None
+    stage = db.session.get(RouteStageExecution, progress.route_stage_execution_id)
+    leg = db.session.get(RouteLeg, progress.route_leg_id)
+    plan = db.session.get(RoutePlan, progress.route_plan_id)
+    return {
+        "kind": progress.progress_kind,
+        "stage_execution_public_id": stage.public_id,
+        "distance_remaining_km": str(progress.distance_remaining_km),
+        "planned_distance_km": str(progress.planned_distance_km) if progress.planned_distance_km is not None else None,
+        "route_plan_revision": plan.revision_number,
+        "route_leg_sequence": leg.sequence_number,
+        "route_label": (f"بخش مسیر {leg.sequence_number} — {route_times.endpoint_label(leg.origin_snapshot)}"
+                        f" ← {route_times.endpoint_label(leg.destination_snapshot)}"),
+    }
+
+
 def options(shipment):
     cargo = db.session.scalars(select(ShipmentCargoItem).where(ShipmentCargoItem.operational_shipment_id == shipment.id)
         .order_by(ShipmentCargoItem.line_number)).all()
@@ -221,16 +314,43 @@ def options(shipment):
         select(RouteStageExecution.id).where(
             RouteStageExecution.execution_unit_id == ExecutionUnit.id,
             RouteStageExecution.operational_shipment_id == shipment.id).exists()).order_by(ExecutionUnit.id)).all()
+    active_stages = db.session.execute(select(RouteStageExecution, RouteLeg, RoutePlan)
+        .join(RouteLeg, RouteLeg.id == RouteStageExecution.route_leg_id)
+        .join(RoutePlan, RoutePlan.id == RouteStageExecution.route_plan_id)
+        .where(RouteStageExecution.operational_shipment_id == shipment.id,
+               RouteStageExecution.organization_id == shipment.organization_id,
+               RoutePlan.status == "active", RoutePlan.is_active.is_(True))
+        .order_by(RouteLeg.sequence_number)).all()
+    stages_by_unit = {}
+    for stage, leg, plan in active_stages:
+        stages_by_unit.setdefault(stage.execution_unit_id, []).append((stage, leg, plan))
     unit_options = []
+    progress_stages = {}
     for unit in units:
         revision = db.session.scalar(select(ExecutionTransportRevision).where(
             ExecutionTransportRevision.execution_unit_id == unit.id).order_by(ExecutionTransportRevision.revision_number.desc()).limit(1))
-        label = f"{revision.means_identifier} · {unit.unit_code}" if revision and revision.means_identifier else unit.unit_code
+        means = revision.transport_means_type.fa_name if revision and revision.transport_means_type else None
+        stage_values = stages_by_unit.get(unit.id, [])
+        route_label = None
+        if stage_values:
+            _, first_leg, _ = stage_values[0]
+            route_label = (f"بخش مسیر {first_leg.sequence_number} — {route_times.endpoint_label(first_leg.origin_snapshot)}"
+                           f" ← {route_times.endpoint_label(first_leg.destination_snapshot)}")
+        technical = " · ".join(value for value in (means, revision.means_identifier if revision else None, unit.unit_code) if value)
+        label = f"{route_label} — {technical}" if route_label else technical
         unit_options.append({"public_id": unit.public_id, "label": label if unit.is_active else f"{label} · سابقه اجرای غیرفعال"})
+        progress_stages[unit.public_id] = [{
+            "public_id": stage.public_id,
+            "label": (f"بخش مسیر {leg.sequence_number} — {route_times.endpoint_label(leg.origin_snapshot)}"
+                      f" ← {route_times.endpoint_label(leg.destination_snapshot)}"
+                      f" — {means or 'وسیله حمل'}"),
+            "route_plan_revision": plan.revision_number,
+            "route_leg_sequence": leg.sequence_number,
+        } for stage, leg, plan in stage_values]
     return {"cargo": cargo_options,
             "ROUTE_STAGE": [{"public_id": str(leg.id), "label": f"مسیر {plan.revision_number} · بخش {leg.sequence_number}"} for leg, plan in legs],
             "EXECUTION_UNIT": unit_options,
-            "CARGO": cargo_options, "SHIPMENT": []}
+            "CARGO": cargo_options, "SHIPMENT": [], "progress_stages": progress_stages}
 
 
 def listing(shipment_public_id, user, page=1):
@@ -275,6 +395,7 @@ def listing(shipment_public_id, user, page=1):
             "actor_label": actor.full_name or actor.username if actor else "کارشناس",
             "customer_message": event.customer_message, "customer_effect": row.customer_effect,
             "impacted_cargo_public_ids": impacted.get(event.id, []), "reason": row.correction_reason,
+            "route_progress": _progress_value(row),
             "corrects_public_id": db.session.get(OperationalEvent, event.supersedes_event_id).public_id if event.supersedes_event_id else None,
             "status": "SUPERSEDED" if event.id in superseded else "CURRENT"}
         items[event.id] = item

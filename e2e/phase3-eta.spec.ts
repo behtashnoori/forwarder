@@ -5,12 +5,13 @@ const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
 if (!password || !fixturePath) throw new Error("Owned P3-11 runner required");
 type Case = { shipment: string; cargo: string; plan: number; private_cargo: string | null; report: string | null;
-  location: string; basis: string; references: { public_id: string; id: number }[] };
+  location: string; basis: string; references: { public_id: string; id: number }[];
+  progress_unit: string | null; progress_stage: string | null };
 const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as {
   p311_cases: Record<string, Case>; p311_accounts: Record<string, { email: string; public_id: string }> };
 type Estimate = { available: boolean; earliest: string | null; latest: string | null; reason: string | null };
 type Snapshot = { public_id: string; sequence: number; next: Estimate; final: Estimate; as_of: string;
-  planned_distance: null; source_fingerprint?: string; provenance?: unknown };
+  planned_distance: string | null; source_fingerprint?: string; provenance?: unknown };
 test.setTimeout(240_000);
 
 async function login(page: Page, persona: string) {
@@ -60,9 +61,9 @@ test("P3-11 Expert normal navigation: stop placement, independent unknowns, comp
     range(value.next, cases[name].basis, low, high); range(value.final, cases[name].basis, low, high);
   }
   const unknown = await open(page, cases.unknown);
-  expect(unknown.next.reason).toBe("REFERENCE_UNDEFINED"); expect(unknown.final.available).toBe(false);
+  expect(unknown.next.reason).toBe("ROUTE_BASELINE_UNDEFINED"); expect(unknown.final.available).toBe(false);
   const partial = await open(page, cases.missing_later);
-  range(partial.next, cases.missing_later.basis, 5, 10); expect(partial.final.reason).toBe("REFERENCE_UNDEFINED");
+  range(partial.next, cases.missing_later.basis, 5, 10); expect(partial.final.reason).toBe("ROUTE_BASELINE_UNDEFINED");
   expect((await open(page, cases.origin)).next.reason).toBe("DEPARTURE_UNDEFINED");
   expect((await open(page, cases.destination)).final.reason).toBe("DESTINATION_REACHED");
   expect((await open(page, cases.split)).next.reason).toBe("PROGRESS_AMBIGUOUS");
@@ -84,6 +85,40 @@ test("P3-11 Expert normal navigation: stop placement, independent unknowns, comp
   await page.setViewportSize({ width: 1280, height: 900 });
   const reopened = await open(page, item); expect(reopened.public_id).toBe(after.public_id);
   expect(errors).toEqual([]); await context.close();
+});
+
+test("structured remaining distance entered in the human workflow drives ETA v2", async ({ browser }, info) => {
+  const context = await browser.newContext(); const page = await context.newPage();
+  await login(page, "restricted");
+  const item = fixture.p311_cases.structured;
+  expect(item.progress_unit).toBeTruthy(); expect(item.progress_stage).toBeTruthy();
+  await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
+  await page.locator(`a[href="/operations/shipments/${item.shipment}"]`).click();
+  await page.locator("summary", { hasText: "گزارش موقعیت و تغییرات حمل" }).click();
+  const reports = page.getByRole("region", { name: "گزارش‌های موقعیت و تغییرات حمل" });
+  await reports.getByRole("button", { name: "گزارش تازه" }).click();
+  await reports.getByLabel("نوع گزارش").selectOption("PROGRESS");
+  await reports.getByLabel("منبع گزارش").selectOption("DRIVER_REPORT");
+  await reports.getByLabel("بخش مربوط به گزارش").selectOption(item.progress_unit!);
+  await reports.getByLabel("بخش دقیق مسیر برای پیشرفت").selectOption(item.progress_stage!);
+  await reports.getByLabel("فاصله باقی‌مانده مسیر").fill("50.000");
+  const occurred = new Date(Date.now() - 1000);
+  const localOccurred = new Date(occurred.getTime() - occurred.getTimezoneOffset() * 60_000).toISOString().slice(0, 19);
+  await reports.getByLabel("زمان وقوع گزارش").fill(localOccurred);
+  await reports.getByLabel("موقعیت گزارش‌شده", { exact: true }).fill("PRIVATE HUMAN LOCATION TEXT");
+  await reports.locator("label", { hasText: "آزمون زمان رسیدن structured" }).locator('input[type="checkbox"]').check();
+  const saved = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/reported-facts"));
+  await reports.getByRole("button", { name: "ثبت گزارش", exact: true }).click();
+  expect((await saved).status()).toBe(201);
+  await expect(reports.getByText(/پیشرفت ساختاریافته:.*۵۰.*کیلومتر باقی‌مانده/)).toBeVisible();
+  const value = await open(page, item);
+  expect(value.planned_distance).toBe("100.000");
+  range(value.next, value.as_of, 0.5, 1);
+  range(value.final, value.as_of, 5.5, 11);
+  const etaRegion = page.getByRole("region", { name: "زمان تقریبی رسیدن کالا", exact: true });
+  await expect(etaRegion).toContainText("۱۰۰ کیلومتر");
+  await etaRegion.screenshot({ path: info.outputPath("structured-progress-eta.png") });
+  await context.close();
 });
 
 test("P3-11 Customer normal navigation, safe own-Cargo basis, partial ETA and private source exclusion", async ({ browser }, info) => {
@@ -131,7 +166,7 @@ test("P3-11 Customer normal navigation, safe own-Cargo basis, partial ETA and pr
   await otherContext.close();
 });
 
-test("P3-11 applicable reference changes append history and leave P3-10 plan pins intact", async ({ browser }) => {
+test("P3-11 later reference versions leave the selected P3-10 plan basis intact", async ({ browser }) => {
   const context = await browser.newContext(); const page = await context.newPage();
   const adminContext = await browser.newContext(); const admin = await adminContext.newPage();
   await login(page, "restricted"); await login(admin, "admin");
@@ -153,13 +188,13 @@ test("P3-11 applicable reference changes append history and leave P3-10 plan pin
   expect((await command(admin, `/api/admin/organization-route-reference-times/${item.references[1].public_id}/versions`, {
     expected_version: 1, movement_min_minutes: 180, movement_max_minutes: 240,
     stop_min_minutes: 0, stop_max_minutes: 0, effective_from: new Date(Date.now() + 2000).toISOString() })).status()).toBe(201);
-  await expect.poll(async () => (await refresh(page, item)).public_id, { timeout: 20_000 }).not.toBe(before.public_id);
-  const after = await refresh(page, item); range(after.next, item.basis, 3, 4);
+  const after = await refresh(page, item); range(after.next, item.basis, 1, 2);
+  expect(after.public_id).toBe(before.public_id);
   expect(await pins()).toEqual(originalPins);
   const history = await page.request.get(`${root}/cargo/${item.cargo}/eta/history`, { headers: { Authorization: `Bearer ${token}` } });
   const rows = (await history.json()).items as Snapshot[];
   expect(rows.find(row => row.public_id === before.public_id)?.next).toEqual(before.next);
   await page.getByRole("button", { name: "برآوردهای قبلی", exact: true }).click();
-  await expect(page.getByRole("region", { name: "زمان تقریبی رسیدن کالا", exact: true }).getByText(/برآورد قبلی/)).toHaveCount(2);
+  await expect(page.getByRole("region", { name: "زمان تقریبی رسیدن کالا", exact: true }).getByText(/برآورد قبلی/)).toHaveCount(1);
   await context.close(); await adminContext.close();
 });

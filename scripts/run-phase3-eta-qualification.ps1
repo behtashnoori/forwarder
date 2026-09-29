@@ -48,7 +48,7 @@ try {
   $dirty = [bool](git status --porcelain)
   if ($ExpectedProductSha -and ($dirty -or $productHead -ne $ExpectedProductSha)) { throw 'Final qualification requires the exact clean Product SHA' }
   $head = (python -m scripts.browser_migration_contract repository-head).Trim()
-  if ($head -ne '20261012_phase3_cargo_eta') { throw "Unexpected migration head: $head" }
+  if ($head -ne '20261013_structured_route_progress_eta') { throw "Unexpected migration head: $head" }
   $pgPort = Free-Port
   & (Join-Path $pgBin 'initdb.exe') -D $pgData -U postgres --auth-host=trust --auth-local=trust --encoding=UTF8 --locale=C *> (Join-Path $EvidenceDirectory 'initdb.log')
   Check-Exit 'initialize owned PostgreSQL'

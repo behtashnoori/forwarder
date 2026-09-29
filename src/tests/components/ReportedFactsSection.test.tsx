@@ -5,10 +5,30 @@ import { listReportedFacts, recordReportedFact, type ReportFact, type ReportList
 
 vi.mock("@/lib/reportedFactApi", () => ({ listReportedFacts: vi.fn(), recordReportedFact: vi.fn() }));
 const fixture = (canManage = true): ReportList => ({ items: [], reported_locations: [], total: 0, page: 1, can_manage: canManage,
-  options: { SHIPMENT: [], ROUTE_STAGE: [], EXECUTION_UNIT: [{ public_id: "unit-a", label: "وسیله اول" }], CARGO: [{ public_id: "cargo-a", label: "کالای من" }], cargo: [{ public_id: "cargo-a", label: "کالای من" }] } });
+  options: { SHIPMENT: [], ROUTE_STAGE: [], EXECUTION_UNIT: [{ public_id: "unit-a", label: "وسیله اول" }], CARGO: [{ public_id: "cargo-a", label: "کالای من" }], cargo: [{ public_id: "cargo-a", label: "کالای من" }], progress_stages: { "unit-a": [{ public_id: "stage-a", label: "بخش مسیر ۱ — اصفهان ← بندرعباس — کامیون", route_plan_revision: 1, route_leg_sequence: 1 }] } } });
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(listReportedFacts).mockResolvedValue({ data: fixture() }); });
 
 describe("scoped operational reports", () => {
+  it("captures one explicit stage distance without deriving it from human location text", async () => {
+    vi.mocked(recordReportedFact).mockResolvedValue({ public_id: "progress", created: true });
+    render(<ReportedFactsSection shipmentId="shipment" />);
+    fireEvent.click(await screen.findByRole("button", { name: "گزارش تازه" }));
+    fireEvent.change(screen.getByLabelText("نوع گزارش"), { target: { value: "PROGRESS" } });
+    fireEvent.change(screen.getByLabelText("بخش مربوط به گزارش"), { target: { value: "unit-a" } });
+    expect(screen.getByRole("option", { name: /بخش مسیر ۱.*اصفهان.*بندرعباس.*کامیون/ })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("بخش دقیق مسیر برای پیشرفت"), { target: { value: "stage-a" } });
+    fireEvent.change(screen.getByLabelText("فاصله باقی‌مانده مسیر"), { target: { value: "45.250" } });
+    fireEvent.change(screen.getByLabelText("زمان وقوع گزارش"), { target: { value: "2026-09-29T10:30" } });
+    fireEvent.change(screen.getByLabelText("موقعیت گزارش‌شده"), { target: { value: "نزدیک مرز" } });
+    fireEvent.click(screen.getByRole("button", { name: "ثبت گزارش" }));
+    await waitFor(() => expect(recordReportedFact).toHaveBeenCalled());
+    expect(vi.mocked(recordReportedFact).mock.calls[0][1]).toMatchObject({
+      kind: "PROGRESS", scope: "EXECUTION_UNIT", target_public_id: "unit-a",
+      location: { location_text: "نزدیک مرز" },
+      route_progress: { stage_execution_public_id: "stage-a", distance_remaining_km: "45.250" },
+    });
+  });
+
   it("preserves retry key and keeps occurred time and safe text explicit", async () => {
     vi.mocked(recordReportedFact).mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce({ public_id: "report", created: true });
     render(<ReportedFactsSection shipmentId="shipment" />);
@@ -31,7 +51,7 @@ describe("scoped operational reports", () => {
   });
 
   it("shows separate units and retained correction history in read-only oversight", async () => {
-    const first = { public_id: "r1", scope: "EXECUTION_UNIT", target_public_id: "a", kind: "LOCATION", source: "DRIVER_REPORT", source_label: "گزارش راننده", scope_label: "وسیله اول", location: "مرز اول", occurred_at: "2026-09-20T10:30:00Z", recorded_at: "2026-09-21T10:30:00Z", actor_user_id: 1, actor_label: "کارشناس", customer_effect: "CHANGE", impacted_cargo_public_ids: [], internal_note: null, customer_message: null, status: "CURRENT" } as ReportFact;
+    const first = { public_id: "r1", scope: "EXECUTION_UNIT", target_public_id: "a", kind: "LOCATION", source: "DRIVER_REPORT", source_label: "گزارش راننده", scope_label: "وسیله اول", location: "مرز اول", route_progress: null, occurred_at: "2026-09-20T10:30:00Z", recorded_at: "2026-09-21T10:30:00Z", actor_user_id: 1, actor_label: "کارشناس", customer_effect: "CHANGE", impacted_cargo_public_ids: [], internal_note: null, customer_message: null, status: "CURRENT" } as ReportFact;
     const second = { ...first, public_id: "r2", target_public_id: "b", scope_label: "وسیله دوم", location: "مرز دوم" };
     vi.mocked(listReportedFacts).mockResolvedValue({ data: { ...fixture(false), items: [first, second, { ...first, public_id: "old", status: "SUPERSEDED" }], reported_locations: [first, second], total: 3 } });
     render(<ReportedFactsSection shipmentId="shipment" />);

@@ -51,7 +51,7 @@ from backend.services import oip_service as oip
 
 # The scale proof instantiates the current ORM and therefore must qualify the
 # unique current repository schema, not the historical P3-04 boundary.
-HEAD = "20261012_phase3_cargo_eta"
+HEAD = "20261013_structured_route_progress_eta"
 NOW = datetime(2026, 9, 21, 12, tzinfo=timezone.utc)
 ACTIVE_COUNT = 500
 
