@@ -1,0 +1,21 @@
+{
+  "verdict": "PASS — STRUCTURED ROUTE PROGRESS AND ETA FOUNDATION QUALIFIED",
+  "qualified_at": "2026-09-29",
+  "canonical_entry_sha": "95af46867c2900c9e832018e3e53ee8bb5d862ab",
+  "product_sha": "f8f65e5b8dd83095e111b8b0448295adce075068",
+  "alembic_head": "20261013_structured_route_progress_eta",
+  "alembic_head_count": 1,
+  "focused": {"status": "PASS", "passed": 74, "skipped": 1},
+  "postgresql_18": {"status": "PASS", "phase3_passed": 17, "public_tracking_passed": 1},
+  "full_backend": {"status": "PASS", "passed": 1632, "skipped": 124},
+  "frontend": {"status": "PASS", "files": 99, "tests": 473, "build": "PASS", "lint_errors": 0},
+  "architecture_governance": "PASS",
+  "chrome_journeys": "PASS",
+  "product_review": "PASS",
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "human_product_walkthrough": "IN_PROGRESS",
+  "release_ready": false
+}
