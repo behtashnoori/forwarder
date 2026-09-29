@@ -252,6 +252,7 @@ try {
     $env:P3_CLOSURE_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_p3_12_closure_$($runId.Substring(0, 8))"
     $env:P3_OWNER_TRANSFER_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_p3_13_owner_$($runId.Substring(0, 8))"
     $env:SHIPMENT_CARGO_CREATION_POSTGRES_URL = New-OwnedDatabase "forwarder_cargo_create_$($runId.Substring(0, 8))"
+    $env:CARGO_CONTINUITY_REPAIR_POSTGRES_URL = New-OwnedDatabase "forwarder_cargo_continuity_repair_$($runId.Substring(0, 8))"
     $env:DN10_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_dn10_$($runId.Substring(0, 8))"
     $env:CONTROL_TOWER_DISPOSABLE_POSTGRES_URL = New-OwnedDatabase 'forwarder_control_tower_build'
     $postgresSpecs = @(
@@ -269,6 +270,7 @@ try {
       'backend/tests/test_phase3_closure_postgresql.py',
       'backend/tests/test_phase3_owner_transfer_postgresql.py',
       'backend/tests/test_shipment_cargo_creation_postgresql.py',
+      'backend/tests/test_cargo_continuity_repair_postgresql.py',
       'backend/tests/test_customer_entitlement_postgresql.py',
       'backend/tests/test_control_tower_scalability_postgresql.py'
     )
