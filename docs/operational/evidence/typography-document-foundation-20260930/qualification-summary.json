@@ -1,0 +1,49 @@
+{
+  "mission": "typography-and-document-foundation-only",
+  "lpaf_baseline": "2.6",
+  "starting_canonical_sha": "4e1709f2dd50f350c69a202bbf71727a654fd3c9",
+  "source_candidate_sha": "b49d46ca3c1c3b4e33fe5b36ed7e0a7d377b8dbe",
+  "product_sha": "833186409a93b100633351c702cacb941e0a4259",
+  "font": {
+    "package": "@fontsource-variable/vazirmatn",
+    "version": "5.3.0",
+    "license": "OFL-1.1"
+  },
+  "document_package": {
+    "checksum": "sha256:657625053e373a80fcb80b18e83077e0063ca44d6a04bdd122a7653ba0596820",
+    "pre_apply_plan_fingerprint": "sha256:549ec64efcc9a4dec1200c2079af7002be9128d2a56082241a12902685521353",
+    "planned_create_count": 4,
+    "conflict_count": 0
+  },
+  "qualification": {
+    "focused_backend": "26 passed",
+    "focused_frontend": "9 files, 85 passed",
+    "frontend": "100 files, 479 passed",
+    "typecheck": "PASS",
+    "build": "PASS",
+    "lint": "PASS - 0 errors, 16 existing warnings",
+    "architecture": "PASS",
+    "browser": "PASS"
+  },
+  "pre_apply_runtime": {
+    "database": "forwarder_human_walkthrough",
+    "postgresql": "18",
+    "schema_head": "20261014_canonical_geography_locations",
+    "document_type_count": 0,
+    "document_required_count": 0,
+    "operational_stage_count": 0,
+    "closure_policy_active": 0,
+    "shipment_public_id": "c66be7ef-ee20-4d39-a985-a3db5bd611db",
+    "shipment_facts_preserved": true
+  },
+  "product_behavior_changed": false,
+  "journey_impact": "AFFECTS_EXISTING_JOURNEY",
+  "journey_result": "PASS",
+  "excluded_lifecycle_diff_paths_not_integrated": true,
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "human_product_walkthrough": "IN_PROGRESS",
+  "release_ready": false
+}
