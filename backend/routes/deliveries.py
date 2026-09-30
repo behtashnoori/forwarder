@@ -31,7 +31,7 @@ def listing(shipment_id):
 def create(shipment_id):
     try:
         row, created = service.create(str(shipment_id), get_current_user(), request.get_json(silent=True), request.headers.get("Idempotency-Key"))
-        result = {"public_id": row.public_id, "revision": row.revision, "created": created}
+        result = {"public_id": row.public_id, "revision": row.revision, "is_final": row.is_final, "created": created}
         db.session.commit()
         return jsonify(result), 201 if created else 200
     except OperationalError as exc:

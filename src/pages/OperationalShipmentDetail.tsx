@@ -47,6 +47,7 @@ import RouteStageTransportExecutionSection from "@/components/RouteStageTranspor
 import ReportedFactsSection from "@/components/ReportedFactsSection";
 import ShipmentClosure from "@/components/ShipmentClosure";
 import DeliverySection from "@/components/DeliverySection";
+import ShipmentOperationalStages from "@/components/ShipmentOperationalStages";
 import { ShipmentEta } from "@/components/CargoEta";
 import CargoAllocationTraceSection from "@/components/CargoAllocationTraceSection";
 import {
@@ -85,10 +86,11 @@ const inconsistentIdentityMessage = "شناسه بازگشتی محموله با
 export default function OperationalShipmentDetail() {
   const params = useParams();
   const routeShipmentPublicId = params.id || "";
-  const allowedSections = ["summary","route","cargo","documents","tracking","delivery","closure","history"] as const;
+  const allowedSections = ["summary","route","stages","cargo","documents","tracking","delivery","closure","history"] as const;
   const legacyHashSections: Record<string, typeof allowedSections[number]> = {
     "#shipment-overview": "summary", "#shipment-next-action": "summary", "#shipment-route": "route",
     "#shipment-cargo": "cargo", "#shipment-operational-details": "documents", "#shipment-deliveries": "delivery",
+    "#shipment-operational-stages": "stages",
     "#shipment-closure": "closure", "#shipment-history": "history",
   };
   const activeSection = allowedSections.includes(params.section as typeof allowedSections[number])
@@ -261,12 +263,13 @@ export default function OperationalShipmentDetail() {
           <nav aria-label="بخش‌های پرونده حمل" className="sticky top-2 z-20 overflow-x-auto rounded-xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
             <div className="flex min-w-max items-center gap-1">
               {[
-                ["summary", "خلاصه"], ["route", "مسیر و اجرا"], ["cargo", "کالا و تخصیص"],
+                ["summary", "خلاصه"], ["route", "مسیر و اجرا"], ["stages", "مراحل عملیاتی"], ["cargo", "کالا و تخصیص"],
                 ["documents", "اسناد"], ["tracking", "پیگیری و ETA"], ["delivery", "تحویل"],
                 ["closure", "تکمیل و بستن"], ["history", "تاریخچه"],
               ].map(([section, label]) => <Link key={section} to={`/operations/shipments/${shipmentPublicId}/${section}`} aria-current={activeSection===section?"page":undefined} className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${activeSection===section?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-100"}`}>{label}</Link>)}
             </div>
           </nav>
+          <section hidden={activeSection!=="stages"} className="scroll-mt-28"><ShipmentOperationalStages shipmentId={shipmentPublicId}/></section>
           <section hidden={!(["summary","route"] as string[]).includes(activeSection)} id="shipment-next-action" aria-labelledby="next-action-heading" className="scroll-mt-28 space-y-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5">
             <div><p className="text-xs font-semibold text-blue-700">اقدام جاری</p><h2 id="next-action-heading" className="text-xl font-bold">{data.status === "closed" ? "اصلاح و تکمیل سوابق" : "اقدامات مجاز بعدی"}</h2><p className="mt-1 text-sm text-slate-600">اقدامات این بخش فقط بر پایه وضعیت و مجوزهای ثبت‌شده در سامانه نمایش داده می‌شوند.</p></div>
             {data.status !== "closed" && routePlansLoaded && !activePlan && <RouteAuthoringSection shipmentId={shipmentPublicId} draft={draftPlan} hasDraft={plans.some((item) => item.status === "draft")} reload={load} />}

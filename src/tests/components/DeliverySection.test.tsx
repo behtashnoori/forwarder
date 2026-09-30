@@ -13,7 +13,7 @@ vi.mock("@/components/CanonicalLocationPicker", () => ({
 const fixture = (canManage = true): DeliveryList => ({ items: [], total: 0, page: 1, can_manage: canManage,
   cargo: [{ public_id: "cargo-a", label: "کالای اول", customer_label: "مشتری الف", uom_public_id: "carton", uom_symbol: "کارتن", known_actual: "100", delivered: "0", remaining: "100", excess: "0", has_delivery: false, can_record: true },
     { public_id: "cargo-b", label: "کالای دوم", customer_label: "مشتری ب", uom_public_id: "carton", uom_symbol: "کارتن", known_actual: "25", delivered: "0", remaining: "25", excess: "0", has_delivery: false, can_record: true }] });
-const fact: DeliveryFact = { public_id: "delivery", cargo_public_id: "cargo-a", quantity: "60", uom_symbol: "کارتن", destination_text: "انبار الف", occurred_at: "2026-09-21T08:00:00Z", recorded_at: "2026-09-22T08:00:00Z", revision: 1, status: "CURRENT", is_correction: false, actor_label: "کارشناس", reason: null, corrects_public_id: null, evidence: [] };
+const fact: DeliveryFact = { public_id: "delivery", cargo_public_id: "cargo-a", quantity: "60", uom_symbol: "کارتن", destination_text: "انبار الف", occurred_at: "2026-09-21T08:00:00Z", recorded_at: "2026-09-22T08:00:00Z", revision: 1, status: "CURRENT", is_correction: false, is_final: false, actor_label: "کارشناس", reason: null, corrects_public_id: null, evidence: [] };
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(listDeliveries).mockResolvedValue({ data: fixture() }); });
 
 describe("partial cargo deliveries", () => {
@@ -31,7 +31,7 @@ describe("partial cargo deliveries", () => {
     await screen.findByText("تحویل ثبت شد؛ وضعیت پرونده حمل تغییری نکرد.");
     const calls = vi.mocked(recordDelivery).mock.calls;
     expect(calls).toHaveLength(2); expect(calls[0][2]).toBe(calls[1][2]);
-    expect(calls[0][1]).toEqual({ cargo_public_id: "cargo-a", quantity: "102", uom_public_id: "carton", destination_reference: { country_id: 1, source_type: "city", source_id: 2 }, destination_note: "انبار الف", occurred_at: new Date("2026-09-21T10:30").toISOString(), expected_version: 0 });
+    expect(calls[0][1]).toEqual({ cargo_public_id: "cargo-a", quantity: "102", uom_public_id: "carton", destination_reference: { country_id: 1, source_type: "city", source_id: 2 }, destination_note: "انبار الف", occurred_at: new Date("2026-09-21T10:30").toISOString(), expected_version: 0, is_final: false });
   });
 
   it("shows independent cargo warnings and preserves history in read-only oversight", async () => {

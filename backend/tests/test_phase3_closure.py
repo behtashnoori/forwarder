@@ -3,7 +3,7 @@ from datetime import timedelta
 from uuid import uuid4
 import pytest
 from backend.extensions import db
-from backend.closure_models import ClosureDecision, ClosurePolicyVersion
+from backend.closure_models import ClosureDecision, ClosurePolicy, ClosurePolicyCriterion, ClosurePolicyVersion
 from backend.operational_models import OperationalShipment, RoutePlan, utcnow
 from backend.services import closure_service as svc, route_orchestration_service as routes
 from backend.services import cargo_service, delivery_service, occurrence_projection_service as projection
@@ -14,9 +14,20 @@ from backend.tests.test_phase3_cargo_delivery import setup as delivery_setup, pa
 
 
 def policy(app, criteria=None, **extra):
+    """Seed a historical policy; current publication is covered by the V1 tests."""
     values = {"expected_version": 0, "effective_from": (utcnow()-timedelta(days=1)).isoformat(),
         "criteria": criteria or [{"scope": "GENERAL", "code": "NO_OPEN_EXCEPTIONS", "mandatory": True}], **extra}
-    row, _ = svc.save_policy(_user(app, "verifier"), values, str(uuid4()))
+    org = app.config["phase1a"]["org"]
+    root = ClosurePolicy.query.filter_by(organization_id=org).one_or_none()
+    if root is None:
+        root = ClosurePolicy(organization_id=org); db.session.add(root); db.session.flush()
+    latest = ClosurePolicyVersion.query.filter_by(policy_id=root.id).order_by(ClosurePolicyVersion.version.desc()).first()
+    row = ClosurePolicyVersion(
+        organization_id=org, policy_id=root.id, version=(latest.version + 1 if latest else 1),
+        effective_from=svc.times.instant(values["effective_from"]), actor_user_id=app.config["phase1a"]["verifier"],
+    )
+    db.session.add(row); db.session.flush()
+    db.session.add_all(ClosurePolicyCriterion(organization_id=org, policy_version_id=row.id, **item) for item in values["criteria"])
     db.session.commit()
     return row
 

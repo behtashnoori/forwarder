@@ -20,7 +20,7 @@ from backend.services.operational_service import OperationalError, require_permi
 from backend.services import operational_service as base
 
 FIELDS = {"cargo_public_id", "quantity", "uom_public_id", "destination_text", "destination_reference", "destination_note", "occurred_at",
-          "expected_version", "corrects_public_id", "reason", "evidence_document_public_ids"}
+          "expected_version", "corrects_public_id", "reason", "evidence_document_public_ids", "is_final"}
 
 
 from backend.services import closure_commands as closure_guard
@@ -165,6 +165,19 @@ def create(shipment_public_id, user, payload, key):
     elif expected != 0:
         fail("نسخه تحویل تازه معتبر نیست.", 409, "DELIVERY_VERSION_CONFLICT")
     documents = _evidence_selection(shipment, cargo, payload.get("evidence_document_public_ids", []))
+    is_final = payload.get("is_final", False)
+    if type(is_final) is not bool:
+        fail("نوع تحویل نهایی معتبر نیست.")
+    if is_final:
+        current_final = db.session.scalar(select(Delivery).where(
+            Delivery.operational_shipment_id == shipment.id,
+            Delivery.organization_id == shipment.organization_id,
+            Delivery.is_final.is_(True),
+            current_predicate(),
+            Delivery.id != previous.id if previous is not None else True,
+        ).limit(1))
+        if current_final is not None:
+            fail("برای این محموله قبلاً یک تحویل نهایی جاری ثبت شده است.", 409, "FINAL_DELIVERY_EXISTS")
     closure_guard.prior_fact(shipment, _instant(payload.get("occurred_at")))
     destination = payload.get("destination_reference")
     destination_location_id = destination_point_id = None
@@ -188,7 +201,7 @@ def create(shipment_public_id, user, payload, key):
         destination_snapshot=destination_snapshot,
         occurred_at=_instant(payload.get("occurred_at")), actor_user_id=int(user["id"]),
         supersedes_delivery_id=previous.id if previous else None, revision=previous.revision + 1 if previous else 1,
-        reason=_text(payload.get("reason"), 500))
+        reason=_text(payload.get("reason"), 500), is_final=is_final)
     db.session.add(row); db.session.flush()
     for document in documents: attach_evidence(row, document, int(user["id"]))
     db.session.add(OperationalIdempotency(organization_id=shipment.organization_id, operation="record_cargo_delivery",
@@ -254,7 +267,8 @@ def project(row, superseded, *, account=None):
     if account is None:
         actor = db.session.get(ExpertUser, row.actor_user_id)
         result.update(actor_label=(actor.full_name or actor.username) if actor else "کارشناس", reason=row.reason,
-            corrects_public_id=db.session.get(Delivery, row.supersedes_delivery_id).public_id if row.supersedes_delivery_id else None)
+            corrects_public_id=db.session.get(Delivery, row.supersedes_delivery_id).public_id if row.supersedes_delivery_id else None,
+            is_final=row.is_final)
     return result
 
 

@@ -7,7 +7,11 @@ import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 const when = (value: string) => formatDualCalendarInstant(value, "fa", {timeZoneName:"short"});
 const sourceSections:Record<string,string>={ACTUAL_QUANTITY_KNOWN:"shipment-cargo",ALL_CARGO_DELIVERED:"shipment-deliveries",
   REQUIRED_DOCUMENTS_READY:"documents-heading",NO_OPEN_EXCEPTIONS:"issues-heading",NO_OPEN_FOLLOW_UPS:"issues-heading",
-  NO_OPEN_OPERATIONAL_WORK:"issues-heading",MODE_UNDEFINED:"next-action-heading"};
+  NO_OPEN_OPERATIONAL_WORK:"issues-heading",MODE_UNDEFINED:"next-action-heading",
+  FINAL_DELIVERY_EXISTS:"shipment-deliveries",REQUIRED_OPERATIONAL_STAGES_COMPLETE:"shipment-operational-stages",
+  NO_BLOCKING_OPERATIONAL_ISSUE:"issues-heading",ACTUAL_CARGO_UNKNOWN:"shipment-cargo",
+  ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED:"shipment-cargo",DELIVERED_DIFFERS_FROM_PLANNED:"shipment-deliveries",
+  OPTIONAL_DOCUMENTS_ABSENT:"documents-heading",ETA_UNAVAILABLE:"shipment-route",NON_BLOCKING_OPERATIONAL_WARNINGS:"issues-heading"};
 function openSource(id:string) {
   const target=document.getElementById(id);
   let parent:HTMLElement|null=target;
@@ -17,8 +21,8 @@ function openSource(id:string) {
 export function ClosureItems({items}: {items: ClosureItem[]}) {
   const ordered=[...items].sort((a,b)=>Number(a.state==="PASS")-Number(b.state==="PASS") || Number(b.mandatory)-Number(a.mandatory));
   return <ul className="space-y-2">{ordered.map(item=><li key={item.code} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
-    <span>{item.label}<small className="mx-2 text-slate-500">{item.mandatory?"الزامی":"اطلاعاتی"}</small></span>
-    <strong className={item.state==="PASS"?"text-emerald-700":"text-amber-800"}>{item.state==="PASS"?"کامل":item.state==="UNKNOWN"?"نامشخص":"کامل نیست"}</strong>
+    <span>{item.label}<small className="mx-2 text-slate-500">{item.mandatory?"مسدودکننده":"هشدار غیرمسدودکننده"}</small></span>
+    <strong className={item.state==="PASS"?"text-emerald-700":"text-amber-800"}>{item.state==="PASS"?(item.mandatory?"کامل":"هشدار ندارد"):item.state==="UNKNOWN"?"نامشخص":item.mandatory?"کامل نیست":"نیازمند توجه"}</strong>
     {sourceSections[item.code]&&<a className="text-sm text-blue-700 underline" href={`#${sourceSections[item.code]}`} onClick={()=>openSource(sourceSections[item.code])}>مشاهده اطلاعات جاری</a>}
   </li>)}</ul>;
 }

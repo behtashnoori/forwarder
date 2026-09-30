@@ -30,11 +30,13 @@ function DeliveryForm({ cargo, initial, pending, onSubmit, onCancel }: {
   const [destinationNote, setDestinationNote] = useState(initial?.destination_text || "");
   const [occurred, setOccurred] = useState(initial ? localTime(initial.occurred_at) : "");
   const [reason, setReason] = useState("");
+  const [isFinal, setIsFinal] = useState(initial?.is_final || false);
   return <form aria-label={initial ? "اصلاح تحویل" : "ثبت تحویل"} className="rounded-xl border bg-slate-50 p-3" onSubmit={event => {
     event.preventDefault();
     void onSubmit({ cargo_public_id: cargo.public_id, quantity, uom_public_id: cargo.uom_public_id,
       destination_reference: destination!, destination_note: destinationNote || null, occurred_at: initial && occurred === localTime(initial.occurred_at) ? initial.occurred_at : new Date(occurred).toISOString(),
-      expected_version: initial?.revision || 0, ...(initial ? { corrects_public_id: initial.public_id, reason: reason || null } : {}) });
+      expected_version: initial?.revision || 0, is_final: isFinal,
+      ...(initial ? { corrects_public_id: initial.public_id, reason: reason || null } : {}) });
   }}>
     <fieldset disabled={pending} className="grid gap-3 sm:grid-cols-2">
       <legend className="mb-3 font-semibold">{initial ? "اصلاح تحویل" : "تحویل تازه"} · {cargo.label} · {cargo.customer_label}</legend>
@@ -43,6 +45,8 @@ function DeliveryForm({ cargo, initial, pending, onSubmit, onCancel }: {
       <label className="sm:col-span-2">یادداشت مقصد (اختیاری)<Input aria-label="یادداشت مقصد تحویل" maxLength={255} value={destinationNote} onChange={e => setDestinationNote(e.target.value)} /></label>
       <label>زمان وقوع تحویل<Input aria-label="زمان وقوع تحویل" required type="datetime-local" step="0.001" dir="ltr" value={occurred} onChange={e => setOccurred(e.target.value)} /><span className="text-xs text-slate-600">زمان محلی شما؛ ثبت دیرهنگام مجاز است.</span></label>
       {initial && <label>دلیل اصلاح (اختیاری)<Input aria-label="دلیل اصلاح تحویل" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>}
+      <label className="flex items-center gap-2 sm:col-span-2"><input aria-label="تحویل نهایی محموله" type="checkbox" checked={isFinal} onChange={e => setIsFinal(e.target.checked)} />این Delivery، تحویل نهایی صریح محموله است</label>
+      <p className="text-xs text-slate-600 sm:col-span-2">تحویل نهایی یک واقعیت مستقل است؛ سامانه آن را از برابری مقدارها نتیجه‌گیری نمی‌کند.</p>
       <p className="text-xs text-slate-600 sm:col-span-2">مقدار واقعی گزارش‌شده را ثبت کنید. اختلاف با مقدار شناخته‌شده مانع ثبت نیست و مقدار کالا را تغییر نمی‌دهد.</p>
       <div className="flex flex-wrap gap-2 sm:col-span-2"><Button type="submit" disabled={!destination}>{pending ? "در حال ثبت…" : initial ? "ثبت اصلاح تحویل" : "ثبت تحویل"}</Button><Button type="button" variant="outline" onClick={onCancel}>انصراف</Button></div>
     </fieldset>
@@ -108,7 +112,7 @@ export default function DeliverySection({ shipmentId }: { shipmentId: string }) 
   const renderFact = (item: DeliveryFact) => {
     const cargo = data?.cargo.find(c => c.public_id === item.cargo_public_id);
     return <article key={item.public_id} data-delivery-id={item.public_id} className="space-y-2 rounded-xl border p-3">
-      <div className="flex flex-wrap justify-between gap-2"><h5 className="font-semibold">{cargo?.label} · {cargo?.customer_label}</h5><span className="text-xs">{item.status === "SUPERSEDED" ? "اصلاح‌شده؛ محفوظ در سابقه" : item.is_correction ? "نسخه اصلاحی جاری" : "تحویل جاری"}</span></div>
+      <div className="flex flex-wrap justify-between gap-2"><h5 className="font-semibold">{cargo?.label} · {cargo?.customer_label}</h5><span className="text-xs">{item.status === "SUPERSEDED" ? "اصلاح‌شده؛ محفوظ در سابقه" : item.is_final ? "تحویل نهایی صریح" : item.is_correction ? "نسخه اصلاحی جاری" : "تحویل جزئی / غیرنهایی"}</span></div>
       <p>{number(item.quantity)} {unit(item.uom_symbol)} · مقصد: {item.destination?.facility?.display_name || item.destination?.display_name || item.destination_text || "ثبت نشده"}</p>
       {item.destination && item.destination_text && <p className="text-sm text-slate-600">یادداشت مقصد: {item.destination_text}</p>}
       <p className="text-xs text-slate-600">وقوع: {time(item.occurred_at)}<br />ثبت: {time(item.recorded_at)} · {item.actor_label}</p>

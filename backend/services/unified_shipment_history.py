@@ -11,6 +11,12 @@ from backend.operational_models import (
 from backend.reported_fact_models import OperationalEventReportContext
 from backend.cargo_models import CargoAllocationRevision, ExecutionUnitCargoAllocation, ShipmentCargoItem
 from backend.delivery_models import CargoDelivery
+from backend.closure_models import ClosureDecision
+from backend.shipment_stage_models import (
+    OrganizationShipmentStageDefinition,
+    OrganizationShipmentStageDefinitionVersion,
+    ShipmentOperationalStageEvent,
+)
 from backend.external_reference_models import OperationalShipmentExternalReference
 from backend.mdpm_models import DocumentReadinessAudit, OperationalDocumentRequirement
 from backend.services.assigned_work_authorization import authorize_work_action
@@ -29,6 +35,7 @@ OMIT_AUDIT_ACTIONS = {
     "operational_delay.created", "operational_delay.resolved",
     "operational_exception.created", "operational_exception.resolved",
     "ROUTE_STAGE_EXECUTION_CREATED",
+    "shipment_stage.started", "shipment_stage.completed", "shipment.closed",
 }
 
 
@@ -119,12 +126,31 @@ def _item(shipment, kind, ident, phase):
         destination = (row.destination_snapshot or {}).get("facility") or row.destination_snapshot or {}
         item = _base(kind, row, phase, "DELIVERY", "cargo_delivery.recorded",
                      row.occurred_at, row.recorded_at, row.actor_user_id)
-        item.update({"business_label": "تحویل کالا ثبت شد" if row.revision == 1 else "اصلاح تحویل ثبت شد",
+        item.update({"business_label": "تحویل نهایی محموله ثبت شد" if row.is_final else "تحویل کالا ثبت شد" if row.revision == 1 else "اصلاح تحویل ثبت شد",
                      "cargo_label": cargo.display_name_snapshot if cargo else None,
                      "quantity": str(row.quantity), "uom_symbol": row.uom_symbol_snapshot,
                      "destination_label": destination.get("display_name") or row.destination_text,
                      "note": row.destination_text if row.destination_snapshot else None,
                      "reason_label": row.reason, "source_entity_id": row.public_id})
+        return item
+    if kind == "shipment_stage":
+        row = db.session.get(ShipmentOperationalStageEvent, ident)
+        configured = db.session.get(OrganizationShipmentStageDefinitionVersion, row.definition_version_id)
+        definition = db.session.get(OrganizationShipmentStageDefinition, configured.definition_id) if configured else None
+        labels = {"STARTED": "مرحله عملیاتی شروع شد", "COMPLETED": "مرحله عملیاتی کامل شد"}
+        item = _base(kind, row, phase, "OPERATIONAL_STAGE", f"shipment_stage.{row.event_type.lower()}",
+                     row.occurred_at, row.recorded_at, row.actor_user_id)
+        item.update({"business_label": labels[row.event_type], "stage_label": configured.display_name_fa if configured else None,
+                     "stage_code": definition.code if definition else None, "status": row.event_type,
+                     "source_entity_id": row.public_id})
+        return item
+    if kind == "closure":
+        row = db.session.get(ClosureDecision, ident)
+        item = _base(kind, row, phase, "CLOSURE", "shipment.closed",
+                     row.occurred_at, row.recorded_at, row.actor_user_id)
+        item.update({"business_label": "پرونده حمل با استثنای مدیر بسته شد" if row.kind == "EXCEPTIONAL" else "پرونده حمل پس از ارزیابی الزامات بسته شد",
+                     "status": row.kind, "reason_label": row.reason, "closure_assessment": row.assessment,
+                     "closure_missing_items": row.missing_items, "source_entity_id": row.public_id})
         return item
     if kind == "revision":
         row = db.session.get(RoutePlan, ident)
@@ -223,6 +249,10 @@ def history(shipment, page=1, per_page=50, user=None):
                      OperationalEventReportContext.operational_shipment_id == shipment.id)))),
         _branch("delivery", CargoDelivery.id, "recorded", CargoDelivery.occurred_at,
                 (CargoDelivery.operational_shipment_id == shipment.id, CargoDelivery.organization_id == org)),
+        _branch("shipment_stage", ShipmentOperationalStageEvent.id, "recorded", ShipmentOperationalStageEvent.occurred_at,
+                (ShipmentOperationalStageEvent.operational_shipment_id == shipment.id, ShipmentOperationalStageEvent.organization_id == org)),
+        _branch("closure", ClosureDecision.id, "recorded", ClosureDecision.occurred_at,
+                (ClosureDecision.operational_shipment_id == shipment.id, ClosureDecision.organization_id == org)),
     ]
     for kind, model, time_field in (("delay", OperationalDelay, OperationalDelay.started_at),
                                     ("exception", OperationalException, OperationalException.occurred_at)):

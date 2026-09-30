@@ -15,7 +15,12 @@ from backend.migration_runtime import alembic_config
 from backend.models import ExpertUser, DocumentDefinition, CaseDocumentFile
 from backend.mdpm_models import OperationalDocumentRequirement, ArtifactAssociation, DocumentAssessment
 from backend.operational_models import OperationalShipment, OperationalMembership, OperationalWorkItem, utcnow
-from backend.closure_models import ClosureDecision
+from backend.closure_models import (
+    ClosureDecision,
+    ClosurePolicy,
+    ClosurePolicyCriterion,
+    ClosurePolicyVersion,
+)
 from backend.services import closure_service as svc
 from backend.services.operational_service import OperationalError
 from backend.tests.test_phase3_transport_execution_postgresql import _seed_runtime
@@ -23,7 +28,7 @@ from backend.tests.test_phase3_transport_execution_postgresql import _seed_runti
 URL = os.environ.get("P3_CLOSURE_POSTGRES_URL", "")
 HEAD = "20261010_phase3_closure"
 PREVIOUS = "20261009_phase3_route_time"
-REPOSITORY_HEAD = "20261014_canonical_geography_locations"
+REPOSITORY_HEAD = "20261015_org_shipment_stages"
 pytestmark = pytest.mark.skipif(not URL, reason="requires explicit owned P3_CLOSURE_POSTGRES_URL")
 
 
@@ -79,8 +84,22 @@ def test_postgresql18_closure_upgrade_preservation_history_and_both_race_orders(
     owner = {"id":ids["owner"],"role":"expert"}
     admin_user = {"id":ids["admin"],"role":"admin"}
     with app.app_context():
-        version,_ = svc.save_policy(admin_user, {"expected_version":0,"effective_from":(utcnow()-timedelta(days=1)).isoformat(),
-            "criteria":[{"scope":"GENERAL","code":"NO_OPEN_FOLLOW_UPS","mandatory":True}]}, str(uuid4()))
+        # This slice test needs a historical legacy policy in order to verify
+        # read compatibility and close serialization.  Current publication is
+        # deliberately restricted to the exact V1 policy, so seed the legacy
+        # evidence directly as migration-era history rather than calling the
+        # current write service.
+        policy = ClosurePolicy(organization_id=ids["org"])
+        db.session.add(policy); db.session.flush()
+        version = ClosurePolicyVersion(
+            organization_id=ids["org"], policy_id=policy.id, version=1,
+            effective_from=utcnow()-timedelta(days=1), actor_user_id=ids["admin"],
+        )
+        db.session.add(version); db.session.flush()
+        db.session.add(ClosurePolicyCriterion(
+            organization_id=ids["org"], policy_version_id=version.id,
+            scope="GENERAL", code="NO_OPEN_FOLLOW_UPS", mandatory=True,
+        ))
         db.session.commit(); version_id=version.id
         shipment = db.session.get(OperationalShipment,ids["shipment_id"])
         stale = values(shipment)

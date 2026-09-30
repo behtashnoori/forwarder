@@ -12,6 +12,7 @@ const categories: Record<string, string> = {
   EXCEPTION: "استثناها", WORK_ITEM: "موارد نیازمند رسیدگی", REFERENCE: "مراجع عملیاتی",
   DOCUMENT: "اسناد", AUDIT: "اقدامات عملیاتی",
   EXECUTION: "اجرا", CARGO: "کالا و تخصیص", TRACKING: "پیگیری", DELIVERY: "تحویل",
+  OPERATIONAL_STAGE: "مراحل عملیاتی", CLOSURE: "تکمیل و بستن",
 };
 
 export default function UnifiedShipmentHistory({ shipmentPublicId }: { shipmentPublicId: string }) {
@@ -50,6 +51,7 @@ export default function UnifiedShipmentHistory({ shipmentPublicId }: { shipmentP
             {item.occurred_at && item.recorded_at && <p className="text-sm text-slate-600">ثبت سیستمی: <time dateTime={item.recorded_at} dir="auto">{displayTime(item.recorded_at)}</time></p>}
             {item.actor && <p>اقدام‌کننده: {item.actor}</p>}
             {item.execution_label && <p>اجرا: {item.execution_label}</p>}
+            {item.stage_label && <p>مرحله عملیاتی: {item.stage_label}</p>}
             {item.cargo_label && <p>کالا: {item.cargo_label}</p>}
             {item.before_quantity != null && item.after_quantity != null && <p>مقدار: {Number(item.before_quantity).toLocaleString("fa-IR")} ← {Number(item.after_quantity).toLocaleString("fa-IR")}</p>}
             {item.quantity != null && <p>مقدار: {Number(item.quantity).toLocaleString("fa-IR")} {item.uom_symbol || ""}</p>}

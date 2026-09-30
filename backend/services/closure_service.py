@@ -6,13 +6,19 @@ import json
 
 from sqlalchemy import select
 from backend.extensions import db
-from backend.closure_models import ClosurePolicy as Policy, ClosurePolicyVersion as Version, ClosurePolicyCriterion as Criterion, ClosureDecision as Decision, CRITERIA, MODES
-from backend.cargo_models import ShipmentCargoItem as Cargo
+from backend.closure_models import (ClosurePolicy as Policy, ClosurePolicyVersion as Version,
+    ClosurePolicyCriterion as Criterion, ClosureDecision as Decision, CRITERIA, MODES,
+    BLOCKER_CRITERIA, WARNING_CRITERIA)
+from backend.cargo_models import ShipmentCargoItem as Cargo, ExecutionUnitCargoAllocation as Allocation
+from backend.eta_models import CargoEtaSnapshot
 from backend.models import ExpertUser
-from backend.operational_models import OperationalOrganization, OperationalMembership, OperationalShipment as Shipment, OperationalException, OperationalWorkItem, RoutePlan, RouteLeg, RouteStageExecution, utcnow
+from backend.operational_models import (OperationalOrganization, OperationalMembership,
+    OperationalShipment as Shipment, OperationalDelay, OperationalException,
+    OperationalWorkItem, RoutePlan, RouteLeg, RouteStageExecution, utcnow)
 from backend.mdpm_models import OperationalDocumentRequirement as Requirement
 from backend.services import operational_service as base, route_time_service as times, route_orchestration_service as routes
 from backend.services import delivery_service as deliveries, document_readiness_service as documents
+from backend.services import shipment_stage_service as shipment_stages
 from backend.services.assigned_work_authorization import authorize_document_management
 
 LABELS = {
@@ -22,6 +28,15 @@ LABELS = {
     "NO_OPEN_EXCEPTIONS": "هیچ مشکل عملیاتی بازی باقی نماند",
     "NO_OPEN_FOLLOW_UPS": "هیچ پیگیری بازی باقی نماند",
     "NO_OPEN_OPERATIONAL_WORK": "هیچ کار عملیاتی بازی باقی نماند",
+    "FINAL_DELIVERY_EXISTS": "تحویل نهایی محموله به‌صراحت ثبت شده باشد",
+    "REQUIRED_OPERATIONAL_STAGES_COMPLETE": "همه مراحل عملیاتی الزامی محموله کامل شده باشند",
+    "NO_BLOCKING_OPERATIONAL_ISSUE": "هیچ مشکل عملیاتی مسدودکننده‌ای باز نباشد",
+    "ACTUAL_CARGO_UNKNOWN": "مقدار واقعی یک یا چند کالا هنوز نامشخص است",
+    "ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED": "تخصیص واقعی با تخصیص برنامه‌ریزی‌شده تفاوت دارد",
+    "DELIVERED_DIFFERS_FROM_PLANNED": "مقدار تحویل‌شده با مقدار برنامه‌ریزی‌شده تفاوت دارد",
+    "OPTIONAL_DOCUMENTS_ABSENT": "یک یا چند سند اختیاری هنوز آماده نیست",
+    "ETA_UNAVAILABLE": "زمان برآوردی رسیدن برای یک یا چند کالا در دسترس نیست",
+    "NON_BLOCKING_OPERATIONAL_WARNINGS": "هشدارهای عملیاتی غیرمسدودکننده باز هستند",
 }
 
 
@@ -61,15 +76,22 @@ def save_policy(user, payload, key):
     if type(payload["expected_version"]) is not int or payload["expected_version"] < 0:
         fail("نسخه قواعد لازم است.")
     values = payload["criteria"]
-    if not isinstance(values, list) or not 1 <= len(values) <= len(CRITERIA) * len(MODES):
-        fail("حداقل یک معیار روشن انتخاب کنید.")
+    if not isinstance(values, list) or len(values) != len(BLOCKER_CRITERIA) + len(WARNING_CRITERIA):
+        fail("نسخه V1 باید دقیقاً چهار مسدودکننده و شش هشدار مصوب را داشته باشد.")
     seen = set()
     for value in values:
         if not isinstance(value, dict) or set(value) != {"scope", "code", "mandatory"} or value["scope"] not in MODES or value["code"] not in CRITERIA or type(value["mandatory"]) is not bool:
             fail("معیار، روش حمل یا الزام معتبر نیست.")
         identity = (value["scope"], value["code"])
         if identity in seen: fail("معیار تکراری در یک دامنه مجاز نیست.")
+        if value["code"] in BLOCKER_CRITERIA and not value["mandatory"]:
+            fail("معیارهای مسدودکننده V1 باید برای بستن عادی الزامی باشند.")
+        if value["code"] in WARNING_CRITERIA and value["mandatory"]:
+            fail("هشدارهای V1 نمی‌توانند مانع بستن شوند.")
         seen.add(identity)
+    expected = {("GENERAL", code) for code in (*BLOCKER_CRITERIA, *WARNING_CRITERIA)}
+    if seen != expected:
+        fail("نسخه V1 فقط معیارهای عمومی مصوب بستن پرونده را می‌پذیرد.")
     effective = times.instant(payload["effective_from"])
     db.session.scalar(select(OperationalOrganization).where(OperationalOrganization.id == org).with_for_update())
     db.session.scalar(select(ExpertUser).where(ExpertUser.id == user["id"]).with_for_update().execution_options(populate_existing=True))
@@ -109,21 +131,64 @@ def _facts(shipment):
     projections = [documents._requirement_projection(row) for row in reqs]
     required = [r for r in projections if r["requirement_level"] != "OPTIONAL"]
     exceptions = db.session.scalars(select(OperationalException).where(OperationalException.operational_shipment_id == shipment.id, OperationalException.resolved_at.is_(None)).order_by(OperationalException.id)).all()
+    delays = db.session.scalars(select(OperationalDelay).where(OperationalDelay.operational_shipment_id == shipment.id, OperationalDelay.resolved_at.is_(None)).order_by(OperationalDelay.id)).all()
     work = db.session.scalars(select(OperationalWorkItem).where(OperationalWorkItem.operational_shipment_id == shipment.id, OperationalWorkItem.status == "open").order_by(OperationalWorkItem.id)).all()
+    allocations = db.session.scalars(select(Allocation).where(
+        Allocation.operational_shipment_id == shipment.id,
+        Allocation.is_current.is_(True),
+        Allocation.route_stage_execution_id.is_not(None),
+        Allocation.dimension.in_(("PLANNED", "ACTUAL")),
+    ).order_by(Allocation.id)).all()
     known = bool(cargo) and all(c.actual_quantity is not None for c in cargo)
     delivered = known and all(t["has_delivery"] and Decimal(t["remaining"]) == 0 for t in totals)
+    final_delivery = any(row.is_final for row in delivery_rows)
+    stage_state, stage_facts = shipment_stages.completion_state(shipment)
+    allocation_totals = defaultdict(lambda: {"PLANNED": Decimal("0"), "ACTUAL": Decimal("0")})
+    allocation_seen = defaultdict(set)
+    for allocation in allocations:
+        key = (allocation.shipment_cargo_item_id, allocation.route_stage_execution_id)
+        allocation_totals[key][allocation.dimension] += allocation.allocated_quantity
+        allocation_seen[key].add(allocation.dimension)
+    allocation_differs = any(
+        seen != {"PLANNED", "ACTUAL"} or allocation_totals[key]["PLANNED"] != allocation_totals[key]["ACTUAL"]
+        for key, seen in allocation_seen.items()
+    )
+    delivered_by_cargo = {row["public_id"]: Decimal(row["delivered"]) for row in totals}
+    delivered_differs = any(delivered_by_cargo.get(row.public_id, Decimal("0")) != (row.planned_quantity or row.quantity) for row in cargo)
+    optional = [r for r in projections if r["requirement_level"] == "OPTIONAL"]
+    optional_absent = any(r["readiness_status"] not in {"SATISFIED", "NOT_APPLICABLE"} for r in optional)
+    eta_cargo_ids = set(db.session.scalars(select(CargoEtaSnapshot.cargo_item_id).where(
+        CargoEtaSnapshot.operational_shipment_id == shipment.id,
+        CargoEtaSnapshot.organization_id == shipment.organization_id,
+        CargoEtaSnapshot.audience == "INTERNAL",
+    )).all())
+    eta_unavailable = any(row.id not in eta_cargo_ids for row in cargo)
+    blocking_work = [row for row in work if row.severity == "critical"]
+    warning_work = [row for row in work if row.severity != "critical"]
     states = {
         "ACTUAL_QUANTITY_KNOWN": "PASS" if known else "UNKNOWN",
         "ALL_CARGO_DELIVERED": "UNKNOWN" if not known else "PASS" if delivered else "FAIL",
-        "REQUIRED_DOCUMENTS_READY": "UNKNOWN" if not reqs or any(r["readiness_status"] == "UNRESOLVED" for r in required) else "PASS" if all(r["readiness_status"] in {"SATISFIED", "NOT_APPLICABLE"} for r in required) else "FAIL",
+        "REQUIRED_DOCUMENTS_READY": "UNKNOWN" if any(r["readiness_status"] == "UNRESOLVED" for r in required) else "PASS" if all(r["readiness_status"] in {"SATISFIED", "NOT_APPLICABLE"} for r in required) else "FAIL",
         "NO_OPEN_EXCEPTIONS": "FAIL" if any(e.resolved_at is None for e in exceptions) else "PASS",
         "NO_OPEN_FOLLOW_UPS": "FAIL" if any(w.status == "open" and w.work_type == "FOLLOW_UP" for w in work) else "PASS",
         "NO_OPEN_OPERATIONAL_WORK": "FAIL" if any(w.status == "open" and w.work_type != "FOLLOW_UP" for w in work) else "PASS",
+        "FINAL_DELIVERY_EXISTS": "PASS" if final_delivery else "FAIL",
+        "REQUIRED_OPERATIONAL_STAGES_COMPLETE": stage_state,
+        "NO_BLOCKING_OPERATIONAL_ISSUE": "FAIL" if exceptions or blocking_work else "PASS",
+        "ACTUAL_CARGO_UNKNOWN": "FAIL" if not known else "PASS",
+        "ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED": "FAIL" if allocation_differs else "PASS",
+        "DELIVERED_DIFFERS_FROM_PLANNED": "FAIL" if delivered_differs else "PASS",
+        "OPTIONAL_DOCUMENTS_ABSENT": "FAIL" if optional_absent else "PASS",
+        "ETA_UNAVAILABLE": "FAIL" if eta_unavailable else "PASS",
+        "NON_BLOCKING_OPERATIONAL_WARNINGS": "FAIL" if delays or warning_work else "PASS",
     }
     facts = {"cargo": [[c.id, c.version, str(c.actual_quantity)] for c in cargo],
-        "deliveries": [[d.id, d.revision, str(d.quantity), d.supersedes_delivery_id] for d in delivery_rows],
+        "deliveries": [[d.id, d.revision, str(d.quantity), d.supersedes_delivery_id, d.is_final] for d in delivery_rows],
         "documents": projections, "exceptions": [[e.id, e.version, str(e.resolved_at)] for e in exceptions],
-        "work": [[w.id, w.version, w.status, w.work_type] for w in work]}
+        "delays": [[d.id, d.version, str(d.resolved_at)] for d in delays],
+        "work": [[w.id, w.version, w.status, w.work_type, w.severity] for w in work],
+        "allocations": [[a.id, a.version, a.dimension, str(a.allocated_quantity), a.route_stage_execution_id] for a in allocations],
+        "eta_cargo_ids": sorted(eta_cargo_ids), "stages": stage_facts}
     return states, facts
 
 
@@ -143,14 +208,15 @@ def assess(shipment, at=None, *, include_sources=False):
     if version:
         states, facts = _facts(shipment)
         grouped = defaultdict(list)
-        for row in db.session.scalars(select(Criterion).where(Criterion.policy_version_id == version.id,
-                Criterion.scope.in_(["GENERAL", *modes])).order_by(Criterion.code, Criterion.scope)).all():
+        configured = db.session.scalars(select(Criterion).where(Criterion.policy_version_id == version.id).order_by(Criterion.code, Criterion.scope)).all()
+        needs_mode = any(row.scope != "GENERAL" for row in configured)
+        for row in [row for row in configured if row.scope in {"GENERAL", *modes}]:
             grouped[row.code].append(row)
         for code, rows in grouped.items():
             items.append({"code": code, "label": LABELS[code], "mandatory": any(r.mandatory for r in rows), "state": states[code],
                 "criteria": [{"public_id": r.public_id, "scope": r.scope, "code": r.code, "mandatory": r.mandatory} for r in rows]})
     missing = [i for i in items if i["state"] != "PASS"]
-    if gap: missing.append({"code": "MODE_UNDEFINED", "label": "روش حمل همه بخش‌های قابل اعمال مشخص نیست", "mandatory": True, "state": "UNKNOWN", "criteria": []})
+    if version and needs_mode and gap: missing.append({"code": "MODE_UNDEFINED", "label": "روش حمل همه بخش‌های قابل اعمال مشخص نیست", "mandatory": True, "state": "UNKNOWN", "criteria": []})
     if version and not items: missing.append({"code": "NO_APPLICABLE_CRITERIA", "label": "معیاری برای این حمل تعریف نشده است", "mandatory": True, "state": "UNKNOWN", "criteria": []})
     basis = {"policy": version.id if version else None, "shipment": [shipment.id, shipment.version, shipment.lifecycle_status],
         "modes": modes, "route": [[r.id, r.version, r.transport_mode] for r in sorted(relevant.values(), key=lambda r: r.id)], "facts": facts, "items": items, "missing": missing}

@@ -48,6 +48,8 @@ class CargoDelivery(db.Model):
     supersedes_delivery_id = db.Column(BIGINT)
     revision = db.Column(db.Integer, nullable=False, default=1)
     reason = db.Column(db.String(500))
+    # Explicit Shipment-level finality. Quantity equality never sets this fact.
+    is_final = db.Column(db.Boolean, nullable=False, default=False)
 
 
 class CargoDeliveryEvidence(db.Model):

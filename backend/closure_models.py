@@ -5,8 +5,14 @@ from backend.extensions import db
 from backend.operational_models import BIGINT, utcnow
 
 MODES = ("GENERAL", "road", "rail", "sea", "air", "multimodal_transfer", "customs_handling")
-CRITERIA = ("ACTUAL_QUANTITY_KNOWN", "ALL_CARGO_DELIVERED", "REQUIRED_DOCUMENTS_READY",
-            "NO_OPEN_EXCEPTIONS", "NO_OPEN_FOLLOW_UPS", "NO_OPEN_OPERATIONAL_WORK")
+LEGACY_CRITERIA = ("ACTUAL_QUANTITY_KNOWN", "ALL_CARGO_DELIVERED", "NO_OPEN_EXCEPTIONS",
+                   "NO_OPEN_FOLLOW_UPS", "NO_OPEN_OPERATIONAL_WORK")
+BLOCKER_CRITERIA = ("FINAL_DELIVERY_EXISTS", "REQUIRED_OPERATIONAL_STAGES_COMPLETE",
+                    "NO_BLOCKING_OPERATIONAL_ISSUE", "REQUIRED_DOCUMENTS_READY")
+WARNING_CRITERIA = ("ACTUAL_CARGO_UNKNOWN", "ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED",
+                    "DELIVERED_DIFFERS_FROM_PLANNED", "OPTIONAL_DOCUMENTS_ABSENT",
+                    "ETA_UNAVAILABLE", "NON_BLOCKING_OPERATIONAL_WARNINGS")
+CRITERIA = (*LEGACY_CRITERIA, *BLOCKER_CRITERIA, *WARNING_CRITERIA)
 
 
 class ClosurePolicy(db.Model):
@@ -43,7 +49,9 @@ class ClosurePolicyCriterion(db.Model):
         db.ForeignKeyConstraint(["policy_version_id", "organization_id"], ["closure_policy_version.id", "closure_policy_version.organization_id"], name="fk_closure_criterion_version", ondelete="RESTRICT"),
         db.UniqueConstraint("policy_version_id", "scope", "code", name="uq_closure_criterion_identity"),
         db.CheckConstraint("scope IN ('GENERAL','road','rail','sea','air','multimodal_transfer','customs_handling')", name="ck_closure_criterion_scope"),
-        db.CheckConstraint("code IN ('ACTUAL_QUANTITY_KNOWN','ALL_CARGO_DELIVERED','REQUIRED_DOCUMENTS_READY','NO_OPEN_EXCEPTIONS','NO_OPEN_FOLLOW_UPS','NO_OPEN_OPERATIONAL_WORK')", name="ck_closure_criterion_code"),
+        db.CheckConstraint("code IN ('ACTUAL_QUANTITY_KNOWN','ALL_CARGO_DELIVERED','REQUIRED_DOCUMENTS_READY','NO_OPEN_EXCEPTIONS','NO_OPEN_FOLLOW_UPS','NO_OPEN_OPERATIONAL_WORK','FINAL_DELIVERY_EXISTS','REQUIRED_OPERATIONAL_STAGES_COMPLETE','NO_BLOCKING_OPERATIONAL_ISSUE','ACTUAL_CARGO_UNKNOWN','ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED','DELIVERED_DIFFERS_FROM_PLANNED','OPTIONAL_DOCUMENTS_ABSENT','ETA_UNAVAILABLE','NON_BLOCKING_OPERATIONAL_WARNINGS')", name="ck_closure_criterion_code"),
+        db.CheckConstraint("code NOT IN ('FINAL_DELIVERY_EXISTS','REQUIRED_OPERATIONAL_STAGES_COMPLETE','NO_BLOCKING_OPERATIONAL_ISSUE','REQUIRED_DOCUMENTS_READY') OR mandatory", name="ck_closure_v1_blocker"),
+        db.CheckConstraint("code NOT IN ('ACTUAL_CARGO_UNKNOWN','ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED','DELIVERED_DIFFERS_FROM_PLANNED','OPTIONAL_DOCUMENTS_ABSENT','ETA_UNAVAILABLE','NON_BLOCKING_OPERATIONAL_WARNINGS') OR NOT mandatory", name="ck_closure_v1_warning"),
     )
     id = db.Column(BIGINT, primary_key=True)
     public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))

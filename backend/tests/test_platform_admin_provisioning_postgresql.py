@@ -65,7 +65,7 @@ def test_postgresql18_concurrent_provisioning_is_atomic_and_idempotent():
         ) < 190000
         assert connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
-        ).scalar_one() == "20261014_canonical_geography_locations"
+        ).scalar_one() == "20261015_org_shipment_stages"
 
     def provision_once(_attempt):
         with app.app_context():

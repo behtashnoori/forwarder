@@ -10,7 +10,7 @@ vi.mock("@/lib/closureApi",()=>({getClosure:api.get,closeShipment:api.close,getC
 const view:ClosureView={assessment:{policy:{public_id:"policy-1",version:1,effective_from:"2026-09-01T00:00:00Z",effective_until:null,recorded_at:"2026-09-01T00:00:00Z",criteria:[]},shipment_version:3,lifecycle_status:"completed",assessed_at:"2026-09-26T10:00:00Z",modes:["road"],items:[{code:"ACTUAL_QUANTITY_KNOWN",label:"مقدار واقعی مشخص باشد",mandatory:true,state:"PASS",criteria:[]}],missing:[],normal_ready:true,message:null,fingerprint:"basis-1"},decision:null,can_close:true,can_close_exceptionally:false};
 const reload=vi.fn().mockResolvedValue(undefined);
 describe("explicit completed-only closure",()=>{
-  beforeEach(()=>{vi.clearAllMocks();api.get.mockResolvedValue({data:view});api.close.mockResolvedValue({data:{public_id:"decision",created:true}});api.config.mockResolvedValue({data:{versions:[],criteria:{ACTUAL_QUANTITY_KNOWN:"مقدار واقعی مشخص باشد"},scopes:["GENERAL","road"]}});api.save.mockResolvedValue({data:{public_id:"version",created:true}});});
+  beforeEach(()=>{vi.clearAllMocks();api.get.mockResolvedValue({data:view});api.close.mockResolvedValue({data:{public_id:"decision",created:true}});api.config.mockResolvedValue({data:{versions:[],criteria:{FINAL_DELIVERY_EXISTS:"تحویل نهایی",REQUIRED_OPERATIONAL_STAGES_COMPLETE:"مراحل الزامی",NO_BLOCKING_OPERATIONAL_ISSUE:"بدون مشکل مسدودکننده",REQUIRED_DOCUMENTS_READY:"مدارک الزامی",ACTUAL_CARGO_UNKNOWN:"مقدار واقعی نامشخص",ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED:"اختلاف تخصیص",DELIVERED_DIFFERS_FROM_PLANNED:"اختلاف تحویل",OPTIONAL_DOCUMENTS_ABSENT:"مدارک اختیاری",ETA_UNAVAILABLE:"ETA ناموجود",NON_BLOCKING_OPERATIONAL_WARNINGS:"هشدارهای عملیاتی"},scopes:["GENERAL","road"]}});api.save.mockResolvedValue({data:{public_id:"version",created:true}});});
   it("requires an explicit review and confirmation and sends the assessed version",async()=>{
     render(<ShipmentClosure shipment="shipment" reload={reload}/>);
     fireEvent.click(await screen.findByRole("button",{name:"بستن پرونده"}));
@@ -59,11 +59,16 @@ describe("explicit completed-only closure",()=>{
     render(<ClosurePolicyTab/>);
     expect(await screen.findByText(/قواعد هنوز تعریف نشده است/)).toBeInTheDocument();
     expect(api.save).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button",{name:"تعریف نسخه تازه قواعد"}));
+    fireEvent.click(screen.getByRole("button",{name:"تعریف نسخه V1 قواعد"}));
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button",{name:"افزودن معیار"}));
     fireEvent.change(screen.getByLabelText("شروع اعتبار (زمان محلی)"),{target:{value:"2030-01-01T09:00"}});
     fireEvent.click(screen.getByRole("button",{name:"ثبت نسخه قواعد"}));
-    await waitFor(()=>expect(api.save).toHaveBeenCalledWith(expect.objectContaining({expected_version:0,criteria:[{scope:"GENERAL",code:"ACTUAL_QUANTITY_KNOWN",mandatory:true}]}),expect.any(String)));
+    await waitFor(()=>expect(api.save).toHaveBeenCalledWith(expect.objectContaining({expected_version:0,criteria:expect.arrayContaining([
+      {scope:"GENERAL",code:"FINAL_DELIVERY_EXISTS",mandatory:true},
+      {scope:"GENERAL",code:"REQUIRED_OPERATIONAL_STAGES_COMPLETE",mandatory:true},
+      {scope:"GENERAL",code:"ACTUAL_CARGO_UNKNOWN",mandatory:false},
+      {scope:"GENERAL",code:"DELIVERED_DIFFERS_FROM_PLANNED",mandatory:false},
+    ])}),expect.any(String)));
+    expect(api.save.mock.calls[0][0].criteria).toHaveLength(10);
   });
 });

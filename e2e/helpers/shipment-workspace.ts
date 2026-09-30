@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test";
 export type ShipmentWorkspaceSection =
   | "summary"
   | "route"
+  | "stages"
   | "cargo"
   | "documents"
   | "tracking"
@@ -13,6 +14,7 @@ export type ShipmentWorkspaceSection =
 const labels: Record<ShipmentWorkspaceSection, string> = {
   summary: "خلاصه",
   route: "مسیر و اجرا",
+  stages: "مراحل عملیاتی",
   cargo: "کالا و تخصیص",
   documents: "اسناد",
   tracking: "پیگیری و ETA",

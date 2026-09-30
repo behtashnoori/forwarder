@@ -42,6 +42,7 @@ from .customer_shipments import customer_shipments_bp
 from .route_times import route_times_bp
 from .eta import eta_bp
 from .closure import closure_bp
+from .shipment_stages import shipment_stages_bp
 from .owner_transfer import owner_transfer_bp
 
 
@@ -91,4 +92,5 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(route_times_bp)
     app.register_blueprint(eta_bp)
     app.register_blueprint(closure_bp)
+    app.register_blueprint(shipment_stages_bp)
     app.register_blueprint(owner_transfer_bp)

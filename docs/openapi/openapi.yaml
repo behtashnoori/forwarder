@@ -2526,7 +2526,7 @@ components:
         criteria:
           type: object
           additionalProperties: false
-          required: [ACTUAL_QUANTITY_KNOWN, ALL_CARGO_DELIVERED, REQUIRED_DOCUMENTS_READY, NO_OPEN_EXCEPTIONS, NO_OPEN_FOLLOW_UPS, NO_OPEN_OPERATIONAL_WORK]
+          required: [ACTUAL_QUANTITY_KNOWN, ALL_CARGO_DELIVERED, REQUIRED_DOCUMENTS_READY, NO_OPEN_EXCEPTIONS, NO_OPEN_FOLLOW_UPS, NO_OPEN_OPERATIONAL_WORK, FINAL_DELIVERY_EXISTS, REQUIRED_OPERATIONAL_STAGES_COMPLETE, NO_BLOCKING_OPERATIONAL_ISSUE, ACTUAL_CARGO_UNKNOWN, ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED, DELIVERED_DIFFERS_FROM_PLANNED, OPTIONAL_DOCUMENTS_ABSENT, ETA_UNAVAILABLE, NON_BLOCKING_OPERATIONAL_WARNINGS]
           properties:
             ACTUAL_QUANTITY_KNOWN: {type: string}
             ALL_CARGO_DELIVERED: {type: string}
@@ -2534,6 +2534,15 @@ components:
             NO_OPEN_EXCEPTIONS: {type: string}
             NO_OPEN_FOLLOW_UPS: {type: string}
             NO_OPEN_OPERATIONAL_WORK: {type: string}
+            FINAL_DELIVERY_EXISTS: {type: string}
+            REQUIRED_OPERATIONAL_STAGES_COMPLETE: {type: string}
+            NO_BLOCKING_OPERATIONAL_ISSUE: {type: string}
+            ACTUAL_CARGO_UNKNOWN: {type: string}
+            ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED: {type: string}
+            DELIVERED_DIFFERS_FROM_PLANNED: {type: string}
+            OPTIONAL_DOCUMENTS_ABSENT: {type: string}
+            ETA_UNAVAILABLE: {type: string}
+            NON_BLOCKING_OPERATIONAL_WARNINGS: {type: string}
         scopes:
           type: array
           items:
@@ -2554,8 +2563,8 @@ components:
           format: date-time
         criteria:
           type: array
-          minItems: 1
-          maxItems: 42
+          minItems: 10
+          maxItems: 10
           items:
             type: object
             additionalProperties: false
@@ -2568,21 +2577,19 @@ components:
                 type: string
                 enum:
                 - GENERAL
-                - road
-                - rail
-                - sea
-                - air
-                - multimodal_transfer
-                - customs_handling
               code:
                 type: string
                 enum:
-                - ACTUAL_QUANTITY_KNOWN
-                - ALL_CARGO_DELIVERED
                 - REQUIRED_DOCUMENTS_READY
-                - NO_OPEN_EXCEPTIONS
-                - NO_OPEN_FOLLOW_UPS
-                - NO_OPEN_OPERATIONAL_WORK
+                - FINAL_DELIVERY_EXISTS
+                - REQUIRED_OPERATIONAL_STAGES_COMPLETE
+                - NO_BLOCKING_OPERATIONAL_ISSUE
+                - ACTUAL_CARGO_UNKNOWN
+                - ACTUAL_ALLOCATION_DIFFERS_FROM_PLANNED
+                - DELIVERED_DIFFERS_FROM_PLANNED
+                - OPTIONAL_DOCUMENTS_ABSENT
+                - ETA_UNAVAILABLE
+                - NON_BLOCKING_OPERATIONAL_WARNINGS
               mandatory:
                 type: boolean
     CloseShipmentCommand:
@@ -2624,6 +2631,102 @@ components:
           format: uuid
         created:
           type: boolean
+    OrganizationShipmentStage:
+      type: object
+      additionalProperties: false
+      required: [public_id, configuration_public_id, code, display_name_fa, sequence, active, required_for_completion]
+      properties:
+        public_id: { type: string, format: uuid, description: Stable Organization stage-definition identity. }
+        configuration_public_id: { type: string, format: uuid, description: Immutable definition-version identity. }
+        code: { type: string, enum: [PREPARATION_LOADING, ORIGIN_DEPARTURE, IN_TRANSIT, DESTINATION_ARRIVAL, UNLOADING] }
+        display_name_fa: { type: string, minLength: 1, maxLength: 160 }
+        sequence: { type: integer, minimum: 1, maximum: 5 }
+        active: { type: boolean }
+        required_for_completion: { type: boolean }
+    OrganizationShipmentStagePolicyVersion:
+      type: object
+      additionalProperties: false
+      required: [public_id, version, effective_from, recorded_at, stages]
+      properties:
+        public_id: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        effective_from: { type: string, format: date-time }
+        recorded_at: { type: string, format: date-time }
+        stages: { type: array, minItems: 5, maxItems: 5, items: { $ref: '#/components/schemas/OrganizationShipmentStage' } }
+    OrganizationShipmentStageConfiguration:
+      type: object
+      additionalProperties: false
+      required: [canonical_stages, versions]
+      properties:
+        canonical_stages:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, display_name_fa]
+            properties:
+              code: { type: string, enum: [PREPARATION_LOADING, ORIGIN_DEPARTURE, IN_TRANSIT, DESTINATION_ARRIVAL, UNLOADING] }
+              display_name_fa: { type: string }
+        versions: { type: array, items: { $ref: '#/components/schemas/OrganizationShipmentStagePolicyVersion' } }
+    OrganizationShipmentStagePolicyCommand:
+      type: object
+      additionalProperties: false
+      required: [expected_version, effective_from, stages]
+      properties:
+        expected_version: { type: integer, minimum: 0 }
+        effective_from: { type: string, format: date-time }
+        stages:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, display_name_fa, sequence, active, required_for_completion]
+            properties:
+              code: { type: string, enum: [PREPARATION_LOADING, ORIGIN_DEPARTURE, IN_TRANSIT, DESTINATION_ARRIVAL, UNLOADING] }
+              display_name_fa: { type: string, minLength: 1, maxLength: 160 }
+              sequence: { type: integer, minimum: 1, maximum: 5 }
+              active: { type: boolean }
+              required_for_completion: { type: boolean }
+    ShipmentOperationalStage:
+      type: object
+      additionalProperties: false
+      required: [public_id, configuration_public_id, code, display_name_fa, sequence, active, required_for_completion, status, started_at, completed_at]
+      properties:
+        public_id: { type: string, format: uuid }
+        configuration_public_id: { type: string, format: uuid }
+        code: { type: string, enum: [PREPARATION_LOADING, ORIGIN_DEPARTURE, IN_TRANSIT, DESTINATION_ARRIVAL, UNLOADING] }
+        display_name_fa: { type: string }
+        sequence: { type: integer, minimum: 1, maximum: 5 }
+        active: { type: boolean }
+        required_for_completion: { type: boolean }
+        status: { type: string, enum: [NOT_STARTED, STARTED, COMPLETED] }
+        started_at: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+    ShipmentOperationalStagesView:
+      type: object
+      additionalProperties: false
+      required: [configuration, pinned, instance_public_id, stages, can_record, project_required]
+      properties:
+        configuration:
+          allOf: [{ $ref: '#/components/schemas/OrganizationShipmentStagePolicyVersion' }]
+          nullable: true
+        pinned: { type: boolean }
+        instance_public_id: { type: string, format: uuid, nullable: true }
+        stages: { type: array, items: { $ref: '#/components/schemas/ShipmentOperationalStage' } }
+        can_record: { type: boolean }
+        project_required: { type: boolean, enum: [false] }
+    ShipmentOperationalStageEventCommand:
+      type: object
+      additionalProperties: false
+      required: [event_type, occurred_at, expected_policy_version_public_id]
+      properties:
+        event_type: { type: string, enum: [STARTED, COMPLETED] }
+        occurred_at: { type: string, format: date-time }
+        expected_policy_version_public_id: { type: string, format: uuid }
 paths:
   /api/organization/route-reference-times:
     get:
@@ -5761,6 +5864,7 @@ paths:
                 destination_text: { type: string, minLength: 1, maxLength: 255 }
                 occurred_at: { type: string, format: date-time, description: Explicit aware occurrence instant; backend assigns recorded_at. }
                 expected_version: { type: integer, minimum: 0, description: Zero for a new delivery; exact current predecessor revision for correction. }
+                is_final: { type: boolean, default: false, description: Explicit final-delivery semantic, never inferred from quantity equality. Omission remains a partial Delivery for backwards compatibility. At most one current final Delivery may exist for a Shipment. }
                 corrects_public_id: { type: string, format: uuid, description: Current same-Cargo delivery; all original facts and evidence remain. }
                 reason: { type: string, nullable: true, maxLength: 500 }
                 evidence_document_public_ids: { type: array, maxItems: 20, uniqueItems: true, items: { type: string, format: uuid }, description: Exact active same-Shipment file versions with typed same-Cargo or same-Cargo Delivery context. Empty is allowed; later uploads use DELIVERY context and atomic evidence linking. }
@@ -5876,6 +5980,81 @@ paths:
           description: Invalid page.
         '409': { description: Current authorization changed during projection; discard and reread. }
 
+  /api/admin/shipment-stage-configuration:
+    get:
+      operationId: getOrganizationShipmentStageConfiguration
+      summary: Organization Admin reads immutable Organization Shipment stage configuration history.
+      tags: [Operational Shipments]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Authorized tenant result; private, no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [data]
+                properties: { data: { $ref: '#/components/schemas/OrganizationShipmentStageConfiguration' } }
+        '401': { description: Authentication required. }
+        '403': { description: Active same-Organization Admin required. }
+  /api/admin/shipment-stage-configuration/versions:
+    post:
+      operationId: createOrganizationShipmentStageConfigurationVersion
+      summary: Organization Admin publishes an immutable five-stage prospective configuration.
+      tags: [Operational Shipments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/OrganizationShipmentStagePolicyCommand' } } }
+      responses:
+        '201': { description: Configuration version created. }
+        '200': { description: Exact idempotent replay. }
+        '403': { description: Active same-Organization Admin required. }
+        '409': { description: Stale version, replay conflict or concurrent change. }
+        '422': { description: Invalid canonical stage configuration. }
+  /api/operational-shipments/{shipment_id}/operational-stages:
+    get:
+      operationId: getShipmentOperationalStages
+      summary: Read project-independent operational Shipment stages from the applicable or pinned Organization configuration.
+      tags: [Operational Shipments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Stage state with explicit started/completed instants; reading does not create history.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [data]
+                properties: { data: { $ref: '#/components/schemas/ShipmentOperationalStagesView' } }
+        '403': { description: Missing Shipment read authority. }
+        '404': { description: Missing or inaccessible Shipment. }
+  /api/operational-shipments/{shipment_id}/operational-stages/{definition_id}/events:
+    post:
+      operationId: recordShipmentOperationalStageEvent
+      summary: Owning Expert appends an explicit stage-started or stage-completed event in configured order.
+      tags: [Operational Shipments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: definition_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ShipmentOperationalStageEventCommand' } } }
+      responses:
+        '201': { description: Immutable stage event appended. }
+        '200': { description: Exact idempotent replay. }
+        '403': { description: Active owning Expert required; Organization Admin does not inherit command authority. }
+        '404': { description: Missing or inaccessible Shipment or active definition. }
+        '409': { description: Closed Shipment, stale configuration, invalid order/transition or replay conflict. }
+        '422': { description: Invalid event type or aware occurrence instant. }
   /api/admin/closure-policy:
     get:
       operationId: getClosurePolicy

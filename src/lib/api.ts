@@ -2113,6 +2113,7 @@ export interface ShipmentHistoryItem {
   source_is_projection?: boolean;
   cargo_label?: string | null;
   execution_label?: string | null;
+  stage_label?: string | null;
   before_quantity?: string | null;
   after_quantity?: string | null;
   quantity?: string | null;

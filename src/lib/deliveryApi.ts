@@ -8,7 +8,7 @@ export interface DeliveryCargo {
 export interface DeliveryFact {
   public_id: string; cargo_public_id: string; quantity: string; uom_symbol: string; destination_text: string | null;
   occurred_at: string; recorded_at: string; revision: number; status: "CURRENT" | "SUPERSEDED";
-  is_correction: boolean; actor_label: string; reason: string | null; corrects_public_id: string | null;
+  is_correction: boolean; is_final: boolean; actor_label: string; reason: string | null; corrects_public_id: string | null;
   evidence: Array<{ public_id: string; filename: string; version: number; status: string }>;
   destination?: { display_name?: string; facility?: { display_name?: string }; canonical_geography?: { display_name?: string } } | null;
   destination_reference?: {country_id:number;source_type:string;source_id:number|string} | null;
@@ -17,11 +17,11 @@ export interface DeliveryDraft {
   cargo_public_id: string; quantity: string; uom_public_id: string; destination_text?: string;
   destination_reference?: {country_id:number;source_type:string;source_id:number|string}; destination_note?: string | null;
   occurred_at: string; expected_version: number; corrects_public_id?: string; reason?: string | null;
-  evidence_document_public_ids?: string[];
+  evidence_document_public_ids?: string[]; is_final: boolean;
 }
 export interface DeliveryList { cargo: DeliveryCargo[]; items: DeliveryFact[]; can_manage: boolean; page: number; total: number }
 const path = (shipment: string) => `/api/operational-shipments/${encodeURIComponent(shipment)}/deliveries`;
 export const listDeliveries = (shipment: string, page = 1) => request<{ data: DeliveryList }>(`${path(shipment)}?page=${page}`, { cache: "no-store" });
-export const recordDelivery = (shipment: string, draft: DeliveryDraft, key: string) => request<{ public_id: string; revision: number; created: boolean }>(path(shipment), {
+export const recordDelivery = (shipment: string, draft: DeliveryDraft, key: string) => request<{ public_id: string; revision: number; is_final: boolean; created: boolean }>(path(shipment), {
   method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(draft),
 });
