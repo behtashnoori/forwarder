@@ -1,0 +1,28 @@
+{
+  "stopped": true,
+  "qualified_candidate_sha": "e2cc7d68a2ee1987b3de2fe74ac5685b5ec07951",
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "product_sha": "add28ca831b9a0c5958a548d98b4cdedae44f1d9",
+  "production_accessed": false,
+  "browser_stages": [
+    "IPJ04"
+  ],
+  "release_created": false,
+  "postgres_only": false,
+  "schema": "20261014_canonical_geography_locations",
+  "production_migration_performed": false,
+  "browser_only": true,
+  "executed_at_utc": "2026-09-30T08:05:29.0499143Z",
+  "deployment_performed": false,
+  "dirty_source": false,
+  "results": [
+    {
+      "name": "IPJ04 Chrome",
+      "specs": [
+        "e2e/phase3-owner-transfer.spec.ts"
+      ],
+      "status": "PASS"
+    }
+  ],
+  "production_mutated": false
+}

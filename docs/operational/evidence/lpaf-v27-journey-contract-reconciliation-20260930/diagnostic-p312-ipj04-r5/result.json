@@ -1,0 +1,29 @@
+{
+  "production_mutated": false,
+  "dirty_source": false,
+  "production_accessed": false,
+  "qualified_candidate_sha": "2625e1b2995b5e6ce741feb6e2894ec0f6a3ab46",
+  "postgres_only": false,
+  "browser_stages": [
+    "P312",
+    "IPJ04"
+  ],
+  "release_created": false,
+  "deployment_performed": false,
+  "executed_at_utc": "2026-09-30T07:51:02.1864525Z",
+  "product_sha": "add28ca831b9a0c5958a548d98b4cdedae44f1d9",
+  "schema": "20261014_canonical_geography_locations",
+  "production_migration_performed": false,
+  "results": [
+    {
+      "name": "P312 Chrome",
+      "specs": [
+        "e2e/phase3-closure.spec.ts"
+      ],
+      "status": "PASS"
+    }
+  ],
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "browser_only": true,
+  "stopped": true
+}

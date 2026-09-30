@@ -1,0 +1,150 @@
+{
+  "qualified_candidate_sha": "e2cc7d68a2ee1987b3de2fe74ac5685b5ec07951",
+  "postgres_only": false,
+  "dirty_source": false,
+  "browser_only": true,
+  "production_migration_performed": false,
+  "schema": "20261014_canonical_geography_locations",
+  "stopped": true,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "product_sha": "add28ca831b9a0c5958a548d98b4cdedae44f1d9",
+  "executed_at_utc": "2026-09-30T08:34:57.0851406Z",
+  "results": [
+    {
+      "specs": [
+        "e2e/phase3-reference-catalog.spec.ts",
+        "e2e/admin-system-foundations.spec.ts"
+      ],
+      "name": "P301 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-cargo-lineage.spec.ts"
+      ],
+      "name": "P302 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-branched-route.spec.ts"
+      ],
+      "name": "P303 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-transport-execution.spec.ts",
+        "e2e/human-walkthrough-cargo-chain.spec.ts"
+      ],
+      "name": "P304 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-cargo-allocation.spec.ts"
+      ],
+      "name": "P305 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-document-context.spec.ts"
+      ],
+      "name": "P306 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-reported-facts.spec.ts"
+      ],
+      "name": "P307 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-cargo-delivery.spec.ts"
+      ],
+      "name": "P308 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-route-time.spec.ts"
+      ],
+      "name": "P310 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-eta.spec.ts"
+      ],
+      "name": "P311 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-closure.spec.ts"
+      ],
+      "name": "P312 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-owner-transfer.spec.ts"
+      ],
+      "name": "P313 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/fixed-shipment-owner.spec.ts"
+      ],
+      "name": "IPJ01 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/operational-workspace-phase1.spec.ts"
+      ],
+      "name": "IPJ02-IPJ03 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/operational-workspace-phase2.spec.ts"
+      ],
+      "name": "IPJ02-IPJ03-PHASE2 Chrome",
+      "status": "PASS"
+    },
+    {
+      "specs": [
+        "e2e/phase3-owner-transfer.spec.ts"
+      ],
+      "name": "IPJ04 Chrome",
+      "status": "PASS"
+    }
+  ],
+  "production_accessed": false,
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "browser_stages": [
+    "P301",
+    "P302",
+    "P303",
+    "P304",
+    "P305",
+    "P306",
+    "P307",
+    "P308",
+    "P310",
+    "P311",
+    "P312",
+    "P313",
+    "IPJ01",
+    "IPJ02-IPJ03",
+    "IPJ02-IPJ03-PHASE2",
+    "IPJ04"
+  ]
+}

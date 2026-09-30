@@ -1,0 +1,12 @@
+{
+  "owner_transfer": "PASS",
+  "shared_cargo_route_execution_allocation": "PASS",
+  "report_correction_history": "PASS",
+  "contextual_documents": "PASS",
+  "partial_delivery_history": "PASS",
+  "eta": "PASS",
+  "closure": "PASS",
+  "old_owner_denial": "PASS",
+  "customer_a_b_privacy_after_transfer_and_closure": "PASS",
+  "production_accessed": false
+}

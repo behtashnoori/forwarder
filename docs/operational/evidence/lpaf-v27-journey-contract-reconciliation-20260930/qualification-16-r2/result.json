@@ -1,0 +1,66 @@
+{
+  "dirty_source": false,
+  "qualified_candidate_sha": "773960c1732f9f9a90673f19e243fc4a57468810",
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "stopped": true,
+  "browser_stages": [
+    "P301",
+    "P302",
+    "P303",
+    "P304",
+    "P305",
+    "P306",
+    "P307",
+    "P308",
+    "P310",
+    "P311",
+    "P312",
+    "P313",
+    "IPJ01",
+    "IPJ02-IPJ03",
+    "IPJ02-IPJ03-PHASE2",
+    "IPJ04"
+  ],
+  "production_mutated": false,
+  "schema": "20261014_canonical_geography_locations",
+  "product_sha": "add28ca831b9a0c5958a548d98b4cdedae44f1d9",
+  "postgres_only": false,
+  "results": [
+    {
+      "specs": [
+        "e2e/phase3-reference-catalog.spec.ts",
+        "e2e/admin-system-foundations.spec.ts"
+      ],
+      "status": "PASS",
+      "name": "P301 Chrome"
+    },
+    {
+      "specs": [
+        "e2e/phase3-cargo-lineage.spec.ts"
+      ],
+      "status": "PASS",
+      "name": "P302 Chrome"
+    },
+    {
+      "specs": [
+        "e2e/phase3-branched-route.spec.ts"
+      ],
+      "status": "PASS",
+      "name": "P303 Chrome"
+    },
+    {
+      "specs": [
+        "e2e/phase3-transport-execution.spec.ts",
+        "e2e/human-walkthrough-cargo-chain.spec.ts"
+      ],
+      "status": "PASS",
+      "name": "P304 Chrome"
+    }
+  ],
+  "release_created": false,
+  "production_accessed": false,
+  "browser_only": true,
+  "executed_at_utc": "2026-09-30T07:10:06.4865115Z",
+  "deployment_performed": false,
+  "production_migration_performed": false
+}

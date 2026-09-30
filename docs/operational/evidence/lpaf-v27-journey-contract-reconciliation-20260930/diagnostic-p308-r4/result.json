@@ -1,0 +1,28 @@
+{
+  "browser_only": true,
+  "dirty_source": false,
+  "browser_stages": [
+    "P308"
+  ],
+  "schema": "20261014_canonical_geography_locations",
+  "executed_at_utc": "2026-09-30T07:30:21.5716856Z",
+  "product_sha": "add28ca831b9a0c5958a548d98b4cdedae44f1d9",
+  "results": [
+    {
+      "status": "PASS",
+      "specs": [
+        "e2e/phase3-cargo-delivery.spec.ts"
+      ],
+      "name": "P308 Chrome"
+    }
+  ],
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "deployment_performed": false,
+  "release_created": false,
+  "qualified_candidate_sha": "2dc4f9af65349445802af65b66c5725d00e068c1",
+  "stopped": true,
+  "production_migration_performed": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "postgres_only": false
+}

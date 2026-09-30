@@ -1,0 +1,20 @@
+{
+  "schema": "20261014_canonical_geography_locations",
+  "production_accessed": false,
+  "executed_at_utc": "2026-09-30T08:00:22.0455609Z",
+  "qualified_candidate_sha": "cbe22d92304d17945681a5aa7bbad8c056632397",
+  "production_mutated": false,
+  "results": [],
+  "deployment_performed": false,
+  "postgres_only": false,
+  "product_sha": "add28ca831b9a0c5958a548d98b4cdedae44f1d9",
+  "stopped": true,
+  "dirty_source": false,
+  "release_created": false,
+  "browser_stages": [
+    "IPJ04"
+  ],
+  "production_migration_performed": false,
+  "browser_only": true,
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome"
+}
