@@ -154,3 +154,38 @@ transactional behavior did not.
 Controlled canonical integration is authorized only from this independently
 qualified Product SHA and its evidence commit. The preserved runtime package
 apply occurs afterward using the reviewed checksum and plan fingerprint.
+
+## Preserved runtime — governed apply receipt
+
+The preserved local database was brought online without reset or reseed. Before
+mutation, a PostgreSQL custom-format recovery snapshot was written to
+`D:\1-webapp\forwarder-human-walkthrough-runtime\pre-typography-document-foundation-20260930-v2.dump`
+(`4,031,308` bytes; SHA-256
+`77F378E3E9FC6B55B484D8170D5C73B02A24FF25FB56FFB2E5CD8F4BD3EA3303`).
+
+The reviewed plan fingerprint remained
+`sha256:549ec64efcc9a4dec1200c2079af7002be9128d2a56082241a12902685521353`.
+Apply run `0dfe03e1-39d3-4a03-8d0e-97cf558c898c` completed with status
+`succeeded`, four creates, zero updates, and zero conflicts. Using the existing
+governed catalog lifecycle and organization-policy services, the same qualified
+organization administrator promoted only those four source-confirmed entries to
+`ACTIVE` and set each organization policy to `OPTIONAL`.
+
+Post-apply read-only verification established:
+
+- `DOCUMENT_TYPE_COUNT=4`
+- `DOCUMENT_REQUIRED_COUNT=0`
+- `ORGANIZATION_OPTIONAL_POLICY_COUNT=4`
+- `PROJECT_DOCUMENT_REQUIREMENT_COUNT=0`
+- `OPERATIONAL_DOCUMENT_REQUIREMENT_COUNT=0`
+- `UPLOADED_FILE_COUNT=0`
+- `OPERATIONAL_STAGE_COUNT=0` (`project_milestone_definition`)
+- `CLOSURE_POLICY_ACTIVE=0`; `CLOSURE_CRITERION_COUNT=0`
+- Shipment `project_id=NULL`, lifecycle `planned`
+- Requested `100`, Planned `100`, Actual Cargo `UNKNOWN`, Planned Allocation
+  `100`, Actual Allocation `95`, Delivered `95`, destination `بندرعباس`, manual
+  position `نزدیک مرز`
+
+The two pre-existing route-plan milestone observations remain untouched and are
+not Project-scoped operational-stage definitions. No upload, stage, closure,
+Route, Delivery, allocation, or other Expert business action was performed.

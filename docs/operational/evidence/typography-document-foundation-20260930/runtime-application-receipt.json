@@ -1,0 +1,82 @@
+{
+  "runtime": "forwarder-human-walkthrough-runtime",
+  "database": "forwarder_human_walkthrough",
+  "environment": "uat",
+  "backup": {
+    "path": "D:\\1-webapp\\forwarder-human-walkthrough-runtime\\pre-typography-document-foundation-20260930-v2.dump",
+    "bytes": 4031308,
+    "sha256": "77F378E3E9FC6B55B484D8170D5C73B02A24FF25FB56FFB2E5CD8F4BD3EA3303"
+  },
+  "package": {
+    "catalog_name": "forwarder-v1-operational-generic-documents",
+    "catalog_version": "1.0.0",
+    "checksum": "sha256:657625053e373a80fcb80b18e83077e0063ca44d6a04bdd122a7653ba0596820",
+    "reviewed_plan_fingerprint": "sha256:549ec64efcc9a4dec1200c2079af7002be9128d2a56082241a12902685521353",
+    "run_id": "0dfe03e1-39d3-4a03-8d0e-97cf558c898c",
+    "status": "succeeded",
+    "planned_count": 4,
+    "created_count": 4,
+    "updated_count": 0,
+    "conflict_count": 0
+  },
+  "document_types": [
+    {
+      "code": "generic_transport_document",
+      "name_fa": "بارنامه",
+      "name_en": "Transport Document",
+      "lifecycle": "ACTIVE",
+      "requirement_level": "OPTIONAL"
+    },
+    {
+      "code": "generic_invoice",
+      "name_fa": "فاکتور",
+      "name_en": "Invoice",
+      "lifecycle": "ACTIVE",
+      "requirement_level": "OPTIONAL"
+    },
+    {
+      "code": "generic_packing_list",
+      "name_fa": "پکینگ لیست",
+      "name_en": "Packing List",
+      "lifecycle": "ACTIVE",
+      "requirement_level": "OPTIONAL"
+    },
+    {
+      "code": "generic_delivery_receipt",
+      "name_fa": "رسید تحویل",
+      "name_en": "Delivery Receipt",
+      "lifecycle": "ACTIVE",
+      "requirement_level": "OPTIONAL"
+    }
+  ],
+  "counts": {
+    "document_type_count": 4,
+    "document_required_count": 0,
+    "organization_optional_policy_count": 4,
+    "project_document_requirement_count": 0,
+    "operational_document_requirement_count": 0,
+    "uploaded_file_count": 0,
+    "operational_stage_count": 0,
+    "closure_policy_active": 0,
+    "closure_criterion_count": 0
+  },
+  "preserved_shipment": {
+    "public_id": "c66be7ef-ee20-4d39-a985-a3db5bd611db",
+    "project_id": null,
+    "lifecycle_status": "planned",
+    "requested_quantity": 100,
+    "planned_quantity": 100,
+    "actual_quantity": null,
+    "planned_allocation": 100,
+    "actual_allocation": 95,
+    "delivered_quantity": 95,
+    "delivery_destination": "بندرعباس",
+    "manual_position": "نزدیک مرز"
+  },
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "human_product_walkthrough": "IN_PROGRESS",
+  "release_ready": false
+}

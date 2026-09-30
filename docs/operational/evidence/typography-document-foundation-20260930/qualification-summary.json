@@ -36,6 +36,23 @@
     "shipment_public_id": "c66be7ef-ee20-4d39-a985-a3db5bd611db",
     "shipment_facts_preserved": true
   },
+  "post_apply_runtime": {
+    "backup_path": "D:\\1-webapp\\forwarder-human-walkthrough-runtime\\pre-typography-document-foundation-20260930-v2.dump",
+    "backup_sha256": "77F378E3E9FC6B55B484D8170D5C73B02A24FF25FB56FFB2E5CD8F4BD3EA3303",
+    "catalog_run_id": "0dfe03e1-39d3-4a03-8d0e-97cf558c898c",
+    "catalog_run_status": "succeeded",
+    "document_type_count": 4,
+    "document_required_count": 0,
+    "organization_optional_policy_count": 4,
+    "project_document_requirement_count": 0,
+    "operational_document_requirement_count": 0,
+    "uploaded_file_count": 0,
+    "operational_stage_count": 0,
+    "closure_policy_active": 0,
+    "closure_criterion_count": 0,
+    "shipment_project_id": null,
+    "shipment_facts_preserved": true
+  },
   "product_behavior_changed": false,
   "journey_impact": "AFFECTS_EXISTING_JOURNEY",
   "journey_result": "PASS",
