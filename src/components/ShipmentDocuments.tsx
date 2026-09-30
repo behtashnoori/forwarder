@@ -3,6 +3,7 @@ import { Download, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import {
   deleteShipmentDocument,
   downloadShipmentDocument,
@@ -248,7 +249,8 @@ export default function ShipmentDocuments({ shipmentPublicId }: { shipmentPublic
                 </select>
               </label>}
             </>}
-            <Input className="sm:col-span-2" aria-label="انتخاب فایل سند" type="file" multiple={!replaceId} accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx"
+            <LocalizedFileInput containerClassName="sm:col-span-2" aria-label="انتخاب فایل سند" multiple={!replaceId} accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx"
+              selectedText={files.length > 1 ? `${files.length.toLocaleString("fa-IR")} فایل انتخاب شده است` : files[0]?.name || "فایلی انتخاب نشده است"}
               onChange={(event) => setFiles(Array.from(event.target.files || []))} />
             <Button className="sm:col-span-2" disabled={busy || !options || !files.length || (Boolean(replaceId) && files.length !== 1) || !title.trim() || !target || (visibility === "EXPLICIT_SHARED" && !audiences.length)}
               onClick={() => void upload()}><Upload className="ms-2 h-4 w-4" />{busy ? "در حال بارگذاری…" : files.length > 1 ? `بارگذاری ${files.length} فایل` : "بارگذاری سند"}</Button>

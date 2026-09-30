@@ -14,7 +14,7 @@ const NavItem = ({ to, active, children }: { to: string; active: boolean; childr
     aria-current={active ? "page" : undefined}
     className={cn(
       buttonVariants({ variant: active ? "default" : "ghost" }),
-      "min-h-11",
+      "app-nav__item min-h-10 px-3 text-sm",
     )}
   >
     {children}
@@ -48,7 +48,7 @@ export default function OperationsNav() {
   })();
   if (!contextLoaded) return null;
   const isNewOperation = pathname === "/operations/shipments/new";
-  return <nav aria-label={t("operations.navLabel")} className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2">
+  return <nav aria-label={t("operations.navLabel")} className="app-nav flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
     {canReadOperations && <NavItem to="/operations" active={pathname === "/operations"}>فضای کار امروز</NavItem>}
     {canReadRequests && <NavItem to="/expert" active={pathname === "/expert" || pathname.startsWith("/expert/requests/")}>درخواست‌ها و قیمت‌ها</NavItem>}
     {canReadOperations && <NavItem to="/operations/shipments" active={!isNewOperation && pathname.startsWith("/operations/shipments")}>{t("operations.shipmentsTitle")}</NavItem>}
@@ -56,7 +56,7 @@ export default function OperationsNav() {
     {canReadDashboards && <NavItem to="/dashboards" active={pathname.startsWith("/dashboards")}>داشبوردهای من</NavItem>}
     {canReadWorkQueue && <NavItem to="/operations/work-queue" active={pathname.startsWith("/operations/work-queue")}>{t("operations.workQueue")}</NavItem>}
     {canManageCustomers && <NavItem to="/customers" active={pathname.startsWith("/customers")}>مشتریان</NavItem>}
-    {canCreate && <Link className={cn(buttonVariants({ variant: "outline" }), "min-h-11 border-blue-200 text-blue-700")} to="/operations/shipments/new"><Plus />{t("operations.newOperation")}</Link>}
+    {canCreate && <Link className={cn(buttonVariants({ variant: "outline" }), "min-h-10 border-blue-200 px-3 text-sm text-blue-700")} to="/operations/shipments/new"><Plus />{t("operations.newOperation")}</Link>}
     <div className="ms-auto shrink-0 px-2"><ReleaseIdentity /></div>
   </nav>;
 }

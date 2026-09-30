@@ -19,7 +19,8 @@ export default function OccurrenceTimeAction({ id, action, pending, onSubmit }: 
   return <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end">
     <div className="min-w-0">
       <label className="mb-1 block text-sm" htmlFor={id}>زمان وقوع</label>
-      <Input id={id} type="datetime-local" step="1" className="min-w-0 max-w-full" value={value} disabled={pending} onChange={(event) => { setValue(event.target.value); setError(""); }} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} />
+      <Input id={id} type="datetime-local" step="1" dir="ltr" className="min-w-0 max-w-full" value={value} disabled={pending} onChange={(event) => { setValue(event.target.value); setError(""); }} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : `${id}-hint`} />
+      <p id={`${id}-hint`} className="mt-1 text-xs text-slate-500">تاریخ و ساعت بر پایهٔ زمان محلی مرورگر است.</p>
       {error && <p id={`${id}-error`} role="alert" className="text-sm text-red-700">{error}</p>}
     </div>
     <Button className="min-h-11" disabled={pending} onClick={() => {

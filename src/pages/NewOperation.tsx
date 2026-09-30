@@ -65,33 +65,33 @@ const initialSide: Side = {
   logisticsPointId: "",
 };
 const backendMessages: Record<string, string> = {
-  VALIDATION_FAILED: "Check the required fields.",
-  INVALID_OPERATION_SOURCE: "The selected creation source is invalid.",
+  VALIDATION_FAILED: "فیلدهای الزامی را بررسی کنید.",
+  INVALID_OPERATION_SOURCE: "منبع انتخاب‌شده برای ایجاد عملیات معتبر نیست.",
   COMMERCIAL_LINEAGE_NOT_ALLOWED:
-    "Direct operations cannot include quote lineage.",
-  INVALID_ROUTE_TIMELINE: "Planned arrival must be after departure.",
-  FORBIDDEN_OPERATION: "You do not have permission to create this operation.",
+    "عملیات مستقیم نمی‌تواند سابقهٔ قیمت داشته باشد.",
+  INVALID_ROUTE_TIMELINE: "زمان برنامه‌ریزی‌شدهٔ رسیدن باید پس از حرکت باشد.",
+  FORBIDDEN_OPERATION: "مجوز ایجاد این عملیات را ندارید.",
   TENANT_SCOPE_VIOLATION:
-    "Your active operational organization could not be resolved.",
-  RESOURCE_NOT_FOUND: "A selected governed resource is no longer available.",
+    "سازمان عملیاتی فعال شما قابل تشخیص نیست.",
+  RESOURCE_NOT_FOUND: "یکی از گزینه‌های حاکم‌شدهٔ انتخابی دیگر در دسترس نیست.",
   IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD:
-    "This submission changed after it started. Review and submit again.",
-  OPERATIONAL_SHIPMENT_ALREADY_EXISTS: "This quote has already been converted.",
+    "این درخواست هنگام ارسال تغییر کرده است؛ آن را بررسی و دوباره ارسال کنید.",
+  OPERATIONAL_SHIPMENT_ALREADY_EXISTS: "این قیمت قبلاً به پروندهٔ حمل تبدیل شده است.",
   SOURCE_CAPABILITY_NOT_APPLICABLE:
-    "This capability does not apply to the selected source.",
+    "این قابلیت برای منبع انتخاب‌شده قابل اعمال نیست.",
   LOCATION_MAPPING_REQUIRED:
-    "The selected location is not operationally eligible.",
+    "موقعیت انتخاب‌شده برای عملیات مجاز نیست.",
   LOCATION_ANCESTRY_MISMATCH:
-    "The selected location hierarchy is inconsistent.",
+    "ساختار موقعیت انتخاب‌شده ناسازگار است.",
   PROJECT_CUSTOMER_MISMATCH:
-    "The selected project does not belong to this customer.",
+    "پروژهٔ انتخاب‌شده متعلق به این مشتری نیست.",
 };
 const errorText = (error: unknown) =>
   error instanceof ApiError
-    ? backendMessages[error.code] || "The operation could not be created."
+    ? backendMessages[error.code] || "ایجاد عملیات ممکن نشد."
     : error instanceof Error
       ? error.message
-      : "The operation could not be created.";
+      : "ایجاد عملیات ممکن نشد.";
 
 function RequiredLabel({
   children,

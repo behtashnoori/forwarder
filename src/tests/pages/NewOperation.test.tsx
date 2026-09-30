@@ -93,6 +93,7 @@ const logisticsPoint = (
     fa_name: name,
     en_name: name,
     is_active: true,
+    governance_state: "APPROVED",
     version: 1,
     point_type: {
       public_id: "warehouse-type",

@@ -115,6 +115,23 @@ export const formatMoney = (
   return amount === missing ? missing : `${amount}${currency ? ` ${currency}` : ""}`;
 };
 
+const unitLabelsFa: Record<string, string> = {
+  pcs: "عدد",
+  pc: "عدد",
+  piece: "عدد",
+  pieces: "عدد",
+  ea: "عدد",
+};
+
+/** Localize display-only unit abbreviations without changing governed UOM values. */
+export const formatUnitSymbol = (
+  symbol: string | null | undefined,
+  locale = "en-US",
+): string => {
+  if (!symbol) return "";
+  return locale.toLowerCase().startsWith("fa") ? unitLabelsFa[symbol.toLowerCase()] ?? symbol : symbol;
+};
+
 const quoteCurrencyLabelsFa: Record<string, string> = {
   IRR: "ریال ایران (IRR)",
   USD: "دلار آمریکا (USD)",

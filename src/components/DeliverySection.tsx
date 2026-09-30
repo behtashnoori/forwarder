@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { ApiError, downloadShipmentDocument, uploadShipmentDocument } from "@/lib/api";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { listDeliveries, recordDelivery, type DeliveryCargo, type DeliveryDraft, type DeliveryFact, type DeliveryList } from "@/lib/deliveryApi";
 import CanonicalLocationPicker, {type CanonicalEndpointRef} from "@/components/CanonicalLocationPicker";
+import { formatUnitSymbol } from "@/lib/formatQuantity";
 
 const time = (value: string) => formatDualCalendarInstant(value, "fa-IR");
 const number = (value: string | null) => value === null ? "نامشخص" : Number(value).toLocaleString("fa-IR", { maximumFractionDigits: 6 });
+const unit = (value: string) => formatUnitSymbol(value, "fa-IR");
 const localTime = (value: string) => {
   const date = new Date(value);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, -1);
@@ -23,7 +26,7 @@ function DeliveryForm({ cargo, initial, pending, onSubmit, onCancel }: {
   onSubmit: (draft: DeliveryDraft) => Promise<void>; onCancel: () => void;
 }) {
   const [quantity, setQuantity] = useState(initial?.quantity || "");
-  const [destination, setDestination] = useState<CanonicalEndpointRef|null>(initial?.destination_reference || null);
+  const [destination, setDestination] = useState<CanonicalEndpointRef|null>((initial?.destination_reference as CanonicalEndpointRef | null) || null);
   const [destinationNote, setDestinationNote] = useState(initial?.destination_text || "");
   const [occurred, setOccurred] = useState(initial ? localTime(initial.occurred_at) : "");
   const [reason, setReason] = useState("");
@@ -35,7 +38,7 @@ function DeliveryForm({ cargo, initial, pending, onSubmit, onCancel }: {
   }}>
     <fieldset disabled={pending} className="grid gap-3 sm:grid-cols-2">
       <legend className="mb-3 font-semibold">{initial ? "اصلاح تحویل" : "تحویل تازه"} · {cargo.label} · {cargo.customer_label}</legend>
-      <label>مقدار تحویل ({cargo.uom_symbol})<Input aria-label="مقدار تحویل" required type="number" min="0.000001" step="0.000001" max="999999999999.999999" dir="ltr" value={quantity} onChange={e => setQuantity(e.target.value)} /></label>
+      <label>مقدار تحویل ({unit(cargo.uom_symbol)})<Input aria-label="مقدار تحویل" required type="number" min="0.000001" step="0.000001" max="999999999999.999999" dir="ltr" value={quantity} onChange={e => setQuantity(e.target.value)} /></label>
       <div className="sm:col-span-2"><CanonicalLocationPicker label="مقصد تحویل" value={destination} onChange={setDestination}/></div>
       <label className="sm:col-span-2">یادداشت مقصد (اختیاری)<Input aria-label="یادداشت مقصد تحویل" maxLength={255} value={destinationNote} onChange={e => setDestinationNote(e.target.value)} /></label>
       <label>زمان وقوع تحویل<Input aria-label="زمان وقوع تحویل" required type="datetime-local" step="0.001" dir="ltr" value={occurred} onChange={e => setOccurred(e.target.value)} /><span className="text-xs text-slate-600">زمان محلی شما؛ ثبت دیرهنگام مجاز است.</span></label>
@@ -64,7 +67,7 @@ function EvidenceForm({ shipmentId, delivery, onSaved }: { shipmentId: string; d
     }}>
       {error && <p role="alert" className="text-red-700">{error}</p>}
       <fieldset disabled={pending} className="space-y-3">
-        <Input aria-label="فایل مدرک تحویل" required type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setFile(e.target.files?.[0])} />
+        <LocalizedFileInput aria-label="فایل مدرک تحویل" required accept=".pdf,.png,.jpg,.jpeg,.webp" selectedText={file?.name || "فایلی انتخاب نشده است"} onChange={e => setFile(e.target.files?.[0])} />
         <label className="block text-sm">دسترسی مدرک<select aria-label="دسترسی مدرک تحویل" className="mt-1 w-full rounded border p-2" value={visibility} onChange={e => setVisibility(e.target.value)}><option value="INTERNAL">فقط داخلی</option><option value="CARGO_OWNER">مشتری صاحب کالا، پس از احراز مجوز هویتی</option></select></label>
         <Button type="submit" variant="outline">{pending ? "در حال بارگذاری…" : "ثبت مدرک تحویل"}</Button>
       </fieldset>
@@ -106,7 +109,7 @@ export default function DeliverySection({ shipmentId }: { shipmentId: string }) 
     const cargo = data?.cargo.find(c => c.public_id === item.cargo_public_id);
     return <article key={item.public_id} data-delivery-id={item.public_id} className="space-y-2 rounded-xl border p-3">
       <div className="flex flex-wrap justify-between gap-2"><h5 className="font-semibold">{cargo?.label} · {cargo?.customer_label}</h5><span className="text-xs">{item.status === "SUPERSEDED" ? "اصلاح‌شده؛ محفوظ در سابقه" : item.is_correction ? "نسخه اصلاحی جاری" : "تحویل جاری"}</span></div>
-      <p>{number(item.quantity)} {item.uom_symbol} · مقصد: {item.destination?.facility?.display_name || item.destination?.display_name || item.destination_text || "ثبت نشده"}</p>
+      <p>{number(item.quantity)} {unit(item.uom_symbol)} · مقصد: {item.destination?.facility?.display_name || item.destination?.display_name || item.destination_text || "ثبت نشده"}</p>
       {item.destination && item.destination_text && <p className="text-sm text-slate-600">یادداشت مقصد: {item.destination_text}</p>}
       <p className="text-xs text-slate-600">وقوع: {time(item.occurred_at)}<br />ثبت: {time(item.recorded_at)} · {item.actor_label}</p>
       {item.reason && <p className="text-sm">دلیل اصلاح: {item.reason}</p>}
@@ -124,11 +127,11 @@ export default function DeliverySection({ shipmentId }: { shipmentId: string }) 
       {data.cargo.length === 0 && <p>ابتدا کالاهای پرونده حمل را ثبت کنید.</p>}
       <div className="grid gap-3 lg:grid-cols-2">{data.cargo.map(cargo => <article key={cargo.public_id} data-delivery-cargo={cargo.public_id} className="space-y-3 rounded-xl border bg-white p-3">
         <h4 className="font-semibold">{cargo.label} · {cargo.customer_label}</h4>
-        <dl className="grid grid-cols-3 gap-2 text-sm"><div><dt className="text-slate-600">واقعی شناخته‌شده</dt><dd>{number(cargo.known_actual)} {cargo.uom_symbol}</dd></div><div><dt className="text-slate-600">تحویل‌شده</dt><dd>{number(cargo.delivered)} {cargo.uom_symbol}</dd></div><div><dt className="text-slate-600">مانده</dt><dd>{number(cargo.remaining)} {cargo.uom_symbol}</dd></div></dl>
+        <dl className="grid grid-cols-3 gap-2 text-sm"><div><dt className="text-slate-600">واقعی شناخته‌شده</dt><dd>{number(cargo.known_actual)} {unit(cargo.uom_symbol)}</dd></div><div><dt className="text-slate-600">تحویل‌شده</dt><dd>{number(cargo.delivered)} {unit(cargo.uom_symbol)}</dd></div><div><dt className="text-slate-600">مانده</dt><dd>{number(cargo.remaining)} {unit(cargo.uom_symbol)}</dd></div></dl>
         {!cargo.has_delivery && <p className="text-sm text-slate-600">هنوز تحویلی ثبت نشده است.</p>}
         {cargo.known_actual === null && <p className="text-sm text-amber-800">مقدار واقعی نامشخص است؛ مانده قابل محاسبه نیست.</p>}
-        {cargo.excess !== null && Number(cargo.excess) > 0 && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-amber-900">{number(cargo.excess)} {cargo.uom_symbol} بیش از مقدار واقعی شناخته‌شده تحویل ثبت شده است. مقدار کالا یا سابقه تحویل را بررسی کنید.</p>}
-        {cargo.has_delivery && cargo.remaining !== null && Number(cargo.remaining) > 0 && <p className="text-sm text-amber-800">{number(cargo.remaining)} {cargo.uom_symbol} هنوز تحویل ثبت‌شده ندارد؛ این اختلاف به معنی گم‌شدن یا بسته‌شدن نیست.</p>}
+        {cargo.excess !== null && Number(cargo.excess) > 0 && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-amber-900">{number(cargo.excess)} {unit(cargo.uom_symbol)} بیش از مقدار واقعی شناخته‌شده تحویل ثبت شده است. مقدار کالا یا سابقه تحویل را بررسی کنید.</p>}
+        {cargo.has_delivery && cargo.remaining !== null && Number(cargo.remaining) > 0 && <p className="text-sm text-amber-800">{number(cargo.remaining)} {unit(cargo.uom_symbol)} هنوز تحویل ثبت‌شده ندارد؛ این اختلاف به معنی گم‌شدن یا بسته‌شدن نیست.</p>}
         {data.can_manage && (cargo.can_record ? <Button variant="outline" className="h-auto min-h-10 whitespace-normal text-right" disabled={pending} onClick={() => { setForm({ cargo }); setNotice(""); }}>تحویل تازه برای {cargo.label}</Button> : <p className="text-sm text-amber-800">برای ثبت تحویل، ابتدا مشتری واقعی این کالا را مشخص کنید.</p>)}
       </article>)}</div>
       {data.can_manage && form && <DeliveryForm key={form.initial?.public_id || form.cargo.public_id} cargo={form.cargo} initial={form.initial} pending={pending} onSubmit={submit} onCancel={() => setForm(null)} />}

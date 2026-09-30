@@ -1,0 +1,178 @@
+{
+  "schema_version": "1",
+  "catalog_name": "forwarder-v1-operational-generic-documents",
+  "catalog_version": "1.0.0",
+  "jurisdiction_bundle": "generic-operational",
+  "source_bundle_version": "2026-09-30-product-decision-1",
+  "checksum": "sha256:657625053e373a80fcb80b18e83077e0063ca44d6a04bdd122a7653ba0596820",
+  "definitions": [
+    {
+      "code": "generic_transport_document",
+      "name_fa": "بارنامه",
+      "name_en": "Transport Document",
+      "family": "TRANSPORT",
+      "description_fa": "سند حمل عمومی برای استفاده عملیاتی؛ بدون ادعای انطباق قانونی یا شمول یک روش حمل خاص.",
+      "description_en": "Generic operational transport document; no legal-compliance or mode-specific claim.",
+      "reference_number_label_fa": "شماره بارنامه",
+      "reference_number_label_en": "Transport document number",
+      "expiry_applicable": false,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [{"kind": "GLOBAL"}],
+      "transport_modes": ["MODE_INDEPENDENT"],
+      "process_stages": [],
+      "business_scopes": ["OPERATIONAL_SHIPMENT"],
+      "provenance": [
+        {
+          "source_authority_code": "FORWARDER_PRODUCT_OWNER",
+          "source_authority_name": "Forwarder Product Owner",
+          "source_title": "V1 Operational Configuration Decision",
+          "source_reference": "V1-OPERATIONAL-CONFIGURATION-TYPOGRAPHY-MISSION-AUTHORITY",
+          "source_url": null,
+          "source_version": "2026-09-30",
+          "source_date": "2026-09-30",
+          "jurisdiction_key": "GLOBAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Product-authorized generic operational vocabulary only; creates no statutory, regulatory, customs, or carrier requirement. Organization policy remains optional."
+        }
+      ],
+      "compatibility": {
+        "title": "Transport Document",
+        "description": "Generic operational transport document",
+        "applicability_scope": "all",
+        "allowed_formats": ["pdf", "jpeg", "png", "webp"],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 5,
+        "sort_order": 101
+      }
+    },
+    {
+      "code": "generic_invoice",
+      "name_fa": "فاکتور",
+      "name_en": "Invoice",
+      "family": "COMMERCIAL",
+      "description_fa": "فاکتور عمومی برای استفاده عملیاتی؛ بدون ادعای مالیاتی، گمرکی یا قانونی.",
+      "description_en": "Generic operational invoice; no tax, customs, or legal claim.",
+      "reference_number_label_fa": "شماره فاکتور",
+      "reference_number_label_en": "Invoice number",
+      "expiry_applicable": false,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [{"kind": "GLOBAL"}],
+      "transport_modes": ["MODE_INDEPENDENT"],
+      "process_stages": [],
+      "business_scopes": ["OPERATIONAL_SHIPMENT"],
+      "provenance": [
+        {
+          "source_authority_code": "FORWARDER_PRODUCT_OWNER",
+          "source_authority_name": "Forwarder Product Owner",
+          "source_title": "V1 Operational Configuration Decision",
+          "source_reference": "V1-OPERATIONAL-CONFIGURATION-TYPOGRAPHY-MISSION-AUTHORITY",
+          "source_url": null,
+          "source_version": "2026-09-30",
+          "source_date": "2026-09-30",
+          "jurisdiction_key": "GLOBAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Product-authorized generic operational vocabulary only; creates no statutory, regulatory, customs, or carrier requirement. Organization policy remains optional."
+        }
+      ],
+      "compatibility": {
+        "title": "Invoice",
+        "description": "Generic operational invoice",
+        "applicability_scope": "all",
+        "allowed_formats": ["pdf", "jpeg", "png", "webp"],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 5,
+        "sort_order": 102
+      }
+    },
+    {
+      "code": "generic_packing_list",
+      "name_fa": "پکینگ لیست",
+      "name_en": "Packing List",
+      "family": "COMMERCIAL",
+      "description_fa": "فهرست بسته‌بندی عمومی برای استفاده عملیاتی؛ بدون ادعای گمرکی یا قانونی.",
+      "description_en": "Generic operational packing list; no customs or legal claim.",
+      "reference_number_label_fa": "شماره پکینگ لیست",
+      "reference_number_label_en": "Packing list number",
+      "expiry_applicable": false,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [{"kind": "GLOBAL"}],
+      "transport_modes": ["MODE_INDEPENDENT"],
+      "process_stages": [],
+      "business_scopes": ["OPERATIONAL_SHIPMENT"],
+      "provenance": [
+        {
+          "source_authority_code": "FORWARDER_PRODUCT_OWNER",
+          "source_authority_name": "Forwarder Product Owner",
+          "source_title": "V1 Operational Configuration Decision",
+          "source_reference": "V1-OPERATIONAL-CONFIGURATION-TYPOGRAPHY-MISSION-AUTHORITY",
+          "source_url": null,
+          "source_version": "2026-09-30",
+          "source_date": "2026-09-30",
+          "jurisdiction_key": "GLOBAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Product-authorized generic operational vocabulary only; creates no statutory, regulatory, customs, or carrier requirement. Organization policy remains optional."
+        }
+      ],
+      "compatibility": {
+        "title": "Packing List",
+        "description": "Generic operational packing list",
+        "applicability_scope": "all",
+        "allowed_formats": ["pdf", "jpeg", "png", "webp"],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 5,
+        "sort_order": 103
+      }
+    },
+    {
+      "code": "generic_delivery_receipt",
+      "name_fa": "رسید تحویل",
+      "name_en": "Delivery Receipt",
+      "family": "OPERATIONAL_NOTICE",
+      "description_fa": "رسید تحویل عمومی برای ثبت عملیاتی؛ بدون ادعای اثبات قانونی یا پذیرش قراردادی.",
+      "description_en": "Generic operational delivery receipt; no legal-proof or contractual-acceptance claim.",
+      "reference_number_label_fa": "شماره رسید تحویل",
+      "reference_number_label_en": "Delivery receipt number",
+      "expiry_applicable": false,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [{"kind": "GLOBAL"}],
+      "transport_modes": ["MODE_INDEPENDENT"],
+      "process_stages": [],
+      "business_scopes": ["OPERATIONAL_SHIPMENT"],
+      "provenance": [
+        {
+          "source_authority_code": "FORWARDER_PRODUCT_OWNER",
+          "source_authority_name": "Forwarder Product Owner",
+          "source_title": "V1 Operational Configuration Decision",
+          "source_reference": "V1-OPERATIONAL-CONFIGURATION-TYPOGRAPHY-MISSION-AUTHORITY",
+          "source_url": null,
+          "source_version": "2026-09-30",
+          "source_date": "2026-09-30",
+          "jurisdiction_key": "GLOBAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Product-authorized generic operational vocabulary only; creates no statutory, regulatory, customs, or carrier requirement. Organization policy remains optional."
+        }
+      ],
+      "compatibility": {
+        "title": "Delivery Receipt",
+        "description": "Generic operational delivery receipt",
+        "applicability_scope": "all",
+        "allowed_formats": ["pdf", "jpeg", "png", "webp"],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 5,
+        "sort_order": 104
+      }
+    }
+  ]
+}

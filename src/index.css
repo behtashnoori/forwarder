@@ -76,18 +76,19 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
     --transition-bounce: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
     /* Typography - Persian Optimized */
+    --font-family-ui: 'Vazirmatn Variable', 'Vazirmatn', system-ui, sans-serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
-    --font-size-base: 1rem;
+    --font-size-base: 0.875rem;
     --font-size-lg: 1.125rem;
     --font-size-xl: 1.25rem;
-    --font-size-2xl: 1.5rem;
-    --font-size-3xl: 1.875rem;
+    --font-size-2xl: 1.375rem;
+    --font-size-3xl: 1.75rem;
     --font-size-4xl: 2.25rem;
 
-    --line-height-tight: 1.25;
-    --line-height-normal: 1.5;
-    --line-height-relaxed: 1.75;
+    --line-height-tight: 1.35;
+    --line-height-normal: 1.75;
+    --line-height-relaxed: 1.9;
 
     /* Spacing System */
     --spacing-xs: 0.25rem;
@@ -149,7 +150,9 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
 
   html {
     direction: rtl;
-    font-family: 'Vazirmatn', 'Vazir', Tahoma, system-ui, sans-serif;
+    font-family: var(--font-family-ui);
+    font-size: 16px;
+    text-rendering: optimizeLegibility;
   }
 
   html[dir="ltr"] {
@@ -158,7 +161,10 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
 
   body {
     @apply bg-gradient-to-br from-background to-background-secondary text-foreground;
-    @apply font-medium leading-normal;
+    font-family: var(--font-family-ui);
+    font-size: var(--font-size-base);
+    font-weight: 400;
+    line-height: var(--line-height-normal);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -166,23 +172,93 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
 
   /* Persian Typography - Vazirmatn */
   .font-persian {
-    font-family: 'Vazirmatn', 'Vazir', Tahoma, system-ui, sans-serif;
+    font-family: var(--font-family-ui);
   }
 
-  /* Smooth animations */
-  * {
-    transition: var(--transition-smooth);
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    letter-spacing: -0.012em;
+  }
+
+  h1 {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  h2 {
+    font-size: var(--font-size-2xl);
+    font-weight: 675;
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--font-size-lg);
+    font-weight: 625;
+    line-height: 1.55;
+  }
+
+  h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.6;
+  }
+
+  p, li, dd, dt {
+    text-wrap: pretty;
   }
 
   /* Form elements RTL optimization */
   input, select, textarea {
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    line-height: 1.65;
     text-align: right;
+  }
+
+  label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.65;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 0.8125rem;
+    font-weight: 400;
+  }
+
+  input[type="datetime-local"],
+  input[type="date"],
+  input[type="time"] {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
   }
 
   html[dir="ltr"] input,
   html[dir="ltr"] select,
   html[dir="ltr"] textarea {
     text-align: left;
+  }
+
+  :where(button, a, input, select, textarea, summary) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  :where(bdi, [dir="ltr"], .technical-text) {
+    unicode-bidi: isolate;
+  }
+
+  :where(code, kbd, samp, .technical-text) {
+    direction: ltr;
+    overflow-wrap: anywhere;
+    font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+    font-size: 0.92em;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Custom scrollbar */
@@ -202,4 +278,140 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primary-dark));
   }
+}
+
+/* Cross-surface semantic typography and rhythm. These selectors intentionally
+   sit outside Tailwind layers so the design system remains authoritative over
+   legacy one-off weight utilities without changing component semantics. */
+.site-header,
+.app-nav,
+.shipment-workspace {
+  font-family: var(--font-family-ui);
+}
+
+.site-header nav,
+.app-nav,
+.shipment-workspace [aria-label="بخش‌های پرونده حمل"] {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.site-header nav a,
+.site-header nav button,
+.app-nav a,
+.app-nav button,
+.shipment-workspace [aria-label="بخش‌های پرونده حمل"] a {
+  font-weight: 525;
+  letter-spacing: 0;
+}
+
+.app-nav a:not([aria-current="page"]),
+.shipment-workspace [aria-label="بخش‌های پرونده حمل"] a:not([aria-current="page"]) {
+  color: hsl(220 10% 42%);
+}
+
+.shipment-workspace {
+  line-height: 1.75;
+}
+
+.shipment-workspace h1 {
+  font-size: clamp(1.625rem, 2.2vw, 1.75rem);
+  font-weight: 700;
+}
+
+.shipment-workspace h2 {
+  font-size: clamp(1.25rem, 1.8vw, 1.375rem);
+  font-weight: 675;
+}
+
+.shipment-workspace h3,
+.shipment-workspace summary.text-lg {
+  font-size: 1.0625rem;
+  font-weight: 625;
+}
+
+.shipment-workspace :where(.font-bold, .font-extrabold) {
+  font-weight: 675;
+}
+
+.shipment-workspace :where(.font-semibold) {
+  font-weight: 600;
+}
+
+.shipment-workspace :where(.text-xs) {
+  font-size: 0.78125rem;
+  line-height: 1.65;
+}
+
+.shipment-workspace :where(.text-sm) {
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.shipment-workspace :where(details, article, [data-ui="card"]) {
+  box-shadow: 0 1px 2px hsl(220 20% 20% / 0.035);
+}
+
+.form-helper,
+.form-meta {
+  font-size: 0.78125rem;
+  font-weight: 400;
+  line-height: 1.7;
+  color: hsl(var(--muted-foreground));
+}
+
+.form-error,
+.form-warning {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.7;
+}
+
+.localized-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.localized-file-picker {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.localized-file-picker__control {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius-sm);
+  background: hsl(var(--background));
+  padding: 0.35rem 0.55rem;
+}
+
+.localized-file-picker__button {
+  flex: none;
+  border-radius: 0.4rem;
+  background: hsl(var(--accent));
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: hsl(var(--accent-foreground));
+}
+
+.localized-file-picker__name {
+  min-width: 0;
+  overflow: hidden;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

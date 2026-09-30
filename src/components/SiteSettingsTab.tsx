@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -176,17 +177,15 @@ export default function SiteSettingsTab() {
                     <p className="text-sm text-muted-foreground">فعلاً لوگویی انتخاب نشده؛ با دکمهٔ زیر آپلود کنید.</p>
                   )}
                   <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Input
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml"
-                        onChange={handleLogoUpload}
-                        disabled={uploadingLogo}
-                        className="max-w-xs"
-                      />
-                      {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : <Upload className="w-4 h-4" />}
-                      <span className="text-sm">انتخاب و آپلود</span>
-                    </label>
+                    <LocalizedFileInput
+                      containerClassName="w-full max-w-md"
+                      aria-label="انتخاب و آپلود لوگو"
+                      buttonLabel="انتخاب و آپلود"
+                      accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml"
+                      onChange={handleLogoUpload}
+                      disabled={uploadingLogo}
+                    />
+                    {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin text-gray-500" /> : <Upload className="h-4 w-4 text-gray-500" />}
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">فرمت‌های مجاز: PNG, JPG, GIF, WebP, SVG. حداکثر ۵ مگابایت.</p>

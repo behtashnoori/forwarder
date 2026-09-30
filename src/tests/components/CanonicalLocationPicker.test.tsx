@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import CanonicalLocationPicker from "@/components/CanonicalLocationPicker";
+import CanonicalLocationPicker, { type CanonicalEndpointRef } from "@/components/CanonicalLocationPicker";
 import {
   createExpertLocation, fetchCanonicalAdmin1, fetchCanonicalCities, fetchCanonicalCountries,
   listLogisticsPoints, listLogisticsPointTypes,
@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.mocked(createExpertLocation).mockResolvedValue({ item: point });
 });
 
-async function chooseCity(onChange: ReturnType<typeof vi.fn>) {
+async function chooseCity(onChange: (value: CanonicalEndpointRef) => void) {
   render(<CanonicalLocationPicker label="مبدأ" value={null} onChange={onChange} />);
   await screen.findByRole("option", { name: "ایران · IR" });
   fireEvent.change(screen.getByLabelText("مبدأ کشور"), { target: { value: "1" } });
