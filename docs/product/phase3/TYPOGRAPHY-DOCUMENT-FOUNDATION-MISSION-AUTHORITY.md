@@ -5,7 +5,7 @@
 | Field | Record |
 | --- | --- |
 | Outcome | Integrate the qualified Persian typography/presentation subset and the four-entry generic V1 Document Type package, then apply only that package to the preserved local walkthrough runtime. |
-| Governing baseline | `LPAF v2.6 — ACTIVE / FROZEN / CANONICAL`; the mission's v2.7 assertion conflicts with repository governance and is not applied. |
+| Governing baseline | `LPAF v2.7 — ACTIVE / FROZEN / CANONICAL`; canonical repository governance remained v2.7 throughout this mission. The earlier v2.6 label was a reporting defect caused by a stale untracked `AGENTS.md` in an unrelated working checkout; that file was not present in that checkout's Git HEAD and no canonical governance file changed baseline. |
 | Rigor and route | `Level B — Product / local preserved walkthrough`; `Sol` because extraction, candidate-bound verification, controlled integration, and preserved-runtime evidence are coupled. |
 | Owner / authority | Product Owner; explicit user mission supplied on 2026-09-30. |
 | Starting canonical identity | `4e1709f2dd50f350c69a202bbf71727a654fd3c9`. |
@@ -43,7 +43,8 @@
 ## Facts, assumptions, and unknowns
 
 - FACT: the source candidate is one commit ahead of `4e1709f2...` and changes 27 paths.
-- FACT: no source-candidate path implements an operational-stage or closure model/evaluator/policy; its old broad mission-authority file nevertheless describes aborted stage/closure scope and must not be integrated unchanged.
+- FACT: no source-candidate path implements an operational-stage or closure model/evaluator/policy; its old broad v2.7 mission-authority file nevertheless describes aborted stage/closure scope and must not be integrated unchanged.
+- FACT: this correction supersedes only the earlier incorrect v2.6 baseline statements; Product identity and all Product, runtime, test, and qualification results remain unchanged.
 - FACT: the repository baseline contains governed Document Catalog package loading and organization document-policy services.
 - ASSUMPTION: none may redefine Product behavior or the preserved runtime facts.
 - UNKNOWN pending candidate-bound verification: exact affected frontend test, build, lint, bidi/browser, and preserved-runtime outcomes.
@@ -52,7 +53,7 @@
 
 `JOURNEY_IMPACT = AFFECTS_EXISTING_JOURNEY`: global typography and presentation can affect all user-facing surfaces. Browser evidence is therefore required for the affected normal navigation and Shipment Workspace presentation before controlled integration.
 
-- LPAF reference impact: `NONE`; this mission applies v2.6 and does not amend it.
+- LPAF reference impact: `NONE`; this mission applies v2.7 and does not amend it.
 - Project reference impact: `UPDATE_REQUIRED` only for this authority record and candidate-bound evidence report; business contracts remain unchanged.
 - Required evidence: exact diff classification; focused document-package and affected frontend tests; full frontend tests; type-check; production build; lint; architecture/diff checks; browser presentation journey; controlled push/fetch identity; preserved-runtime before/after proof.
 - Stop conditions: any lifecycle path or semantic change, Product Authority Reconciliation `VIOLATION`/`UNKNOWN`, required check failure, runtime-fact drift, missing exact package mechanism, Production access, or destructive database action.

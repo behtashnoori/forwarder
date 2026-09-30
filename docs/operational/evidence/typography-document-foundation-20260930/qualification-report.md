@@ -4,7 +4,7 @@
 
 | Field | Result |
 | --- | --- |
-| Governing baseline | `LPAF v2.6 — ACTIVE / FROZEN / CANONICAL` |
+| Governing baseline | `LPAF v2.7 — ACTIVE / FROZEN / CANONICAL` |
 | Starting canonical SHA | `4e1709f2dd50f350c69a202bbf71727a654fd3c9` |
 | Source candidate SHA | `b49d46ca3c1c3b4e33fe5b36ed7e0a7d377b8dbe` |
 | Extracted Product SHA | `833186409a93b100633351c702cacb941e0a4259` |
@@ -13,10 +13,13 @@
 | Human Product Walkthrough | `IN_PROGRESS` |
 | Release Ready | `NO` |
 
-The repository `AGENTS.md` and the canonical LPAF acceptance record govern with
-v2.6. The source mission's v2.7 baseline assertion conflicts with that frozen
-authority and was not applied. Product scope remains exactly the authorized
-typography/presentation refinement and the four generic Document Types.
+The prior version of this evidence incorrectly labeled the governing baseline
+as v2.6. Canonical repository governance remained v2.7 throughout. The error
+was caused by a stale untracked `AGENTS.md` in an unrelated working checkout;
+that file was not present in the checkout's Git HEAD, and no canonical
+governance file changed baseline. This corrective commit supersedes only those
+incorrect baseline statements. The Product identity, technical qualification
+measurements, runtime evidence, and authorized scope remain unchanged.
 
 ## Exact extraction and diff safety
 
@@ -52,7 +55,7 @@ typography/presentation refinement and the four generic Document Types.
 
 The source candidate's runtime and test tree is byte-identical to the extracted
 Product SHA. The only candidate-to-extraction difference is governance: the old
-broad v2.7 authority file was removed and replaced by the subset-specific v2.6
+broad v2.7 authority file was removed and replaced by the subset-specific v2.7
 authority record. No operational-stage, Project binding, Shipment `project_id`,
 stage vocabulary, closure evaluator, closure criterion, policy, or Shipment
 closure-state implementation path is present.
