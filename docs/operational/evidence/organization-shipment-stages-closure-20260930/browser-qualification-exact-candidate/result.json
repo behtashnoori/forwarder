@@ -1,0 +1,10 @@
+{
+  "journey": "PASS",
+  "schema": "20261015_org_shipment_stages",
+  "executed_at_utc": "2026-09-30T19:14:05.9766496Z",
+  "postgresql_major": 18,
+  "production_accessed": false,
+  "dirty_source": false,
+  "product_sha": "4385b2e18617a1b81bdf33345ea2f9823edc5876",
+  "stopped": false
+}

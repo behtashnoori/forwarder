@@ -1,0 +1,11 @@
+
+> vite_react_shadcn_ts@1.10.0 dev
+> vite --host 127.0.0.1 --port 53408 --strictPort
+
+
+  VITE v6.4.3  ready in 779 ms
+
+  ➜  Local:   http://127.0.0.1:53408/
+  ➜  press h + enter to show help
+۲۲:۴۳:۲۸ [vite] (client) page reload docs/operational/evidence/organization-shipment-stages-closure-20260930/browser-qualification-exact-candidate/browser/.playwright-artifacts-0/traces/resources/a6d90d3b0c11575d589a699ae98a4f3687fb226a.html
+۲۲:۴۴:۰۵ [vite] (client) page reload docs/operational/evidence/organization-shipment-stages-closure-20260930/browser-qualification-exact-candidate/browser/.playwright-artifacts-0/traces/resources/a6d90d3b0c11575d589a699ae98a4f3687fb226a.html
