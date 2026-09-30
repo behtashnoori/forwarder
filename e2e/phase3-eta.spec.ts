@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
@@ -25,7 +26,11 @@ async function open(page: Page, item: Case, customer = false) {
   await page.getByRole("link", { name: customer ? "حمل‌های من" : "پرونده‌های عملیاتی حمل", exact: true }).first().click();
   await page.locator(`a[href="/${customer ? "customer" : "operations"}/shipments/${item.shipment}"]`).click();
   const response = page.waitForResponse(r => r.url().includes(`/cargo/${item.cargo}/eta/ensure`) && r.status() === 200);
-  await page.locator("summary", { hasText: customer ? /^زمان تقریبی رسیدن کالا$/ : "زمان تقریبی رسیدن کالاها" }).click();
+  if (customer) {
+    await page.locator("summary", { hasText: /^زمان تقریبی رسیدن کالا$/ }).click();
+  } else {
+    await openShipmentSection(page, "tracking", item.shipment);
+  }
   const value = await (await response).json() as Snapshot;
   await expect(page.getByRole("region", { name: "زمان تقریبی رسیدن کالا", exact: true })).toContainText("زمان محاسبه:");
   return value;
@@ -94,7 +99,7 @@ test("structured remaining distance entered in the human workflow drives ETA v2"
   expect(item.progress_unit).toBeTruthy(); expect(item.progress_stage).toBeTruthy();
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
   await page.locator(`a[href="/operations/shipments/${item.shipment}"]`).click();
-  await page.locator("summary", { hasText: "گزارش موقعیت و تغییرات حمل" }).click();
+  await openShipmentSection(page, "tracking", item.shipment);
   const reports = page.getByRole("region", { name: "گزارش‌های موقعیت و تغییرات حمل" });
   await reports.getByRole("button", { name: "گزارش تازه" }).click();
   await reports.getByLabel("نوع گزارش").selectOption("PROGRESS");

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const databaseUrl = process.env.E2E_DATABASE_URL;
 const expertPassword = process.env.FORWARDER_E2E_PASSWORD;
@@ -111,6 +112,7 @@ test.describe.serial("Operational Workspace Phase 1 governed browser proof", () 
     await expect(page.getByText("کارشناس مالک ثابت", { exact: true })).toBeVisible();
     await expect(page.getByText("تهران", { exact: false }).first()).toBeVisible();
     await expect(page.getByText("تبریز", { exact: false }).first()).toBeVisible();
+    await openShipmentSection(page, "history", fixture.active_shipment_public_id);
     await expect(page.getByRole("heading", { name: "تاریخچه یکپارچه محموله" })).toBeVisible();
     await expect(page.getByText("در حال دریافت تاریخچه…")).toBeHidden({ timeout: 30_000 });
     await expect(page.getByLabel("تاریخچه عملیات حمل")).not.toContainText("دریافت تاریخچه عملیات ممکن نشد");

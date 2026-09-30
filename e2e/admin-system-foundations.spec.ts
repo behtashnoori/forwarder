@@ -132,16 +132,45 @@ test("explicit dual Admin manages system and own-organization foundations withou
   expect((await adoption).status()).toBe(201);
   await expect(page.getByText(/مکان عملیاتی آماده است/)).toBeVisible();
 
-  await page.getByLabel("کد ثابت مکان").fill("ADMIN-E2E-PRIVATE-WAREHOUSE");
-  await page.getByLabel("نام فارسی مکان").fill("انبار خصوصی آزمون");
-  await page.getByLabel("نام انگلیسی مکان").fill("Private Qualification Warehouse");
-  await page.getByLabel("نوع مکان سراسری").selectOption({ index: 1 });
-  const privateCreate = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/api/admin/logistics-points"));
-  await page.getByRole("button", { name: "ایجاد مکان لجستیکی", exact: true }).click();
-  expect((await privateCreate).status()).toBe(201);
-  await expect(page.getByText("انبار خصوصی آزمون", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "زمان مرجع مسیر", exact: true }).click();
+  await page.getByRole("button", { name: "تعریف زمان مرجع تازه", exact: true }).click();
+  const country = page.getByLabel("مبدأ مرجع کشور", { exact: true });
+  const iran = country.locator("option", { hasText: "IR" });
+  await expect(iran).toHaveCount(1);
+  await country.selectOption((await iran.getAttribute("value"))!);
+  const admin1 = page.getByLabel("مبدأ مرجع استان", { exact: true });
+  await expect(admin1.locator("option").nth(1)).toBeAttached({ timeout: 30_000 });
+  await admin1.selectOption((await admin1.locator("option").nth(1).getAttribute("value"))!);
+  const city = page.getByLabel("مبدأ مرجع شهر", { exact: true });
+  await expect(city.locator("option").nth(1)).toBeAttached({ timeout: 30_000 });
+  await city.selectOption((await city.locator("option").nth(1).getAttribute("value"))!);
+  await page.getByRole("button", { name: "افزودن مکان تازه", exact: true }).click();
+  await page.getByLabel("نام مکان", { exact: true }).fill("انبار خصوصی آزمون");
+  const privateCreate = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/api/internal/logistics-points"));
+  await page.getByRole("button", { name: "ایجاد و استفاده فوری", exact: true }).click();
+  const privateResponse = await privateCreate;
+  expect(privateResponse.status()).toBe(201);
+  const privatePoint = (await privateResponse.json()).item as {
+    public_id: string; immutable_code: string; fa_name: string; is_active: boolean;
+    governance_state: string; city: { geoname_id: number; name_fa: string };
+  };
+  expect(privatePoint.fa_name).toBe("انبار خصوصی آزمون");
+  expect(privatePoint.immutable_code).toMatch(/^LOC-\d+-[0-9A-F]{10}$/);
+  expect(privatePoint.governance_state).toBe("PENDING_REVIEW");
+  expect(privatePoint.is_active).toBe(true);
+  await expect(page.getByLabel("مبدأ مرجع مکان سازمان", { exact: true })).toHaveValue(privatePoint.public_id);
+  await expect(page.getByLabel("مبدأ مرجع مکان سازمان", { exact: true }).locator("option", { hasText: "انبار خصوصی آزمون · در انتظار بررسی" })).toHaveCount(1);
 
   await page.reload();
+  await page.getByRole("tab", { name: "شبکه لجستیکی سازمان", exact: true }).click();
+  const privateCard = page.locator(`#logistics-point-${privatePoint.public_id}`);
+  await expect(privateCard).toContainText("انبار خصوصی آزمون");
+  await expect(privateCard).toContainText(privatePoint.city.name_fa);
+  await expect(privateCard).toContainText("در انتظار بررسی");
+  await expect(privateCard).toContainText("قابل انتخاب");
+  await privateCard.locator("summary", { hasText: "جزئیات فنی" }).click();
+  await expect(privateCard.locator("code")).toHaveText(privatePoint.immutable_code);
+
   await expect(page.getByRole("tab", { name: "تعاریف استاندارد سیستم", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "کاتالوگ کالا", exact: true }).click();
   await expect(page.getByText("مجموعه موتور آزمون", { exact: false })).toBeVisible();

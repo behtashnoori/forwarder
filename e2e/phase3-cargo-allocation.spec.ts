@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
@@ -13,11 +14,12 @@ async function openShipment(page: Page) {
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
   await page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`).click();
   await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
+  await openShipmentSection(page, "cargo", fixture.p304_shipment);
 }
 
 async function openTrace(page: Page): Promise<Locator> {
   const details = page.locator("details").filter({ has: page.locator("summary", { hasText: "تخصیص و مسیر هر کالا" }) }).first();
-  if (!(await details.getAttribute("open"))) await details.locator("summary").click();
+  if ((await details.getAttribute("open")) === null) await details.locator("summary").click();
   await expect(details.getByRole("heading", { name: "تخصیص و مسیر هر کالا" })).toBeVisible();
   await expect(details.getByLabel("کالا برای ردگیری")).toHaveValue(fixture.p305_cargo);
   return details;
@@ -81,7 +83,6 @@ test("P3-05 — normal Chrome Cargo plan, actual, correction, transfer and reope
   await expect(trace.getByText(/از بخش قبل هنوز در این بخش ثبت نشده است|بیشتر از بخش قبل در این بخش ثبت شده است/)).toBeVisible();
 
   const cargoDetails = page.locator("details").filter({ has: page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }) }).first();
-  await cargoDetails.locator("summary").first().click();
   const cargoArticle = cargoDetails.locator("article").filter({ hasText: "قطعات موتور" }).first();
   await cargoArticle.locator("summary", { hasText: "تکمیل یا اصلاح اطلاعات" }).click();
   await cargoArticle.getByLabel("Edit planned quantity line 1").fill("95");

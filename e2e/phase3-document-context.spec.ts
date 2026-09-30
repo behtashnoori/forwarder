@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
@@ -29,7 +30,7 @@ async function expert(page: Page, username = "shared_transport_e2e_restricted") 
     await page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`).click();
   }
   await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
-  await page.locator("summary", { hasText: "جزئیات عملیاتی بیشتر" }).click();
+  await openShipmentSection(page, "documents", fixture.p304_shipment);
   await expect(page.getByRole("heading", { name: "اسناد و مدارک حمل" })).toBeVisible();
 }
 
@@ -71,7 +72,7 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
   await expect(docs.getByText("مربوط به: پرونده حمل").first()).toBeVisible();
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
   await page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`).click();
-  await page.locator("summary", { hasText: "جزئیات عملیاتی بیشتر" }).click();
+  await openShipmentSection(page, "documents", fixture.p304_shipment);
   await expect(page.getByText("internal.pdf")).toBeVisible();
 
   await page.getByLabel("Document upload context").selectOption("CARGO");

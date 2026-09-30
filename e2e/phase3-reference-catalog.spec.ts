@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
@@ -76,7 +77,7 @@ async function openOrganizationFamily(page: Page, tab: string) {
 }
 
 async function openCargoEditor(page: Page) {
-  await page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }).click();
+  await openShipmentSection(page, "cargo", fixture.shipment_a);
   await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();
 }
 
@@ -146,7 +147,7 @@ test("P3-01 — central definitions → organization activation → expert use �
   expect((await createCargo).status()).toBe(201);
   await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible();
   await page.reload();
-  await page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }).click();
+  await openShipmentSection(page, "cargo", fixture.shipment_a);
   await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible();
 
   await page.goto("/expert");
@@ -162,7 +163,7 @@ test("P3-01 — central definitions → organization activation → expert use �
   await login(page, "restricted");
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
   await page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`).click();
-  await page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }).click();
+  await openShipmentSection(page, "cargo", fixture.shipment_a);
   await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible();
   await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();
   await expect(page.getByLabel("Cargo type").locator("option", { hasText: "کالای مرجع پی‌سه" })).toHaveCount(0);

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
@@ -10,7 +11,7 @@ test.setTimeout(180_000);
 async function openReports(page: Page) {
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
   await page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`).click();
-  await page.locator("summary", { hasText: "گزارش موقعیت و تغییرات حمل" }).click();
+  await openShipmentSection(page, "tracking", fixture.p304_shipment);
   return page.getByRole("region", { name: "گزارش‌های موقعیت و تغییرات حمل" });
 }
 

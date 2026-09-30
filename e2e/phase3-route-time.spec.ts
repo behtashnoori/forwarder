@@ -1,9 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 const password=process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath=process.env.FORWARDER_E2E_FIXTURE_PATH;
 if(!password||!fixturePath)throw new Error("Use the owned P3-10 qualification runner.");
-const fixture=JSON.parse(readFileSync(fixturePath,"utf8")) as {p310_old_shipment:string;p310_new_shipment:string;p310_points:Record<string,string>;p310_foreign_reference:string};
+const fixture=JSON.parse(readFileSync(fixturePath,"utf8")) as {p310_old_shipment:string;p310_new_shipment:string;p310_points:Record<string,string>;p310_geography:Record<string,{country_id:number;admin1_geoname_id:number;city_geoname_id:number}>;p310_foreign_reference:string};
 test.setTimeout(180_000);
 function local(date:Date){const pad=(n:number)=>String(n).padStart(2,"0");return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;}
 async function login(page:Page,persona:string){
@@ -17,6 +18,7 @@ async function openShipment(page:Page,id:string){
   // Open its ordinary authenticated detail URL, as the P3-03 authoring journey does.
   await page.goto(`/operations/shipments/${id}`);
   await expect(page.getByRole("heading",{name:"خلاصه محموله"})).toBeVisible();
+  await openShipmentSection(page,"route",id);
 }
 async function draft(page:Page,mode="rail"){
   await expect(page.getByRole("button",{name:"ایجاد مسیر عملیات",exact:true})).toBeVisible();
@@ -40,13 +42,18 @@ test("P3-10 normal Admin reference → Expert pinned basis → future version an
   await expect(admin.getByText("زمان مرجع تعریف نشده است. هیچ زمان پیش‌فرضی اعمال نمی‌شود.")).toBeVisible();
   await admin.getByRole("button",{name:"تعریف زمان مرجع تازه",exact:true}).click();
   for(const [side,label] of [["origin","مبدأ مرجع"],["destination","مقصد مرجع"]] as const){
+    const geography=fixture.p310_geography[side];
     const country=admin.getByLabel(`${label} کشور`,{exact:true});
-    const synthetic=country.locator("option",{hasText:"ZZ"});
-    await expect(synthetic).toHaveCount(1,{timeout:30_000});
-    await country.selectOption((await synthetic.getAttribute("value"))!);
-    const select=admin.locator(`#reference-${side}`);
-    await expect(select.locator(`option[value="logistics_point:${fixture.p310_points[`own_${side}`]}"]`)).toHaveCount(1,{timeout:30_000});
-    await select.selectOption(`logistics_point:${fixture.p310_points[`own_${side}`]}`);
+    await country.selectOption(String(geography.country_id));
+    const admin1=admin.getByLabel(`${label} استان`,{exact:true});
+    await expect(admin1.locator(`option[value="${geography.admin1_geoname_id}"]`)).toHaveCount(1,{timeout:30_000});
+    await admin1.selectOption(String(geography.admin1_geoname_id));
+    const city=admin.getByLabel(`${label} شهر`,{exact:true});
+    await expect(city.locator(`option[value="${geography.city_geoname_id}"]`)).toHaveCount(1,{timeout:30_000});
+    await city.selectOption(String(geography.city_geoname_id));
+    const select=admin.getByLabel(`${label} مکان سازمان`,{exact:true});
+    await expect(select.locator(`option[value="${fixture.p310_points[`own_${side}`]}"]`)).toHaveCount(1,{timeout:30_000});
+    await select.selectOption(fixture.p310_points[`own_${side}`]);
   }
   await admin.getByLabel("روش حمل مرجع",{exact:true}).selectOption("rail");
   for(const [label,value] of [["حداقل حرکت (ساعت)","20"],["حداکثر حرکت (ساعت)","24"],["حداقل توقف (ساعت)","4"],["حداکثر توقف (ساعت)","8"]])await admin.getByLabel(label,{exact:true}).fill(value);

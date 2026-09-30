@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const databaseUrl = process.env.E2E_DATABASE_URL;
 const expertPassword = process.env.FORWARDER_E2E_PASSWORD;
@@ -139,7 +140,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     await loginExpert(page, fixture.usernames.owner, /\/operations$/);
     await page.getByRole("link", { name: /مشاهده محموله مشتری عملیاتی آزمایشی/ }).click();
     await expect(page).toHaveURL(new RegExp(`/operations/shipments/${fixture.active_shipment_public_id}$`));
-    await page.getByText("جزئیات عملیاتی بیشتر", { exact: true }).click();
+    await openShipmentSection(page, "route", fixture.active_shipment_public_id);
     await expect(page.getByRole("heading", { name: "مسائل عملیاتی" })).toBeVisible();
 
     const note = "استثنای مرورگری Phase 2";
@@ -218,7 +219,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     await page.unroute("**/api/control-tower/shipments?*");
 
     await page.goto(`/operations/shipments/${fixture.active_shipment_public_id}`);
-    await page.getByText("جزئیات عملیاتی بیشتر", { exact: true }).click();
+    await openShipmentSection(page, "route", fixture.active_shipment_public_id);
     const refreshedAction = page.getByText(actionTitle, { exact: true }).locator("xpath=ancestor::article");
     await refreshedAction.getByLabel(`نتیجه اقدام ${actionTitle}`).fill("تأیید کتبی دریافت و در پرونده ثبت شد");
     await refreshedAction.getByRole("button", { name: "ثبت نتیجه و بستن", exact: true }).click();

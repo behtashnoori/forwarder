@@ -1,16 +1,32 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
 if (!password || !fixturePath) throw new Error("P3-08 requires an owned synthetic fixture");
-const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as { p304_shipment: string; p305_cargo: string; p308_cargo_b: string; p308_status: string };
+const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as {
+  p304_shipment: string; p305_cargo: string; p308_cargo_b: string; p308_status: string;
+  p308_geography: { country_id: number; admin1_geoname_id: number; city_geoname_id: number };
+};
 test.setTimeout(180_000);
 
 async function openDeliveries(page: Page) {
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
   await page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`).click();
-  await page.locator("summary", { hasText: "تحویل کالاها" }).click();
+  await openShipmentSection(page, "delivery", fixture.p304_shipment);
   return page.getByRole("region", { name: "تحویل کالاها" });
+}
+
+async function selectDeliveryDestination(delivery: Locator) {
+  const country = delivery.getByLabel("مقصد تحویل کشور", { exact: true });
+  await country.selectOption(String(fixture.p308_geography.country_id));
+  const admin1 = delivery.getByLabel("مقصد تحویل استان", { exact: true });
+  await expect(admin1.locator(`option[value="${fixture.p308_geography.admin1_geoname_id}"]`)).toHaveCount(1, { timeout: 30_000 });
+  await admin1.selectOption(String(fixture.p308_geography.admin1_geoname_id));
+  const city = delivery.getByLabel("مقصد تحویل شهر", { exact: true });
+  await expect(city.locator(`option[value="${fixture.p308_geography.city_geoname_id}"]`)).toHaveCount(1, { timeout: 30_000 });
+  await city.selectOption(String(fixture.p308_geography.city_geoname_id));
+  await delivery.getByLabel("یادداشت مقصد تحویل", { exact: true }).fill("انبار مشتری اول");
 }
 
 test("P3-08 normal Chrome partial delivery, correction, exact evidence, excess and reopen", async ({ page }) => {
@@ -32,7 +48,7 @@ test("P3-08 normal Chrome partial delivery, correction, exact evidence, excess a
   for (const quantity of ["60", "35"]) {
     await delivery.getByRole("button", { name: "تحویل تازه برای قطعات موتور", exact: true }).click();
     await delivery.getByLabel("مقدار تحویل", { exact: true }).fill(quantity);
-    await delivery.getByLabel("مقصد تحویل", { exact: true }).fill("انبار مشتری اول");
+    await selectDeliveryDestination(delivery);
     await delivery.getByLabel("زمان وقوع تحویل").fill("2026-09-21T10:30");
     const saved = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/deliveries"));
     await delivery.getByRole("button", { name: "ثبت تحویل", exact: true }).click();
@@ -68,7 +84,7 @@ test("P3-08 normal Chrome partial delivery, correction, exact evidence, excess a
   expect(readFileSync((await download.path())!)).toEqual(bytes);
   await delivery.getByRole("button", { name: "تحویل تازه برای قطعات موتور", exact: true }).click();
   await delivery.getByLabel("مقدار تحویل", { exact: true }).fill("9");
-  await delivery.getByLabel("مقصد تحویل", { exact: true }).fill("انبار مشتری اول");
+  await selectDeliveryDestination(delivery);
   await delivery.getByLabel("زمان وقوع تحویل").fill("2026-09-22T10:30");
   await delivery.getByRole("button", { name: "ثبت تحویل", exact: true }).click();
   await expect(delivery.getByRole("alert")).toContainText("۲ کارتن بیش از مقدار واقعی شناخته‌شده");

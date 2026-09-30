@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const databaseUrl = process.env.E2E_DATABASE_URL;
 const password = process.env.FORWARDER_E2E_PASSWORD;
@@ -124,8 +125,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   await page.getByRole("button", { name: "ایجاد پرونده عملیاتی" }).click();
   await expect(page).toHaveURL(/\/operations\/shipments\/[0-9a-f-]{36}$/i);
   const shipmentId = page.url().split("/").pop()!;
-  await page.getByText("جزئیات عملیاتی بیشتر", { exact: true }).click();
-  await expect(page.getByRole("heading", { name: "مدارک و مراجع حمل" })).toBeVisible();
+  await openShipmentSection(page, "route", shipmentId);
 
   // Give the active Shipment a real governed attention reason for Control Tower.
   const exceptionPanel = page.getByRole("heading", {
@@ -142,6 +142,8 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   )).toBeVisible();
 
   // Journey C: the persisted owner can mutate Shipment Documents.
+  await openShipmentSection(page, "documents", shipmentId);
+  await expect(page.getByRole("heading", { name: "مدارک و مراجع حمل" })).toBeVisible();
   await page.getByLabel("نوع یا دسته تجاری سند").fill("بارنامه مالک ثابت");
   await page.getByLabel("انتخاب فایل سند").setInputFiles({
     name: "fixed-owner-proof.pdf",
@@ -159,7 +161,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   });
   expect(reassigned.status()).toBe(200);
   await page.reload();
-  await page.getByText("جزئیات عملیاتی بیشتر", { exact: true }).click();
+  await openShipmentSection(page, "documents", shipmentId);
   await expect(page.getByText("fixed-owner-proof.pdf", { exact: true })).toBeVisible();
 
   // Journey D: E1 retains owner-scoped Control Tower population.
@@ -200,7 +202,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   // Admin oversight is preserved, but Shipment Documents remain read-only.
   await login(page, fixture.usernames.admin, /\/admin$/);
   await page.goto(`/operations/shipments/${shipmentId}`);
-  await page.getByText("جزئیات عملیاتی بیشتر", { exact: true }).click();
+  await openShipmentSection(page, "documents", shipmentId);
   await expect(page.getByText("fixed-owner-proof.pdf", { exact: true })).toBeVisible();
   await expect(page.getByText("دسترسی شما به این بخش فقط خواندنی است.")).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
@@ -87,9 +88,8 @@ test("Accepted Request Cargo stays continuous through route, execution, allocati
   const shipment = created.data.public_id;
   await expect(page).toHaveURL(new RegExp(`/operations/shipments/${shipment}$`));
   await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
-
+  await openShipmentSection(page, "cargo", shipment);
   const cargoDetails = page.locator("details").filter({ has: page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }) }).first();
-  await cargoDetails.locator("summary").first().click();
   const cargoArticle = cargoDetails.getByRole("article").filter({ hasText: fixture.hw_chain_catalog_label }).first();
   await expect(cargoArticle).toContainText(`درخواست مشتری ${fixture.hw_chain_request_tracking}`);
   await expect(cargoArticle).toContainText("درخواستی100 عدد");
@@ -145,7 +145,6 @@ test("Accepted Request Cargo stays continuous through route, execution, allocati
   const stageExecution = execution.data.public_id;
 
   const traceDetails = page.locator("details").filter({ has: page.locator("summary", { hasText: "تخصیص و مسیر هر کالا" }) }).first();
-  await traceDetails.locator("summary").click();
   await traceDetails.getByRole("button", { name: "تازه‌سازی" }).click();
   await expect(traceDetails.getByLabel("اجرای حمل برای تخصیص")).toHaveValue("");
   await expect(traceDetails.getByLabel("اجرای حمل برای تخصیص").locator(`option[value="${stageExecution}"]`)).toHaveCount(1);

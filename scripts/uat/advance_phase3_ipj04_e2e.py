@@ -23,7 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from backend import create_app
 from backend.cargo_models import ShipmentCargoItem
 from backend.extensions import db
-from backend.models import ExpertUser
+from backend.geonames_geography_catalog import DATASET_ID as GEONAMES_DATASET_ID
+from backend.models import City, ExpertUser
 from backend.operational_models import (
     CanonicalLocation,
     ExecutionUnit,
@@ -39,6 +40,7 @@ from backend.reported_fact_models import OperationalEventReportContext
 from backend.services import reported_fact_service as reports
 from backend.services.location_resolver import resolve_location
 from backend.services import route_time_service as route_times
+from scripts.uat.canonical_geography_fixture import ensure_canonical_geography
 
 
 def _assert_owned_database() -> None:
@@ -75,6 +77,7 @@ def main() -> None:
     app = create_app(skip_startup=True)
 
     with app.app_context():
+        ensure_canonical_geography()
         shipment = OperationalShipment.query.filter_by(
             public_id=fixture["p313_shipment"]
         ).one()
@@ -105,6 +108,33 @@ def main() -> None:
         legs = RouteLeg.query.filter_by(route_plan_id=plan.id).order_by(
             RouteLeg.sequence_number, RouteLeg.id
         ).all()
+        legacy_location_ids = sorted({
+            location_id
+            for leg in legs
+            for location_id in (leg.origin_location_id, leg.destination_location_id)
+        })
+        canonical_cities = db.session.scalars(
+            select(City)
+            .where(City.dataset_id == GEONAMES_DATASET_ID, City.is_active.is_(True))
+            .order_by(City.geoname_id)
+            .limit(len(legacy_location_ids))
+        ).all()
+        if len(canonical_cities) != len(legacy_location_ids):
+            raise RuntimeError("IPJ-04 requires enough qualified canonical route locations")
+        canonical_routes = {
+            legacy_id: resolve_location({"source_type": "city", "source_id": city.id})
+            for legacy_id, city in zip(legacy_location_ids, canonical_cities)
+        }
+        for leg in legs:
+            origin = canonical_routes[leg.origin_location_id]
+            destination = canonical_routes[leg.destination_location_id]
+            leg.origin_location_id = origin.canonical_location.id
+            leg.destination_location_id = destination.canonical_location.id
+            leg.origin_snapshot = origin.snapshot()
+            leg.destination_snapshot = destination.snapshot()
+            leg.version += 1
+        db.session.commit()
+
         # Selection is a planning command.  The inherited fixture already has
         # an active route, so briefly expose its synthetic planning state,
         # execute the real commands, and return it to the same active state.

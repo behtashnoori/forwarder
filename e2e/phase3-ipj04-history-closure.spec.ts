@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const databaseUrl = process.env.E2E_DATABASE_URL;
 const password = process.env.FORWARDER_E2E_PASSWORD;
@@ -122,24 +123,30 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   await expect(owner.getByText("قطعات موتور", { exact: true }).first()).toBeVisible();
   await expect(owner.getByText("کالای مشتری دوم", { exact: true }).first()).toBeVisible();
 
-  await owner.getByText("جزئیات عملیاتی بیشتر", { exact: true }).click();
+  const routeReferenceTimes = owner.waitForResponse(response =>
+    response.url().includes("/route-plans/") && response.url().endsWith("/reference-times"),
+  );
+  await openShipmentSection(owner, "route", fixture.p313_shipment);
   await expect(owner.getByRole("heading", { name: "وسیله و شرکت حمل هر بخش مسیر" })).toBeVisible();
-  await owner.locator("summary", { hasText: "تخصیص و مسیر هر کالا" }).click();
+  expect((await routeReferenceTimes).status()).toBe(200);
+  await openShipmentSection(owner, "cargo", fixture.p313_shipment);
   await expect(owner.getByRole("heading", { name: "تخصیص و مسیر هر کالا" })).toBeVisible();
-  await owner.locator("summary", { hasText: "گزارش موقعیت و تغییرات حمل" }).click();
-  await expect(owner.getByText("اصلاح‌شده؛ محفوظ در سابقه", { exact: true })).toBeVisible();
-  await expect(owner.getByText("اصلاح موقعیت برای گواه پیوستگی سفر", { exact: false })).toBeVisible();
-  await owner.locator("summary", { hasText: "تحویل کالاها" }).click();
-  await expect(owner.getByRole("region", { name: "تحویل کالاها" })).toContainText("نسخه اصلاحی جاری");
-  await expect(owner.getByRole("region", { name: "تحویل کالاها" })).toContainText("سابقه تحویل‌های اصلاح‌شده");
 
   const etaResponse = owner.waitForResponse(response =>
     response.url().includes(`/cargo/${fixture.p315_ipj04.eta_cargo}/eta/ensure`) && response.status() === 200,
   );
-  await owner.locator("summary", { hasText: "زمان تقریبی رسیدن کالاها" }).click();
+  await openShipmentSection(owner, "tracking", fixture.p313_shipment);
+  await expect(owner.getByText("اصلاح‌شده؛ محفوظ در سابقه", { exact: true })).toBeVisible();
+  await expect(owner.getByText("اصلاح موقعیت برای گواه پیوستگی سفر", { exact: false })).toBeVisible();
   const eta = await (await etaResponse).json() as { next: { available: boolean }; final: { available: boolean }; source_fingerprint?: string };
   expect(eta.next.available || eta.final.available).toBe(true);
   await expect(owner.getByRole("region", { name: "زمان تقریبی رسیدن کالا", exact: true }).first()).toContainText("زمان محاسبه:");
+
+  await openShipmentSection(owner, "delivery", fixture.p313_shipment);
+  await expect(owner.getByRole("region", { name: "تحویل کالاها" })).toContainText("نسخه اصلاحی جاری");
+  await expect(owner.getByRole("region", { name: "تحویل کالاها" })).toContainText("سابقه تحویل‌های اصلاح‌شده");
+
+  await openShipmentSection(owner, "history", fixture.p313_shipment);
   await expect(owner.getByRole("heading", { name: "تاریخچه یکپارچه محموله" })).toBeVisible();
   await expect(owner.getByLabel("تاریخچه عملیات حمل")).not.toContainText("دریافت تاریخچه عملیات ممکن نشد");
 
@@ -168,7 +175,7 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   expect((await policy).status()).toBe(201);
 
   await owner.bringToFront();
-  await owner.locator("summary", { hasText: "بررسی و بستن پرونده" }).click();
+  await openShipmentSection(owner, "closure", fixture.p313_shipment);
   const closure = owner.getByRole("region", { name: "بررسی بستن پرونده" });
   await closure.getByRole("button", { name: "بررسی دوباره" }).click();
   await expect(closure.getByRole("button", { name: "بستن پرونده", exact: true })).toBeEnabled();
@@ -179,6 +186,7 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   await expect(closure.getByText(/پرونده بسته شده است/)).toBeVisible();
   await owner.reload();
   await expect(owner.getByText("بسته‌شده", { exact: true })).toBeVisible();
+  await openShipmentSection(owner, "route", fixture.p313_shipment);
   await expect(owner.getByRole("heading", { name: "اصلاح و تکمیل سوابق" })).toBeVisible();
 
   const denied = await owner.request.post(`/api/operational-shipments/${fixture.p313_shipment}/reported-facts`, {

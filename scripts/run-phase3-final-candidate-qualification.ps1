@@ -2,8 +2,10 @@
 param(
   [Parameter(Mandatory = $true)][string]$EvidenceDirectory,
   [Parameter(Mandatory = $true)][string]$ExpectedProductSha,
+  [string]$ExpectedBaseProductSha,
   [switch]$PostgresOnly,
   [switch]$BrowserOnly,
+  [string[]]$BrowserStages,
   [ValidateSet('P301','P302','P303','P304','P305','P306','P307','P308','P309','P310','P311','P312','P313','P314','MT3','IPJ01','IPJ02-IPJ03','P315-CORE','HW-COMMERCIAL','IPJ04')]
   [string]$StartBrowserAt
 )
@@ -83,6 +85,10 @@ function Invoke-BrowserJourney {
     [switch]$RestrictedOwnerRuntime,
     [switch]$CustomerPassword
   )
+  if ($BrowserStages -and $Name -notin $BrowserStages) {
+    Write-Output "$Name Chrome SKIPPED_NOT_REQUESTED"
+    return
+  }
   if (-not $script:browserSelectionStarted) {
     if ($Name -ne $StartBrowserAt) {
       Write-Output "$Name Chrome SKIPPED_FOR_DIAGNOSTIC_RESUME"
@@ -196,8 +202,14 @@ try {
   if ($dirty -or $productHead -ne $ExpectedProductSha) {
     throw 'Final qualification requires the exact clean Product SHA'
   }
+  if ($ExpectedBaseProductSha) {
+    $candidateParent = (git rev-parse "$ExpectedProductSha^").Trim()
+    if ($candidateParent -ne $ExpectedBaseProductSha) {
+      throw 'Journey-contract candidate is not directly bound to the expected Product SHA'
+    }
+  }
   $schemaHead = (python -m scripts.browser_migration_contract repository-head).Trim()
-  if ($LASTEXITCODE -ne 0 -or $schemaHead -ne '20261013_structured_route_progress_eta') {
+  if ($LASTEXITCODE -ne 0 -or $schemaHead -ne '20261014_canonical_geography_locations') {
     throw "Unexpected migration head: $schemaHead"
   }
   foreach ($tool in @('initdb.exe', 'pg_ctl.exe', 'createdb.exe')) {
@@ -331,6 +343,13 @@ try {
     if (-not $script:browserSelectionStarted) {
       throw "Diagnostic browser resume target was not found: $StartBrowserAt"
     }
+    if ($BrowserStages) {
+      $completedStages = @($results | ForEach-Object { $_.name -replace ' Chrome$','' })
+      $missingStages = @($BrowserStages | Where-Object { $_ -notin $completedStages })
+      if ($missingStages.Count) {
+        throw "Requested browser stages did not complete: $($missingStages -join ', ')"
+      }
+    }
   }
 
   if ((git rev-parse HEAD).Trim() -ne $ExpectedProductSha -or (git status --porcelain)) {
@@ -346,7 +365,9 @@ try {
   }
   if (Test-Path -LiteralPath $EvidenceDirectory) {
     @{
-      product_sha = $productHead
+      product_sha = $(if ($ExpectedBaseProductSha) { $ExpectedBaseProductSha } else { $productHead })
+      qualified_candidate_sha = $productHead
+      browser_stages = $BrowserStages
       dirty_source = $dirty
       schema = $schemaHead
       results = $results.ToArray()

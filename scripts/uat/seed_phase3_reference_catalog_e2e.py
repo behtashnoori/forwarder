@@ -17,6 +17,7 @@ from backend.operational_models import OperationalMembership, OperationalOrganiz
 from backend.organization_profile import apply_profile, load_profile, plan_profile
 from backend.reference_data_catalog import apply_catalog, load_catalog, plan_catalog
 from backend.services.admin_authorization_service import ORGANIZATION_ADMIN_PERMISSION
+from scripts.uat.canonical_geography_fixture import ensure_canonical_geography
 from scripts.uat.seed_shared_transport_e2e import (
     PERMISSIONS,
     fixture_user,
@@ -39,6 +40,8 @@ def main() -> None:
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
     app = create_app(skip_startup=True)
     with app.app_context():
+        ensure_canonical_geography()
+
         catalog = load_catalog()
         before = plan_catalog(catalog, "uat")
         if before.created_count <= 0 or before.conflict_count or before.rejected_count:

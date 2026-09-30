@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
@@ -155,6 +156,7 @@ test("P3-03 — progressive branched plan, actual deviation, history, and author
   await login(page);
   await page.goto(`/operations/shipments/${fixture.p3_route_shipment}`);
   await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
+  await openShipmentSection(page, "route", fixture.p3_route_shipment);
   await page.getByRole("button", { name: "ایجاد مسیر عملیات", exact: true }).click();
   await expect(page.getByText(/پیش‌نویس برنامه مسیر/)).toBeVisible();
 
@@ -305,7 +307,6 @@ test("P3-03 — progressive branched plan, actual deviation, history, and author
   expect(exceptions.status()).toBe(200);
   expect(((await exceptions.json()) as { data: unknown[] }).data).toEqual([]);
 
-  await page.locator("summary", { hasText: "جزئیات عملیاتی بیشتر" }).click();
   await page.getByLabel("دلیل بازبرنامه‌ریزی").fill("اصلاح برنامه آینده پس از ثبت مسیر واقعی");
   const replanned = page.waitForResponse(response =>
     response.request().method() === "POST" && response.url().endsWith(`/route-plans/${draft.id}/replan`),
@@ -326,7 +327,7 @@ test("P3-03 — progressive branched plan, actual deviation, history, and author
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "بخش مسیر 2 · مقصد تهران", exact: true })).toBeVisible();
-  await page.locator("summary", { hasText: "جزئیات عملیاتی بیشتر" }).click();
+  await openShipmentSection(page, "route", fixture.p3_route_shipment);
   await expect(page.getByText("نسخه مسیر 1", { exact: true })).toBeVisible();
   await expect(page.getByText("نسخه مسیر 2", { exact: true })).toBeVisible();
   await expect(page.getByText(/واقعیت‌های پیمایش: 1 · انحراف‌های ثبت‌شده: 1/)).toBeVisible();

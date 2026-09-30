@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
@@ -49,7 +50,7 @@ async function openShipmentThroughNavigation(page: Page) {
   await expect(shipment).toBeVisible();
   await shipment.click();
   await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
-  await page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }).click();
+  await openShipmentSection(page, "cargo", fixture.shipment_a);
   await expect(page.getByText("کالا، مشتری و درخواست منبع", { exact: true })).toBeVisible();
 }
 

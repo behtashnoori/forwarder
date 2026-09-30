@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 const password=process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath=process.env.FORWARDER_E2E_FIXTURE_PATH;
 if(!password||!fixturePath)throw new Error("Use the owned P3-12 runner");
@@ -15,7 +16,7 @@ async function openShipment(page:Page,id:string){
   const all=page.getByRole("button",{name:"نمایش همه وضعیت‌ها",exact:true});
   if(await all.isVisible())await all.click();
   await page.locator(`a[href="/operations/shipments/${id}"]`).click();
-  await page.locator("summary",{hasText:"بررسی و بستن پرونده"}).click();
+  await openShipmentSection(page,"closure",id);
   const region=page.getByRole("region",{name:"بررسی بستن پرونده"});
   await expect(region.getByRole("button",{name:"بررسی دوباره"})).toBeVisible();return region;
 }
@@ -42,11 +43,13 @@ test("P3-12 Admin configuration → Expert close → immutable exception and pri
   const closed=expert.waitForResponse(response=>response.url().endsWith("/close")&&response.request().method()==="POST");
   await region.getByRole("button",{name:"تأیید نهایی بستن"}).click();expect((await closed).status()).toBe(201);
   await expect(region.getByText(/پرونده بسته شده است/)).toBeVisible();
-  await expert.reload();await expert.locator("summary",{hasText:"بررسی و بستن پرونده"}).click();
+  await expert.reload();await openShipmentSection(expert,"closure",fixture.p312_normal);
   region=expert.getByRole("region",{name:"بررسی بستن پرونده"});await expect(region.getByText(/پرونده بسته شده است/)).toBeVisible();
   await expect(expert.getByText("بسته‌شده",{exact:true})).toBeVisible();
-  await expect(expert.getByRole("heading",{name:"اصلاح و تکمیل سوابق"})).toBeVisible();
   await expect(region.getByRole("button",{name:"بستن پرونده",exact:true})).toHaveCount(0);
+  await openShipmentSection(expert,"route",fixture.p312_normal);
+  await expect(expert.getByRole("heading",{name:"اصلاح و تکمیل سوابق"})).toBeVisible();
+  await openShipmentSection(expert,"closure",fixture.p312_normal);region=expert.getByRole("region",{name:"بررسی بستن پرونده"});
   await expert.setViewportSize({width:390,height:844});await region.scrollIntoViewIfNeeded();
   expect(await expert.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   await expert.screenshot({path:testInfo.outputPath("closed-owner-mobile.png"),fullPage:true});
@@ -59,8 +62,11 @@ test("P3-12 Admin configuration → Expert close → immutable exception and pri
   await exception.getByLabel("دلیل بستن با استثنا (الزامی)").fill("PRIVATE-CLOSURE-EXCEPTION-REASON");
   await exception.getByRole("button",{name:"تأیید نهایی بستن"}).click();await expect(exception.getByText(/پرونده بسته شده است/)).toBeVisible();
   await expect(admin.getByText("بسته‌شده",{exact:true})).toBeVisible();
+  await openShipmentSection(admin,"route",fixture.p312_exception);
   await expect(admin.getByRole("heading",{name:"اصلاح و تکمیل سوابق"})).toBeVisible();
-  await exception.locator("summary",{hasText:"الزامات و کمبودهای هنگام بستن"}).click();await expect(exception.getByText("نامشخص",{exact:true})).toBeVisible();
+  await openShipmentSection(admin,"closure",fixture.p312_exception);
+  const refreshedException=admin.getByRole("region",{name:"بررسی بستن پرونده"});
+  await refreshedException.locator("summary",{hasText:"الزامات و کمبودهای هنگام بستن"}).click();await expect(refreshedException.getByText("نامشخص",{exact:true})).toBeVisible();
   await admin.screenshot({path:testInfo.outputPath("exception-retained-missing.png"),fullPage:true});
   const planned=await openShipment(admin,fixture.p312_planned);await expect(planned.getByText("بستن فقط پس از تکمیل پرونده ممکن است.")).toBeVisible();
   await customer.goto("/customer");await customer.locator("#customer-email").fill(fixture.p309_accounts.a.email);await customer.locator("#customer-password").fill(password!);

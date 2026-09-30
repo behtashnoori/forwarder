@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
 if (!password || !fixturePath) throw new Error("Use the owned P3-13 runner");
@@ -21,6 +22,7 @@ async function openShipment(page: Page) {
   await expect(page.getByRole("heading", {name: "خلاصه محموله", exact: true})).toBeVisible();
 }
 async function ownership(page: Page) {
+  await openShipmentSection(page, "summary", fixture.p313_shipment);
   await page.locator("summary", {hasText: "مسئول و سابقه انتقال"}).click();
   return page.getByRole("region", {name: "مسئول و سابقه انتقال"});
 }
@@ -121,7 +123,7 @@ test("P3-13 Admin transfer changes live Expert access and preserves Customer doc
     await expect(next.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`).first()).toBeVisible();
   }
   await openShipment(next);
-  await next.locator("summary", {hasText: "جزئیات عملیاتی بیشتر"}).click();
+  await openShipmentSection(next, "documents", fixture.p313_shipment);
   await next.getByLabel("نوع یا دسته تجاری سند", {exact: true}).fill("PRIVATE-NEW-OWNER-DOCUMENT");
   await next.getByLabel("انتخاب فایل سند").setInputFiles({name: "new-owner.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF")});
   const uploaded = next.waitForResponse(response => new URL(response.url()).pathname === documents && response.request().method() === "POST");
