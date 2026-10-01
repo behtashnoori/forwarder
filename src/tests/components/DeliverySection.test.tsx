@@ -17,6 +17,49 @@ const fact: DeliveryFact = { public_id: "delivery", cargo_public_id: "cargo-a", 
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(listDeliveries).mockResolvedValue({ data: fixture() }); });
 
 describe("partial cargo deliveries", () => {
+  it("keeps structured destination mandatory for a new Delivery", async () => {
+    render(<DeliverySection shipmentId="shipment" />);
+    fireEvent.click(await screen.findByRole("button", { name: "تحویل تازه برای کالای اول" }));
+    expect(screen.getByRole("button", { name: "ثبت تحویل" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "مقصد تحویل ساخت‌یافته" }));
+    expect(screen.getByRole("button", { name: "ثبت تحویل" })).toBeEnabled();
+  });
+
+  it("submits a historical final-only correction without destination fields", async () => {
+    const historical = { ...fact, quantity: "95", destination_text: "بندرعباس", destination_reference: null };
+    const data = { ...fixture(), items: [historical], total: 1 };
+    vi.mocked(listDeliveries).mockResolvedValue({ data });
+    vi.mocked(recordDelivery).mockResolvedValue({ public_id: "correction", revision: 2, is_final: true, created: true });
+    render(<DeliverySection shipmentId="shipment" />);
+    fireEvent.click(await screen.findByRole("button", { name: "اصلاح تحویل" }));
+    expect(screen.getByText(/مقصد تاریخی بدون تغییر حفظ می‌شود/)).toBeInTheDocument();
+    const submit = screen.getByRole("button", { name: "ثبت اصلاح تحویل" });
+    expect(submit).toBeEnabled();
+    fireEvent.click(screen.getByLabelText("تحویل نهایی محموله"));
+    fireEvent.click(submit);
+    await waitFor(() => expect(recordDelivery).toHaveBeenCalled());
+    expect(vi.mocked(recordDelivery).mock.calls[0][1]).toEqual({
+      cargo_public_id: "cargo-a", quantity: "95", uom_public_id: "carton",
+      occurred_at: fact.occurred_at, expected_version: 1, is_final: true,
+      corrects_public_id: "delivery", reason: null,
+    });
+  });
+
+  it("inherits an existing structured destination unless the user changes it", async () => {
+    const structured = { ...fact, destination_text: "دروازه شرقی", destination_reference: { country_id: 1, source_type: "city", source_id: 2 },
+      destination: { display_name: "بندرعباس" } };
+    const data = { ...fixture(), items: [structured], total: 1 };
+    vi.mocked(listDeliveries).mockResolvedValue({ data });
+    vi.mocked(recordDelivery).mockResolvedValue({ public_id: "correction", revision: 2, is_final: false, created: true });
+    render(<DeliverySection shipmentId="shipment" />);
+    fireEvent.click(await screen.findByRole("button", { name: "اصلاح تحویل" }));
+    fireEvent.change(screen.getByLabelText("مقدار تحویل"), { target: { value: "61" } });
+    fireEvent.click(screen.getByRole("button", { name: "ثبت اصلاح تحویل" }));
+    await waitFor(() => expect(recordDelivery).toHaveBeenCalled());
+    expect(vi.mocked(recordDelivery).mock.calls[0][1]).not.toHaveProperty("destination_reference");
+    expect(vi.mocked(recordDelivery).mock.calls[0][1]).not.toHaveProperty("destination_note");
+  });
+
   it("accepts excess reality and preserves command key through an uncertain retry", async () => {
     vi.mocked(recordDelivery).mockRejectedValueOnce(new Error("خطای شبکه")).mockResolvedValueOnce({ public_id: "delivery", revision: 1, created: true });
     render(<DeliverySection shipmentId="shipment" />);
@@ -58,7 +101,8 @@ describe("partial cargo deliveries", () => {
     fireEvent.change(screen.getByLabelText("دلیل اصلاح تحویل"), { target: { value: "بازشماری" } });
     fireEvent.click(screen.getByRole("button", { name: "ثبت اصلاح تحویل" }));
     await waitFor(() => expect(recordDelivery).toHaveBeenCalled());
-    expect(vi.mocked(recordDelivery).mock.calls[0][1]).toMatchObject({ quantity: "58", expected_version: 1, corrects_public_id: "delivery", occurred_at: fact.occurred_at, reason: "بازشماری" });
+    expect(vi.mocked(recordDelivery).mock.calls[0][1]).toMatchObject({ quantity: "58", expected_version: 1, corrects_public_id: "delivery", occurred_at: fact.occurred_at, reason: "بازشماری",
+      destination_reference: { country_id: 1, source_type: "city", source_id: 2 } });
     fireEvent.click(screen.getByText("افزودن مدرک تحویل"));
     const file = new File(["%PDF-1.4"], "proof.pdf", { type: "application/pdf" });
     fireEvent.change(screen.getByLabelText("فایل مدرک تحویل"), { target: { files: [file] } });

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from backend.extensions import db
 from backend.cargo_models import ShipmentCargoItem
 from backend.delivery_models import CargoDelivery, CargoDeliveryEvidence
+from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
 from backend.models import City, Country, Customer, CustomerGamification, ExpertUser, Province
 from backend.operational_models import OperationalShipment, OperationalWorkItem, ExecutionUnit, OperationalMembership
 from backend.services import delivery_service as deliveries, customer_entitlement_service as entitlements
@@ -156,6 +157,112 @@ def test_structured_destination_is_exact_and_legacy_free_text_remains_unbound(op
         with pytest.raises(ValueError, match="immutable"):
             db.session.flush()
         db.session.rollback()
+
+
+def _without_destination(data):
+    return {key: value for key, value in data.items()
+            if key not in {"destination_text", "destination_reference", "destination_note"}}
+
+
+def test_historical_free_text_final_and_quantity_corrections_preserve_destination(operational_app):
+    """Cases 1-2: non-destination corrections inherit free-text identity exactly."""
+    app = operational_app
+    with app.app_context():
+        ctx = setup(app)
+        original, _ = record(app, ctx, payload(ctx, quantity="95", destination_text="بندرعباس"))
+        final_command = _without_destination(payload(ctx, quantity="95", expected_version=1,
+            corrects_public_id=original.public_id, is_final=True))
+        corrected, _ = record(app, ctx, final_command)
+
+        assert corrected.quantity == original.quantity == Decimal("95")
+        assert corrected.occurred_at == original.occurred_at
+        assert corrected.destination_text == original.destination_text == "بندرعباس"
+        assert corrected.destination_location_id is original.destination_location_id is None
+        assert corrected.destination_logistics_point_id is original.destination_logistics_point_id is None
+        assert corrected.destination_snapshot is original.destination_snapshot is None
+        assert corrected.is_final and not original.is_final
+        assert corrected.supersedes_delivery_id == original.id and corrected.revision == 2
+
+        quantity_original, _ = record(app, ctx, payload(ctx, cargo_public_id=ctx["cargo_b"],
+            quantity="5", destination_text="مقصد تاریخی"))
+        quantity_command = _without_destination(payload(ctx, cargo_public_id=ctx["cargo_b"],
+            quantity="6", expected_version=1, corrects_public_id=quantity_original.public_id))
+        quantity_correction, _ = record(app, ctx, quantity_command)
+        assert quantity_correction.quantity == Decimal("6")
+        assert quantity_correction.destination_text == "مقصد تاریخی"
+        assert quantity_correction.destination_location_id is None
+        assert quantity_correction.destination_snapshot is None
+
+
+def test_destination_replacement_requires_structure_and_structured_identity_is_inherited(operational_app):
+    """Cases 3 and 5: replacement is structured; omission preserves exact identity."""
+    app = operational_app
+    with app.app_context():
+        ctx = setup(app)
+        historical, _ = record(app, ctx, payload(ctx, quantity="5", destination_text="بندرعباس"))
+
+        changed_text = _without_destination(payload(ctx, quantity="5", expected_version=1,
+            corrects_public_id=historical.public_id))
+        changed_text["destination_text"] = "مقصد آزاد جدید"
+        with pytest.raises(OperationalError) as caught:
+            record(app, ctx, changed_text)
+        assert caught.value.code == "DELIVERY_STRUCTURED_DESTINATION_REQUIRED"
+        db.session.rollback()
+
+        country = Country(code="HC", name_fa="کشور آزمون اصلاح", name_en="Historical Correction", is_active=True)
+        db.session.add(country); db.session.flush()
+        province = Province(code="HC-P", name_fa="استان آزمون اصلاح", name_en="Correction Province",
+                            geoname_id=910001, country_id=country.id,
+                            dataset_id="GEONAMES_ADMIN1_CITY_V1", is_active=True)
+        db.session.add(province); db.session.flush()
+        city = City(code="910002", name_fa="شهر ساخت‌یافته", name_en="Structured City",
+                    geoname_id=910002, country_id=country.id, province_id=province.id,
+                    county_id=None, dataset_id="GEONAMES_ADMIN1_CITY_V1", is_active=True)
+        db.session.add(city); db.session.commit()
+
+        replacement = _without_destination(payload(ctx, quantity="5", expected_version=1,
+            corrects_public_id=historical.public_id))
+        replacement.update(destination_reference={"country_id": country.id, "source_type": "city", "source_id": city.id},
+                           destination_note="مقصد جایگزین‌شده")
+        structured, _ = record(app, ctx, replacement)
+        assert structured.destination_text == "مقصد جایگزین‌شده"
+        assert structured.destination_location_id is not None
+        assert structured.destination_snapshot["canonical_reference"] == {"source_type": "city", "source_id": city.id}
+
+        inherited_command = _without_destination(payload(ctx, quantity="7", expected_version=2,
+            corrects_public_id=structured.public_id))
+        inherited, _ = record(app, ctx, inherited_command)
+        assert inherited.destination_text == structured.destination_text
+        assert inherited.destination_location_id == structured.destination_location_id
+        assert inherited.destination_logistics_point_id == structured.destination_logistics_point_id
+        assert inherited.destination_snapshot == structured.destination_snapshot
+
+
+def test_cross_tenant_destination_replacement_is_refused(operational_app):
+    """Case 6: correction inheritance never weakens endpoint tenant isolation."""
+    app = operational_app
+    with app.app_context():
+        ctx = setup(app)
+        original, _ = record(app, ctx, payload(ctx, quantity="5", destination_text="مقصد تاریخی"))
+        ids = app.config["phase1a"]
+        country = Country(code="XT", name_fa="کشور مرزی", name_en="Cross Tenant", is_active=True)
+        point_type = LogisticsPointType(immutable_code="XT-WAREHOUSE", fa_name="انبار مرزی",
+            en_name="Cross Tenant Warehouse", created_by=ids["user"], updated_by=ids["user"])
+        db.session.add_all([country, point_type]); db.session.flush()
+        foreign = LogisticsPoint(organization_id=ids["other_org"], immutable_code="FOREIGN-DELIVERY",
+            logistics_point_type_id=point_type.id, fa_name="مقصد سازمان دیگر", en_name="Foreign Destination",
+            normalized_name="foreign destination", country_id=country.id, geography_key=f"country:{country.id}",
+            is_active=True, created_by=ids["user"], updated_by=ids["user"])
+        db.session.add(foreign); db.session.commit()
+
+        command = _without_destination(payload(ctx, quantity="5", expected_version=1,
+            corrects_public_id=original.public_id))
+        command["destination_reference"] = {"country_id": country.id, "source_type": "logistics_point", "source_id": foreign.public_id}
+        with pytest.raises(OperationalError) as caught:
+            record(app, ctx, command)
+        assert caught.value.code == "RESOURCE_NOT_FOUND" and caught.value.status == 404
+        db.session.rollback()
+        assert CargoDelivery.query.count() == 1
 
 
 @pytest.mark.parametrize("changes", [

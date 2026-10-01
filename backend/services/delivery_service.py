@@ -67,6 +67,43 @@ def _quantity(value):
     return result
 
 
+def _destination_values(payload, previous, organization_id):
+    """Resolve replacement input or inherit the predecessor's exact identity."""
+    destination = payload.get("destination_reference")
+    if destination is not None:
+        if not isinstance(destination, dict):
+            fail("مقصد ساخت‌یافته معتبر نیست.")
+        endpoint = base._endpoint(destination, organization_id)
+        geography = base._endpoint_location(endpoint)
+        if geography.source_type != "city" and destination.get("source_type") != "logistics_point":
+            fail("مقصد تحویل باید شهر یا مکان سازمانی متصل به شهر باشد.")
+        return (
+            _text(payload.get("destination_note"), 255),
+            geography.canonical_location.id,
+            endpoint.logistics_point.id if hasattr(endpoint, "logistics_point") else None,
+            base._endpoint_snapshot(endpoint),
+        )
+
+    if previous is not None:
+        # Legacy clients may echo the unchanged text. Any different text is an
+        # explicit replacement and must use the governed structured contract.
+        supplied_texts = []
+        for field in ("destination_text", "destination_note"):
+            if field in payload:
+                supplied_texts.append(_text(payload.get(field), 255))
+        if any(value != previous.destination_text for value in supplied_texts):
+            fail("برای تغییر مقصد، مقصد ساخت‌یافته را انتخاب کنید.",
+                 code="DELIVERY_STRUCTURED_DESTINATION_REQUIRED")
+        return (
+            previous.destination_text,
+            previous.destination_location_id,
+            previous.destination_logistics_point_id,
+            previous.destination_snapshot,
+        )
+
+    return (_text(payload.get("destination_text"), 255, True), None, None, None)
+
+
 def _can_manage(user, shipment):
     try:
         require_permission(user, "operational_shipment.create")
@@ -179,24 +216,12 @@ def create(shipment_public_id, user, payload, key):
         if current_final is not None:
             fail("برای این محموله قبلاً یک تحویل نهایی جاری ثبت شده است.", 409, "FINAL_DELIVERY_EXISTS")
     closure_guard.prior_fact(shipment, _instant(payload.get("occurred_at")))
-    destination = payload.get("destination_reference")
-    destination_location_id = destination_point_id = None
-    destination_snapshot = None
-    if destination is not None:
-        if not isinstance(destination, dict):
-            fail("مقصد ساخت‌یافته معتبر نیست.")
-        endpoint = base._endpoint(destination, shipment.organization_id)
-        geography = base._endpoint_location(endpoint)
-        if geography.source_type != "city" and destination.get("source_type") != "logistics_point":
-            fail("مقصد تحویل باید شهر یا مکان سازمانی متصل به شهر باشد.")
-        destination_location_id = geography.canonical_location.id
-        destination_point_id = endpoint.logistics_point.id if hasattr(endpoint, "logistics_point") else None
-        destination_snapshot = base._endpoint_snapshot(endpoint)
-    note = _text(payload.get("destination_note"), 255)
-    legacy_text = _text(payload.get("destination_text"), 255, destination is None)
+    destination_text, destination_location_id, destination_point_id, destination_snapshot = _destination_values(
+        payload, previous, shipment.organization_id
+    )
     row = Delivery(organization_id=shipment.organization_id, operational_shipment_id=shipment.id, cargo_item_id=cargo.id,
         quantity=_quantity(payload.get("quantity")), uom_id=cargo.uom_id, uom_code_snapshot=cargo.uom_code_snapshot,
-        uom_symbol_snapshot=cargo.uom_symbol_snapshot, destination_text=note if destination is not None else legacy_text,
+        uom_symbol_snapshot=cargo.uom_symbol_snapshot, destination_text=destination_text,
         destination_location_id=destination_location_id, destination_logistics_point_id=destination_point_id,
         destination_snapshot=destination_snapshot,
         occurred_at=_instant(payload.get("occurred_at")), actor_user_id=int(user["id"]),

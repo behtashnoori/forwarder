@@ -14,7 +14,7 @@ from backend.extensions import db
 from backend.migration_runtime import alembic_config
 from backend.cargo_models import ShipmentCargoItem
 from backend.models import CargoType, UnitOfMeasure, CaseDocumentFile
-from backend.delivery_models import CargoDeliveryEvidence
+from backend.delivery_models import CargoDelivery, CargoDeliveryEvidence
 from backend.document_context_models import OperationalDocumentContext
 from backend.operational_models import OperationalShipment, OperationalMembership
 from backend.services import delivery_service as deliveries, document_context_service as contexts
@@ -89,9 +89,11 @@ def test_postgresql18_delivery_migration_constraints_and_concurrent_commands():
     assert sorted(x[1] for x in results) == [False, True] and results[0][2] == results[1][2]
     original = results[0][2]
     barrier = Barrier(2)
-    correction = {**payload, "quantity": "58", "expected_version": 1, "corrects_public_id": original}
+    correction = {key: value for key, value in payload.items() if key != "destination_text"}
+    correction.update(quantity="58", expected_version=1, corrects_public_id=original)
     results = race([(correction, f"correction-{i}") for i in range(2)])
     assert sorted(x[0] for x in results) == ["DELIVERY_VERSION_CONFLICT", "ok"]
+    correction_public_id = next(x[2] for x in results if x[0] == "ok")
     barrier = Barrier(2)
     results = race([({**payload, "quantity": "35"}, "separate-one"), ({**payload, "quantity": "9"}, "separate-two")])
     assert all(x[0] == "ok" and x[1] for x in results) and results[0][2] != results[1][2]
@@ -99,6 +101,11 @@ def test_postgresql18_delivery_migration_constraints_and_concurrent_commands():
         result = deliveries.listing(ctx["shipment"], {"id": ctx["owner"]})
         assert result["total"] == 4 and Decimal(result["cargo"][0]["delivered"]) == 102
         assert Decimal(result["cargo"][0]["excess"]) == 2
+        correction_row = CargoDelivery.query.filter_by(public_id=correction_public_id).one()
+        assert correction_row.destination_text == "انبار واقعی"
+        assert correction_row.destination_location_id is None
+        assert correction_row.destination_logistics_point_id is None
+        assert correction_row.destination_snapshot is None
         shipment = db.session.get(OperationalShipment, ctx["shipment_id"])
         assert shipment.lifecycle_status == "completed"
         assert ShipmentCargoItem.query.one().actual_quantity == 100

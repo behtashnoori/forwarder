@@ -15,6 +15,9 @@ const localTime = (value: string) => {
   const date = new Date(value);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, -1);
 };
+const sameEndpoint = (left: CanonicalEndpointRef | null, right: CanonicalEndpointRef | null) =>
+  left === right || Boolean(left && right && left.country_id === right.country_id
+    && left.source_type === right.source_type && left.source_id === right.source_id);
 const message = (error: unknown) => error instanceof ApiError && error.status === 403
   ? "فقط کارشناس مسئول می‌تواند تحویل ثبت یا اصلاح کند."
   : error instanceof ApiError && error.status === 409
@@ -31,10 +34,15 @@ function DeliveryForm({ cargo, initial, pending, onSubmit, onCancel }: {
   const [occurred, setOccurred] = useState(initial ? localTime(initial.occurred_at) : "");
   const [reason, setReason] = useState("");
   const [isFinal, setIsFinal] = useState(initial?.is_final || false);
+  const initialDestination = (initial?.destination_reference as CanonicalEndpointRef | null) || null;
+  const destinationChanged = Boolean(initial) && (!sameEndpoint(destination, initialDestination)
+    || destinationNote !== (initial?.destination_text || ""));
+  const structuredDestinationRequired = !initial || destinationChanged;
   return <form aria-label={initial ? "اصلاح تحویل" : "ثبت تحویل"} className="rounded-xl border bg-slate-50 p-3" onSubmit={event => {
     event.preventDefault();
     void onSubmit({ cargo_public_id: cargo.public_id, quantity, uom_public_id: cargo.uom_public_id,
-      destination_reference: destination!, destination_note: destinationNote || null, occurred_at: initial && occurred === localTime(initial.occurred_at) ? initial.occurred_at : new Date(occurred).toISOString(),
+      ...(structuredDestinationRequired ? { destination_reference: destination!, destination_note: destinationNote || null } : {}),
+      occurred_at: initial && occurred === localTime(initial.occurred_at) ? initial.occurred_at : new Date(occurred).toISOString(),
       expected_version: initial?.revision || 0, is_final: isFinal,
       ...(initial ? { corrects_public_id: initial.public_id, reason: reason || null } : {}) });
   }}>
@@ -43,12 +51,13 @@ function DeliveryForm({ cargo, initial, pending, onSubmit, onCancel }: {
       <label>مقدار تحویل ({unit(cargo.uom_symbol)})<Input aria-label="مقدار تحویل" required type="number" min="0.000001" step="0.000001" max="999999999999.999999" dir="ltr" value={quantity} onChange={e => setQuantity(e.target.value)} /></label>
       <div className="sm:col-span-2"><CanonicalLocationPicker label="مقصد تحویل" value={destination} onChange={setDestination}/></div>
       <label className="sm:col-span-2">یادداشت مقصد (اختیاری)<Input aria-label="یادداشت مقصد تحویل" maxLength={255} value={destinationNote} onChange={e => setDestinationNote(e.target.value)} /></label>
+      {initial && !initialDestination && !destinationChanged && <p className="text-xs text-slate-600 sm:col-span-2">مقصد تاریخی بدون تغییر حفظ می‌شود. فقط برای جایگزینی مقصد، مقصد ساخت‌یافته را انتخاب کنید.</p>}
       <label>زمان وقوع تحویل<Input aria-label="زمان وقوع تحویل" required type="datetime-local" step="0.001" dir="ltr" value={occurred} onChange={e => setOccurred(e.target.value)} /><span className="text-xs text-slate-600">زمان محلی شما؛ ثبت دیرهنگام مجاز است.</span></label>
       {initial && <label>دلیل اصلاح (اختیاری)<Input aria-label="دلیل اصلاح تحویل" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>}
       <label className="flex items-center gap-2 sm:col-span-2"><input aria-label="تحویل نهایی محموله" type="checkbox" checked={isFinal} onChange={e => setIsFinal(e.target.checked)} />این Delivery، تحویل نهایی صریح محموله است</label>
       <p className="text-xs text-slate-600 sm:col-span-2">تحویل نهایی یک واقعیت مستقل است؛ سامانه آن را از برابری مقدارها نتیجه‌گیری نمی‌کند.</p>
       <p className="text-xs text-slate-600 sm:col-span-2">مقدار واقعی گزارش‌شده را ثبت کنید. اختلاف با مقدار شناخته‌شده مانع ثبت نیست و مقدار کالا را تغییر نمی‌دهد.</p>
-      <div className="flex flex-wrap gap-2 sm:col-span-2"><Button type="submit" disabled={!destination}>{pending ? "در حال ثبت…" : initial ? "ثبت اصلاح تحویل" : "ثبت تحویل"}</Button><Button type="button" variant="outline" onClick={onCancel}>انصراف</Button></div>
+      <div className="flex flex-wrap gap-2 sm:col-span-2"><Button type="submit" disabled={structuredDestinationRequired && !destination}>{pending ? "در حال ثبت…" : initial ? "ثبت اصلاح تحویل" : "ثبت تحویل"}</Button><Button type="button" variant="outline" onClick={onCancel}>انصراف</Button></div>
     </fieldset>
   </form>;
 }

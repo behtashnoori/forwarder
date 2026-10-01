@@ -72,6 +72,24 @@ converted or rewritten. Example: 100 actual, 60+35 delivered gives 95/5; correct
 60 to 58 gives 93/7; a genuine total 102 is accepted with an excess warning of 2.
 Another Customer's Cargo and Shipment lifecycle remain unchanged.
 
+### Historical destination correction compatibility
+
+The Product Owner's 2026-10-01 `HW_DELIVERY_UX_002` remediation clarifies the
+complete-fact rule for Deliveries created before structured destination binding.
+On a correction, omission of destination fields means exact inheritance of the
+predecessor's destination text, canonical-location FK, Organization logistics-point
+FK, and immutable snapshot. This is a command meaning, not label inference or a
+backfill. An unchanged legacy client echo of the same text is treated identically.
+
+Any different destination input is an explicit replacement and must provide a
+structured canonical endpoint. The normal canonical and Organization-scoped
+facility resolver remains authoritative, including cross-tenant refusal. New
+Delivery UI commands still require a structured destination. Existing historical
+free text is never mapped to a similarly named City or facility automatically.
+The predecessor remains immutable and the successor remains a complete append-only
+fact; quantity, occurrence time, finality, and other editable facts change only
+when their command fields change.
+
 ## Document capability and history
 
 Extend OperationalDocumentContext with a real DELIVERY FK, constrained to the
