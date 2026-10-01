@@ -74,7 +74,9 @@ async function screenshot(page: Page, name: string) {
 }
 
 test("shows background-evaluated Attention, then one shared stale truth in Workspace and Control Tower", async ({ page }) => {
-  test.setTimeout(180_000);
+  // Keep a bounded allowance for the background CLI evaluation plus both
+  // browser sessions and the final relational Control Tower projection.
+  test.setTimeout(240_000);
   const firstPageEvidence = observe(page);
 
   await loginExpert(page, fixture.usernames.owner, /\/operations$/);

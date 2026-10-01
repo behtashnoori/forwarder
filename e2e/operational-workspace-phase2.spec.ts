@@ -136,7 +136,12 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
   });
 
   test("expert records exception evidence, follows and resolves an Action, and keeps history", async ({ page }) => {
-    test.setTimeout(120_000);
+    // This end-to-end proof intentionally exercises the full exception/action
+    // lifecycle before querying the relational Control Tower projection.  On
+    // the owned Windows/PostgreSQL qualification runtime the UI steps can use
+    // most of the default two-minute budget, which used to cancel the final
+    // API request before the backend could complete it.
+    test.setTimeout(240_000);
     const evidence = observe(page);
     await loginExpert(page, fixture.usernames.owner, /\/operations$/);
     await page.getByRole("link", { name: /مشاهده محموله مشتری عملیاتی آزمایشی/ }).click();
