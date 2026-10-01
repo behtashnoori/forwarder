@@ -22,7 +22,7 @@ async function openShipment(page:Page,id:string){
 }
 function local(date:Date){const pad=(n:number)=>String(n).padStart(2,"0");return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;}
 
-test("P3-12 Admin configuration → Expert close → immutable exception and private Customer status",async({browser},testInfo)=>{
+test("P3-12 exact V1 blockers → controlled exception → private Customer status",async({browser},testInfo)=>{
   const adminContext=await browser.newContext();const expertContext=await browser.newContext();const customerContext=await browser.newContext();
   const admin=await adminContext.newPage();const expert=await expertContext.newPage();const customer=await customerContext.newPage();
   const errors:string[]=[];
@@ -31,18 +31,23 @@ test("P3-12 Admin configuration → Expert close → immutable exception and pri
   await expect(region.getByText(/قواعد بستن پرونده تعریف نشده است/)).toBeVisible();
   await login(admin,"admin");await admin.getByRole("tab",{name:"قواعد بستن پرونده",exact:true}).click();
   await expect(admin.getByText(/قواعد هنوز تعریف نشده است/)).toBeVisible();
-  await admin.getByRole("button",{name:"تعریف نسخه تازه قواعد"}).click();await admin.getByRole("button",{name:"افزودن معیار"}).click();
-  await admin.getByLabel("معیار 1",{exact:true}).selectOption("ACTUAL_QUANTITY_KNOWN");
+  await admin.getByRole("button",{name:"تعریف نسخه V1 قواعد",exact:true}).click();
   await admin.getByLabel("شروع اعتبار (زمان محلی)").fill(local(new Date(Date.now()-86400_000)));
   const configured=admin.waitForResponse(response=>response.url().endsWith("/closure-policy/versions")&&response.request().method()==="POST");
   await admin.getByRole("button",{name:"ثبت نسخه قواعد"}).click();expect((await configured).status()).toBe(201);
   await admin.screenshot({path:testInfo.outputPath("closure-policy-admin.png"),fullPage:true});
   await region.getByRole("button",{name:"بررسی دوباره"}).click();
-  await expect(region.getByRole("button",{name:"بستن پرونده",exact:true})).toBeEnabled();
-  await region.getByRole("button",{name:"بستن پرونده",exact:true}).click();
-  const closed=expert.waitForResponse(response=>response.url().endsWith("/close")&&response.request().method()==="POST");
-  await region.getByRole("button",{name:"تأیید نهایی بستن"}).click();expect((await closed).status()).toBe(201);
-  await expect(region.getByText(/پرونده بسته شده است/)).toBeVisible();
+  await expect(region.getByRole("button",{name:"بستن پرونده",exact:true})).toBeDisabled();
+  await expect(region.locator("li",{hasText:"تحویل نهایی محموله به‌صراحت ثبت شده باشد"})).toBeVisible();
+  await expect(region.locator("li",{hasText:"همه مراحل عملیاتی الزامی محموله کامل شده باشند"})).toBeVisible();
+  await expect(region.getByRole("button",{name:"بستن با استثنای مدیر"})).toHaveCount(0);
+  const normalAdmin=await openShipment(admin,fixture.p312_normal);
+  await normalAdmin.getByRole("button",{name:"بستن با استثنای مدیر"}).click();await normalAdmin.getByRole("button",{name:"تأیید نهایی بستن"}).click();
+  await expect(normalAdmin.getByRole("alert")).toContainText("دلیل");
+  await normalAdmin.getByLabel("دلیل بستن با استثنا (الزامی)").fill("PRIVATE-CLOSURE-NORMAL-EXCEPTION");
+  const closed=admin.waitForResponse(response=>response.url().endsWith("/close")&&response.request().method()==="POST");
+  await normalAdmin.getByRole("button",{name:"تأیید نهایی بستن"}).click();expect((await closed).status()).toBe(201);
+  await expect(normalAdmin.getByText(/پرونده بسته شده است/)).toBeVisible();
   await expert.reload();await openShipmentSection(expert,"closure",fixture.p312_normal);
   region=expert.getByRole("region",{name:"بررسی بستن پرونده"});await expect(region.getByText(/پرونده بسته شده است/)).toBeVisible();
   await expect(expert.getByText("بسته‌شده",{exact:true})).toBeVisible();
@@ -73,7 +78,7 @@ test("P3-12 Admin configuration → Expert close → immutable exception and pri
   await customer.locator("form button").first().click();await expect(customer).toHaveURL(/\/customer\/requests/);
   await customer.getByRole("link",{name:"حمل‌های من",exact:true}).click();await customer.locator(`a[href="/customer/shipments/${fixture.p312_normal}"]`).click();
   await expect(customer.getByText("بسته‌شده",{exact:true})).toBeVisible();
-  await expect(customer.getByText("PRIVATE-CLOSURE-EXCEPTION-REASON")).toHaveCount(0);
+  await expect(customer.getByText(/PRIVATE-CLOSURE-/)).toHaveCount(0);
   await expect(customer.getByRole("button",{name:"بستن پرونده",exact:true})).toHaveCount(0);
   await customer.screenshot({path:testInfo.outputPath("closed-customer-safe.png"),fullPage:true});
   expect(errors).toEqual([]);await adminContext.close();await expertContext.close();await customerContext.close();
