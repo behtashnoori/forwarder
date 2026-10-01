@@ -65,7 +65,7 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
   page.on("pageerror", error => errors.push(error.message));
   await expert(page);
   const docs = page.getByRole("region", { name: "اسناد محموله", exact: true }).first();
-  await expect(docs.getByLabel("Document upload context")).toBeVisible();
+  await expect(docs.getByLabel("زمینه بارگذاری سند")).toBeVisible();
 
   const internal = await upload(page, "P306 داخلی", "internal.pdf");
   expect(internal.context.visibility).toBe("INTERNAL");
@@ -75,32 +75,32 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
   await openShipmentSection(page, "documents", fixture.p304_shipment);
   await expect(page.getByText("internal.pdf")).toBeVisible();
 
-  await page.getByLabel("Document upload context").selectOption("CARGO");
-  await page.getByLabel("Document upload target").selectOption(fixture.p305_cargo);
-  await page.getByLabel("Document upload visibility").selectOption("CARGO_OWNER");
+  await page.getByLabel("زمینه بارگذاری سند").selectOption("CARGO");
+  await page.getByLabel("مورد مرتبط برای سند").selectOption(fixture.p305_cargo);
+  await page.getByLabel("دسترسی سند بارگذاری‌شده").selectOption("CARGO_OWNER");
   const cargo = await upload(page, "P306 کالا", "cargo-private.pdf");
   expect(cargo.context.type).toBe("CARGO");
   let cargoArticle = page.getByRole("article").filter({ hasText: "cargo-private.pdf" }).first();
   await cargoArticle.locator("summary", { hasText: "اصلاح زمینه یا دسترسی" }).click();
-  await cargoArticle.getByLabel(`Document context ${cargo.public_id}`).selectOption("ROUTE_LEG");
-  await cargoArticle.getByLabel(`Document target ${cargo.public_id}`).selectOption(String(fixture.p304_road_leg));
+  await cargoArticle.getByLabel("زمینه سند").selectOption("ROUTE_LEG");
+  await cargoArticle.getByLabel("مورد مرتبط سند").selectOption(String(fixture.p304_road_leg));
   await cargoArticle.getByRole("button", { name: "ثبت اصلاح با تاریخچه" }).click();
   await expect(cargoArticle.getByText("مربوط به: مرحله مسیر")).toBeVisible();
   cargoArticle = page.getByRole("article").filter({ hasText: "cargo-private.pdf" }).first();
   await cargoArticle.locator("summary", { hasText: "اصلاح زمینه یا دسترسی" }).click();
-  await cargoArticle.getByLabel(`Document context ${cargo.public_id}`).selectOption("EXECUTION_UNIT");
-  const executionChoice = await cargoArticle.getByLabel(`Document target ${cargo.public_id}`).locator("option").first().getAttribute("value");
+  await cargoArticle.getByLabel("زمینه سند").selectOption("EXECUTION_UNIT");
+  const executionChoice = await cargoArticle.getByLabel("مورد مرتبط سند").locator("option").first().getAttribute("value");
   expect(executionChoice).toBeTruthy();
-  await cargoArticle.getByLabel(`Document target ${cargo.public_id}`).selectOption(executionChoice!);
+  await cargoArticle.getByLabel("مورد مرتبط سند").selectOption(executionChoice!);
   await cargoArticle.getByRole("button", { name: "ثبت اصلاح با تاریخچه" }).click();
   await expect(cargoArticle.getByText("مربوط به: اجرای حمل")).toBeVisible();
   await cargoArticle.locator("summary", { hasText: "اصلاح زمینه یا دسترسی" }).click();
   await cargoArticle.getByRole("button", { name: "نمایش تاریخچه زمینه و دسترسی" }).click();
-  await expect(cargoArticle.getByText(/CONTEXT_CHANGED/).first()).toBeVisible();
+  await expect(cargoArticle.getByText(/اصلاح زمینه سند/).first()).toBeVisible();
 
-  await page.getByLabel("Document upload context").selectOption("SHIPMENT");
-  await page.getByLabel("Document upload visibility").selectOption("EXPLICIT_SHARED");
-  await page.getByLabel("Document upload audiences").selectOption([fixture.p306_account_a]);
+  await page.getByLabel("زمینه بارگذاری سند").selectOption("SHIPMENT");
+  await page.getByLabel("دسترسی سند بارگذاری‌شده").selectOption("EXPLICIT_SHARED");
+  await page.getByLabel("مخاطبان سند بارگذاری‌شده").selectOption([fixture.p306_account_a]);
   const shared = await upload(page, "P306 مشترک", "shared-v1.pdf");
   expect(shared.context.visibility).toBe("EXPLICIT_SHARED");
   const ownerToken = await page.evaluate(() => localStorage.getItem("expert_token"));
@@ -139,16 +139,16 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
 
   const nextArticle = page.getByRole("article").filter({ hasText: "shared-v2.pdf" }).first();
   await nextArticle.locator("summary", { hasText: "اصلاح زمینه یا دسترسی" }).click();
-  await nextArticle.getByLabel(`Document visibility ${replacement.public_id}`).selectOption("EXPLICIT_SHARED");
-  await nextArticle.getByLabel(`Document audiences ${replacement.public_id}`).selectOption([fixture.p306_account_a]);
+  await nextArticle.getByLabel("دسترسی سند").selectOption("EXPLICIT_SHARED");
+  await nextArticle.getByLabel("مخاطبان سند").selectOption([fixture.p306_account_a]);
   await nextArticle.getByRole("button", { name: "ثبت اصلاح با تاریخچه" }).click();
   await expect(nextArticle.getByText(/چه کسانی می‌توانند ببینند؟ مشتریان انتخاب‌شده/)).toBeVisible();
   await a.page.reload();
   await expect(a.page.getByText("document-v2.pdf")).toBeVisible();
   await expect(b.page.getByText("document-v2.pdf")).toHaveCount(0);
 
-  await page.getByLabel("Document upload context").selectOption("SHIPMENT");
-  await page.getByLabel("Document upload visibility").selectOption("INTERNAL");
+  await page.getByLabel("زمینه بارگذاری سند").selectOption("SHIPMENT");
+  await page.getByLabel("دسترسی سند بارگذاری‌شده").selectOption("INTERNAL");
   await page.getByLabel("نوع یا دسته تجاری سند").fill("P306 چندفایلی");
   await page.getByLabel("انتخاب فایل سند").setInputFiles([
     { name: "good.pdf", mimeType: "application/pdf", buffer: pdf },
@@ -184,9 +184,9 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
 
 test("DN10 — Admin grant → own-Cargo exact download → revoke → mobile back/reopen denied", async ({ page, browser }, testInfo) => {
   await expert(page);
-  await page.getByLabel("Document upload context").selectOption("CARGO");
-  await page.getByLabel("Document upload target").selectOption(fixture.p305_cargo);
-  await page.getByLabel("Document upload visibility").selectOption("CARGO_OWNER");
+  await page.getByLabel("زمینه بارگذاری سند").selectOption("CARGO");
+  await page.getByLabel("مورد مرتبط برای سند").selectOption(fixture.p305_cargo);
+  await page.getByLabel("دسترسی سند بارگذاری‌شده").selectOption("CARGO_OWNER");
   const cargo = await upload(page, "مدرک کالای مشتری", "dn10-cargo.pdf");
   const a = await customer(browser, fixture.p306_email_a);
   await a.page.setViewportSize({ width: 390, height: 844 });

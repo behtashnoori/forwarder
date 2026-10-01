@@ -10,7 +10,7 @@ function local(date:Date){const pad=(n:number)=>String(n).padStart(2,"0");return
 async function login(page:Page,persona:string){
   await page.goto("/");await page.getByRole("button",{name:"ورود به سامانه"}).first().click();
   await page.getByLabel("نام کاربری").fill(`shared_transport_e2e_${persona}`);await page.getByLabel("رمز عبور").fill(password!);
-  await page.getByRole("dialog").getByRole("button",{name:"ورود",exact:true}).click();await expect(page).not.toHaveURL(/\/$/);
+  await page.getByRole("dialog").getByRole("button",{name:"ورود",exact:true}).click();await expect(page).not.toHaveURL(/\/$/, { timeout: 15_000 });
 }
 async function headers(page:Page){return {Authorization:`Bearer ${await page.evaluate(()=>localStorage.getItem("expert_token"))}`,"Idempotency-Key":crypto.randomUUID()};}
 async function openShipment(page:Page,id:string){
