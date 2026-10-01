@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ShipmentDocuments from "@/components/ShipmentDocuments";
 
 const api = vi.hoisted(() => ({
-  list: vi.fn(), options: vi.fn(), upload: vi.fn(), change: vi.fn(), history: vi.fn(),
+  list: vi.fn(),
+  options: vi.fn(),
+  upload: vi.fn(),
+  change: vi.fn(),
+  history: vi.fn(),
 }));
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
@@ -18,11 +22,25 @@ vi.mock("@/lib/api", async () => {
 });
 
 const document = {
-  public_id: "file-1", business_document_type: "بارنامه", filename: "bol.pdf", version: 1,
-  recorded_at: "2026-09-25T12:00:00Z", actor: "کارشناس", owner: "SHIPMENT",
-  lifecycle_state: "active", description: null, references: [], requirements: [],
-  context: { public_id: "context-1", type: "CARGO", target_public_id: "cargo-1",
-    visibility: "CARGO_OWNER", version: 1, audiences: [] },
+  public_id: "file-1",
+  business_document_type: "بارنامه",
+  filename: "bol.pdf",
+  version: 1,
+  recorded_at: "2026-09-25T12:00:00Z",
+  actor: "کارشناس",
+  owner: "SHIPMENT",
+  lifecycle_state: "active",
+  description: null,
+  references: [],
+  requirements: [],
+  context: {
+    public_id: "context-1",
+    type: "CARGO",
+    target_public_id: "cargo-1",
+    visibility: "CARGO_OWNER",
+    version: 1,
+    audiences: [],
+  },
 };
 const options = {
   shipment: [{ id: "shipment-1", label: "پرونده حمل" }],
@@ -35,7 +53,10 @@ const options = {
 describe("contextual Shipment documents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.list.mockResolvedValue({ data: [document], can_manage_documents: true });
+    api.list.mockResolvedValue({
+      data: [document],
+      can_manage_documents: true,
+    });
     api.options.mockResolvedValue({ data: options });
     api.upload.mockResolvedValue({ data: document });
     api.history.mockResolvedValue({ data: [] });
@@ -43,20 +64,33 @@ describe("contextual Shipment documents", () => {
 
   it("shows context separately from visibility and keeps customer authority wording bounded", async () => {
     render(<ShipmentDocuments shipmentPublicId="shipment-1" />);
-    expect(await screen.findByText(/مربوط به: کالای مشتری/)).toBeInTheDocument();
-    expect(screen.getByText(/چه کسانی می‌توانند ببینند؟ مشتری صاحب کالا، پس از احراز مجوز هویتی/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/مربوط به: کالای مشتری/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /چه کسانی می‌توانند ببینند؟ مشتری صاحب کالا، پس از احراز مجوز هویتی/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("reports each file outcome and leaves only the failed file retryable", async () => {
-    api.upload.mockImplementationOnce(async () => ({ data: document }))
-      .mockImplementationOnce(async () => { throw new Error("فرمت نامعتبر"); });
+    api.upload
+      .mockImplementationOnce(async () => ({ data: document }))
+      .mockImplementationOnce(async () => {
+        throw new Error("فرمت نامعتبر");
+      });
     render(<ShipmentDocuments shipmentPublicId="shipment-1" />);
-    await screen.findByLabelText("Document upload context");
-    fireEvent.change(screen.getByLabelText("نوع یا دسته تجاری سند"), { target: { value: "بارنامه" } });
+    await screen.findByLabelText("زمینه بارگذاری سند");
+    fireEvent.change(screen.getByLabelText("نوع یا دسته تجاری سند"), {
+      target: { value: "بارنامه" },
+    });
     const a = new File(["%PDF-1.4"], "a.pdf", { type: "application/pdf" });
     const b = new File(["bad"], "b.pdf", { type: "application/pdf" });
-    fireEvent.change(screen.getByLabelText("انتخاب فایل سند"), { target: { files: [a, b] } });
-    fireEvent.click(screen.getByRole("button", { name: "بارگذاری 2 فایل" }));
+    fireEvent.change(screen.getByLabelText("انتخاب فایل سند"), {
+      target: { files: [a, b] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "بارگذاری ۲ فایل" }));
     expect(await screen.findByText("a.pdf: ثبت شد")).toBeInTheDocument();
     expect(screen.getByText(/b.pdf: ناموفق/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "بارگذاری سند" })).toBeEnabled();

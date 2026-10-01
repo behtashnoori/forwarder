@@ -545,7 +545,7 @@ export default function ShipmentDocuments({
               {busy
                 ? "در حال بارگذاری…"
                 : files.length > 1
-                  ? `بارگذاری ${files.length} فایل`
+                  ? `بارگذاری ${files.length.toLocaleString("fa-IR")} فایل`
                   : "بارگذاری سند"}
             </Button>
           </div>
