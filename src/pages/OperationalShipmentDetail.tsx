@@ -325,9 +325,9 @@ export default function OperationalShipmentDetail() {
           <details hidden={!(["route","documents"] as string[]).includes(activeSection)} id="shipment-operational-details" className="scroll-mt-28 rounded border bg-white" open={activeSection==="documents"||legacyOverview}>
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">{activeSection==="documents"?"اسناد و مراجع حمل":"جزئیات اجرای مسیر"}</summary>
             <div className="space-y-5 border-t p-3 sm:p-4">
-              <div hidden={activeSection!=="route"} className="grid gap-4 lg:grid-cols-2">
+              {activeSection==="route" && <div className="grid gap-4 lg:grid-cols-2">
                 <Card><CardHeader><CardTitle>انحراف زمانی مسیر و استثناهای عملیاتی</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{(timeline?.delays?.length || exceptions.length) ? <>{timeline?.delays?.map((delay) => <p key={delay.checkpoint_id}>انحراف زمانی محاسبه‌شده مسیر: {Math.ceil(delay.seconds / 60)} دقیقه</p>)}{exceptions.map((item) => <p key={item.id}>استثنای عملیاتی ثبت‌شده · {businessLabel(item.status)}{item.reason ? ` · ${item.reason}` : ""}</p>)}</> : <p className="text-slate-600">انحراف زمانی یا استثنای عملیاتی ثبت‌شده‌ای وجود ندارد.</p>}</CardContent></Card>
-              </div>
+              </div>}
               <div className="space-y-5">
               <Card hidden={activeSection!=="route"}><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? "عملیات مستقیم" : "درخواست"}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ? "پیشنهاد پذیرفته‌شده مرتبط" : t("operations.notApplicable")}</p></CardContent></Card>
 

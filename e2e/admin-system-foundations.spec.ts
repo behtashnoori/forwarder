@@ -144,7 +144,7 @@ test("explicit dual Admin manages system and own-organization foundations withou
   const city = page.getByLabel("مبدأ مرجع شهر", { exact: true });
   await expect(city.locator("option").nth(1)).toBeAttached({ timeout: 30_000 });
   await city.selectOption((await city.locator("option").nth(1).getAttribute("value"))!);
-  await page.getByRole("button", { name: "افزودن مکان جدید", exact: true }).click();
+  await page.getByRole("group", { name: "مبدأ مرجع", exact: true }).getByRole("button", { name: "افزودن مکان جدید", exact: true }).click();
   await page.getByLabel("نام مکان", { exact: true }).fill("انبار خصوصی آزمون");
   const privateCreate = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/api/internal/logistics-points"));
   await page.getByRole("button", { name: "ایجاد و استفاده فوری", exact: true }).click();

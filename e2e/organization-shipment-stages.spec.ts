@@ -162,6 +162,7 @@ test("Organization Admin configures projectless stages and Expert closes only af
   await expect(expert.getByRole("link",{name:"رفتن به اقدام"})).toHaveCount(0);
   await expert.screenshot({path:testInfo.outputPath("closed-summary-desktop.png"),fullPage:true});
   await openShipmentSection(expert,"documents",fixture.organization_stage_shipment);
+  await expect(expert.getByText("انحراف زمانی مسیر و استثناهای عملیاتی",{exact:true})).toHaveCount(0);
   await expect(expert.getByLabel("انتخاب فایل سند")).toHaveCount(0);
   await expect(expert.getByRole("button",{name:"اصلاح سوابق اسناد"})).toBeVisible();
   await expert.screenshot({path:testInfo.outputPath("closed-documents-readonly-desktop.png"),fullPage:true});
