@@ -62,6 +62,14 @@ def _shipment(public_id: str, user: dict[str, Any], *, manage: bool) -> Operatio
     operational_service.require_permission(
         user, "work_item.manage" if manage else "work_item.read"
     )
+    if manage:
+        from backend.services.assigned_work_authorization import authorize_document_management
+        if not authorize_document_management(user, shipment, for_update=True).allowed:
+            raise operational_service.OperationalError(
+                "FORBIDDEN_OPERATION",
+                "Only the responsible Expert can manage operational actions.",
+                403,
+            )
     return shipment
 
 

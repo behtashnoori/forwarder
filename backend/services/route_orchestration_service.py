@@ -26,6 +26,13 @@ PLAN_PERMISSIONS = {
     "read": "route_plan.read", "create": "route_plan.create",
     "activate": "route_plan.activate", "replan": "route_plan.replan",
 }
+OWNER_ROUTE_WRITE_PERMISSIONS = frozenset({
+    PLAN_PERMISSIONS["create"],
+    PLAN_PERMISSIONS["activate"],
+    PLAN_PERMISSIONS["replan"],
+    "route_leg.manage",
+    "route_exception.manage",
+})
 CHECKPOINT_TYPES = {
     "origin_loading", "export_customs", "border_exit", "transit_border_entry",
     "transit_border_exit", "border_entry", "import_customs", "port_entry",
@@ -92,6 +99,8 @@ def _shipment(shipment_id: str, user: dict, permission: str, *, for_update=False
     from backend.services.assigned_work_authorization import authorize_work_action
     if not authorize_work_action(user, row, "shipment.read").allowed:
         raise base.OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
+    if permission in OWNER_ROUTE_WRITE_PERMISSIONS:
+        _require_route_owner(row, user)
     return row
 
 
@@ -1223,6 +1232,7 @@ def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user
     base._reject_recorded_at(payload)
     base.require_permission(user, "checkpoint.report")
     shipment = _shipment(shipment_id, user, "operational_shipment.read", for_update=True)
+    _require_route_owner(shipment, user)
     checkpoint = db.session.scalar(select(OperationalCheckpoint).join(RoutePlan).where(
         OperationalCheckpoint.id == checkpoint_id, RoutePlan.operational_shipment_id == shipment.id
     ).with_for_update())
@@ -1680,6 +1690,10 @@ def _resolve_route_exception(
         OperationalWorkItem.work_type.in_(["CHECKPOINT_OVERDUE","ROUTE_DEPENDENCY_BLOCKED","REPLAN_REQUIRED"]),
     ).with_for_update())
     if row is None: raise base.OperationalError("ROUTE_EXCEPTION_NOT_FOUND","Route exception was not found.",404)
+    shipment = db.session.get(OperationalShipment, row.operational_shipment_id)
+    if shipment is None:
+        raise base.OperationalError("ROUTE_EXCEPTION_NOT_FOUND", "Route exception was not found.", 404)
+    _require_route_owner(shipment, user)
     reason=str(payload.get("reason") or "").strip()
     if not reason: raise base.OperationalError("EXCEPTION_RESOLUTION_REASON_REQUIRED","Resolution reason is required.")
     replay = request_hash = None

@@ -49,8 +49,8 @@ def execution_app():
             username="execution-operator",
             password_hash="x",
             full_name="Operator",
-            role="admin",
-            authority="ORGANIZATION_ADMIN",
+            role="expert",
+            authority="EXPERT",
             is_active=True,
         )
         verifier = ExpertUser(
@@ -169,7 +169,7 @@ def execution_app():
 
 
 def actor(app, key="operator"):
-    return {"id": app.config["ctx"][key], "role": "admin"}
+    return {"id": app.config["ctx"][key], "role": "expert" if key == "operator" else "admin"}
 
 
 def test_preview_confirm_idempotency_and_no_project_mutation(execution_app):
@@ -431,12 +431,7 @@ def test_unified_history_composes_distinct_facts_and_preserves_document_scope(ex
         assert {item["reference_value"] for item in history["items"] if item["category"] == "REFERENCE"} == {"CMR-42", "CMR-43"}
         assert next(item for item in history["items"] if item["category"] == "DELAY")["reason_label"] == "توقف بندر"
         scoped = reads.history(shipment, 1, 100, user)
-        assert "RequirementMaterialized" not in [item["business_type"] for item in scoped["items"]]
-        membership = OperationalMembership.query.filter_by(user_id=user["id"]).one()
-        membership.permissions = [*membership.permissions, "document_readiness.read"]
-        db.session.commit()
-        permitted = reads.history(shipment, 1, 100, user)
-        assert "RequirementMaterialized" in [item["business_type"] for item in permitted["items"]]
+        assert "RequirementMaterialized" in [item["business_type"] for item in scoped["items"]]
         assert [item["history_id"] for item in reads.history(shipment, 1, 2)["items"]] != [
             item["history_id"] for item in reads.history(shipment, 2, 2)["items"]]
         direct = OperationalShipment(organization_id=shipment.organization_id,
@@ -543,7 +538,7 @@ def test_opaque_event_create_and_append_only_correction(execution_app):
             sqlalchemy_event.remove(engine, "before_cursor_execute", capture)
         # The canonical shipment scope performs a bounded tenant and
         # responsibility fence before the existing event projection.
-        assert len(statements) <= 10
+        assert len(statements) <= 12
         assert len(str(payload).encode("utf-8")) < 16_384
 
 

@@ -70,10 +70,10 @@ function observe(page: Page): BrowserEvidence {
 }
 
 function expectClean(evidence: BrowserEvidence) {
+  expect(evidence.unexpectedResponses, "unexpected API responses").toEqual([]);
   expect(evidence.consoleErrors, "browser console errors").toEqual([]);
   expect(evidence.pageErrors, "uncaught browser errors").toEqual([]);
   expect(evidence.failedRequests, "failed browser requests").toEqual([]);
-  expect(evidence.unexpectedResponses, "unexpected API responses").toEqual([]);
 }
 
 async function loginExpert(

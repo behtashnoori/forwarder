@@ -17,9 +17,14 @@ EXPERT_ROLES = ("expert",)
 # grants workflow capability, not tenant-wide visibility or administrative
 # authority: endpoint guards and assigned-work policy remain authoritative.
 EXPERT_BASELINE_OPERATIONAL_PERMISSIONS: tuple[str, ...] = (
+    "checkpoint.report",
+    "document_readiness.read",
     "execution_unit.create",
     "execution_unit.read",
     "execution_unit.update",
+    "milestone_event.create",
+    "operational_execution.manage",
+    "operational_execution.read",
     "operational_shipment.create",
     "operational_shipment.create_direct",
     "operational_shipment.create_from_quote",
@@ -28,6 +33,13 @@ EXPERT_BASELINE_OPERATIONAL_PERMISSIONS: tuple[str, ...] = (
     # authorization is still enforced by the shipment/execution services.
     "personal_dashboard.manage",
     "personal_dashboard.read",
+    "route_exception.manage",
+    "route_leg.manage",
+    "route_plan.activate",
+    "route_plan.create",
+    "route_plan.replan",
+    "work_item.manage",
+    "work_item.read",
 )
 T = TypeVar("T", bound=ExpertUser)
 

@@ -112,6 +112,15 @@ def test_organization_expert_provisioning_receives_operational_baseline(permissi
             "execution_unit.read",
             "execution_unit.create",
             "execution_unit.update",
+            "milestone_event.create",
+            "operational_execution.manage",
+            "route_plan.create",
+            "route_plan.activate",
+            "route_plan.replan",
+            "route_leg.manage",
+            "checkpoint.report",
+            "work_item.read",
+            "work_item.manage",
         }.issubset(membership.permissions)
         expert_token = create_session_tokens(user_id)["access_token"]
 
@@ -187,12 +196,24 @@ def test_expert_baseline_reconciliation_repairs_execution_read_without_replacing
         plan = reconcile_expert_baseline_permissions()
         assert plan["changed_memberships"] == 1
         assert plan["changes"][0]["added_permissions"] == [
+            "checkpoint.report",
+            "document_readiness.read",
             "execution_unit.read",
+            "milestone_event.create",
+            "operational_execution.manage",
+            "operational_execution.read",
             "operational_shipment.create",
             "operational_shipment.create_direct",
             "operational_shipment.create_from_quote",
             "personal_dashboard.manage",
             "personal_dashboard.read",
+            "route_exception.manage",
+            "route_leg.manage",
+            "route_plan.activate",
+            "route_plan.create",
+            "route_plan.replan",
+            "work_item.manage",
+            "work_item.read",
         ]
         assert "execution_unit.read" not in membership.permissions
 

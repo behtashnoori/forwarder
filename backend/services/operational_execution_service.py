@@ -83,6 +83,14 @@ def _shipment(public_id: str, user: dict, permission="operational_execution.read
         raise OperationalError(
             "RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404
         )
+    if permission == "operational_execution.manage":
+        from backend.services.assigned_work_authorization import authorize_document_management
+        if not authorize_document_management(user, row, for_update=True).allowed:
+            raise OperationalError(
+                "FORBIDDEN_OPERATION",
+                "Only the responsible Expert can manage shipment execution.",
+                403,
+            )
     return row
 
 

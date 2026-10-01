@@ -1433,6 +1433,13 @@ def record_event(
     shipment, milestone = _milestone_target(
         shipment_id, milestone_id, user, "milestone_event.create"
     )
+    from backend.services.assigned_work_authorization import authorize_document_management
+    if not authorize_document_management(user, shipment, for_update=True).allowed:
+        raise OperationalError(
+            "FORBIDDEN_OPERATION",
+            "Only the responsible Expert can record route occurrences.",
+            403,
+        )
     existing = db.session.scalar(
         select(MilestoneEvent).where(
             MilestoneEvent.milestone_id == milestone.id,
