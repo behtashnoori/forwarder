@@ -7,10 +7,11 @@ const databaseUrl = process.env.E2E_DATABASE_URL;
 const expertPassword = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
 const evidencePath = process.env.OPERATIONAL_WORKSPACE_EVIDENCE_PATH;
-if (!databaseUrl || !expertPassword || !fixturePath || !evidencePath) {
+const apiBase = process.env.VITE_BACKEND_URL;
+if (!databaseUrl || !expertPassword || !fixturePath || !evidencePath || !apiBase) {
   throw new Error("Operational Workspace Phase 2 E2E requires owned runtime inputs.");
 }
-if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_workspace_phase2_")) {
+if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_workspace_phase2_") || !apiBase.startsWith("http://127.0.0.1:")) {
   throw new Error("Phase 2 browser proof is restricted to its owned loopback database.");
 }
 
@@ -70,7 +71,7 @@ async function token(page: Page) {
 }
 
 async function reconcile(page: Page) {
-  const response = await page.request.post("/api/oip/reconcile", {
+  const response = await page.request.post(`${apiBase}/api/oip/reconcile`, {
     headers: { Authorization: `Bearer ${await token(page)}` },
     data: {},
   });
@@ -105,7 +106,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     await screenshot(page, "phase2-sla-administration.png");
 
     await loginExpert(page, fixture.usernames.foreign, /\/operations$/);
-    const denied = await page.request.get("/api/organization-sla-rules", {
+    const denied = await page.request.get(`${apiBase}/api/organization-sla-rules`, {
       headers: { Authorization: `Bearer ${await token(page)}` },
     });
     expect(denied.status()).toBe(403);
@@ -120,7 +121,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     await expect(page.getByText("SLA به مرز هشدار نزدیک شده است", { exact: true })).toBeVisible();
     await expect(page.getByText(/بر اساس قاعده «پاسخ به استثنای مصنوعی»/).first()).toBeVisible();
 
-    const workspace = await page.request.get("/api/operational-workspace?limit=20", {
+    const workspace = await page.request.get(`${apiBase}/api/operational-workspace?limit=20`, {
       headers: { Authorization: `Bearer ${await token(page)}` },
     });
     expect(workspace.status()).toBe(200);
@@ -166,7 +167,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     await page.getByLabel("زمینه").selectOption("EXCEPTION");
     const linkedException = page.getByLabel("استثنای مرتبط");
     const conditionsResponse = await page.request.get(
-      `/api/v2/operational-shipments/${fixture.active_shipment_public_id}/execution/exceptions`,
+      `${apiBase}/api/v2/operational-shipments/${fixture.active_shipment_public_id}/execution/exceptions`,
       { headers: { Authorization: `Bearer ${await token(page)}` } },
     );
     expect(conditionsResponse.status()).toBe(200);
@@ -185,7 +186,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     await expect(actionCard.getByText("تماس اول انجام شد و پاسخ در انتظار است", { exact: false })).toBeVisible();
 
     await reconcile(page);
-    const actionWorkspace = await page.request.get("/api/operational-workspace?limit=20", {
+    const actionWorkspace = await page.request.get(`${apiBase}/api/operational-workspace?limit=20`, {
       headers: { Authorization: `Bearer ${await token(page)}` },
     });
     expect(actionWorkspace.status()).toBe(200);
@@ -194,7 +195,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     ]));
     await page.getByRole("link", { name: "فضای کار امروز", exact: true }).click();
     await expect(page.getByText("اقدام عملیاتی نیاز به پیگیری دارد", { exact: true })).toBeVisible();
-    const towerResponse = await page.request.get("/api/control-tower/shipments?page_size=25", {
+    const towerResponse = await page.request.get(`${apiBase}/api/control-tower/shipments?page_size=25`, {
       headers: { Authorization: `Bearer ${await token(page)}` },
     });
     expect(towerResponse.status()).toBe(200);

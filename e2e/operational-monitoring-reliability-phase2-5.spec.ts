@@ -7,10 +7,11 @@ const databaseUrl = process.env.E2E_DATABASE_URL;
 const expertPassword = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
 const evidencePath = process.env.OPERATIONAL_MONITORING_RELIABILITY_EVIDENCE_PATH;
-if (!databaseUrl || !expertPassword || !fixturePath || !evidencePath) {
+const apiBase = process.env.VITE_BACKEND_URL;
+if (!databaseUrl || !expertPassword || !fixturePath || !evidencePath || !apiBase) {
   throw new Error("Operational Monitoring Phase 2.5 E2E requires owned runtime inputs.");
 }
-if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_workspace_phase2_")) {
+if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_workspace_phase2_") || !apiBase.startsWith("http://127.0.0.1:")) {
   throw new Error("Phase 2.5 browser proof is restricted to its owned loopback database.");
 }
 
@@ -79,7 +80,7 @@ test("shows background-evaluated Attention, then one shared stale truth in Works
   await loginExpert(page, fixture.usernames.owner, /\/operations$/);
   const ownerAuthorization = { Authorization: `Bearer ${await token(page)}` };
   const createdAction = await page.request.post(
-    `/api/operational-shipments/${fixture.active_shipment_public_id}/actions`,
+    `${apiBase}/api/operational-shipments/${fixture.active_shipment_public_id}/actions`,
     {
       headers: ownerAuthorization,
       data: {
@@ -112,7 +113,7 @@ test("shows background-evaluated Attention, then one shared stale truth in Works
   const productPage = await browserContext.newPage();
   const evidence = observe(productPage);
   await loginExpert(productPage, fixture.usernames.owner, /\/operations$/);
-  const workspaceResponse = await productPage.request.get("/api/operational-workspace?limit=20", {
+  const workspaceResponse = await productPage.request.get(`${apiBase}/api/operational-workspace?limit=20`, {
     headers: { Authorization: `Bearer ${await token(productPage)}` },
   });
   expect(workspaceResponse.status()).toBe(200);
@@ -125,7 +126,7 @@ test("shows background-evaluated Attention, then one shared stale truth in Works
 
   await loginExpert(productPage, fixture.usernames.admin, /\/admin$/);
   const authorization = { Authorization: `Bearer ${await token(productPage)}` };
-  const rulesResponse = await productPage.request.get("/api/organization-sla-rules", { headers: authorization });
+  const rulesResponse = await productPage.request.get(`${apiBase}/api/organization-sla-rules`, { headers: authorization });
   expect(rulesResponse.status()).toBe(200);
   const rules = (await rulesResponse.json()).data.rules as Array<{
     public_id: string;
@@ -133,7 +134,7 @@ test("shows background-evaluated Attention, then one shared stale truth in Works
     version: number;
   }>;
   expect(rules.length).toBeGreaterThan(0);
-  const changed = await productPage.request.patch(`/api/organization-sla-rules/${rules[0].public_id}`, {
+  const changed = await productPage.request.patch(`${apiBase}/api/organization-sla-rules/${rules[0].public_id}`, {
     headers: authorization,
     data: {
       expected_version: rules[0].version,
@@ -150,7 +151,7 @@ test("shows background-evaluated Attention, then one shared stale truth in Works
   await expect(workspaceWarning).toContainText("نبود هشدار");
   await screenshot(productPage, "phase2-5-workspace-stale.png");
 
-  const towerResponse = await productPage.request.get("/api/control-tower/shipments?page_size=25", {
+  const towerResponse = await productPage.request.get(`${apiBase}/api/control-tower/shipments?page_size=25`, {
     headers: staleOwnerAuthorization,
   });
   expect(towerResponse.status()).toBe(200);
