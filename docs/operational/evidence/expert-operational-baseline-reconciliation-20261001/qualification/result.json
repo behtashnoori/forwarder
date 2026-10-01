@@ -1,0 +1,28 @@
+{
+  "result": "PASS",
+  "executed_at_utc": "2026-10-01T17:49:37.9296385Z",
+  "product_sha": "2f6e28f3e260c770c302e13a6444ce46758d5421",
+  "environment": "owned disposable local PostgreSQL",
+  "postgresql_version": "18.0",
+  "alembic_head": "20261015_org_shipment_stages",
+  "postgresql_baseline_test_count": 1,
+  "focused_authorization_case_count": 13,
+  "focused_authorization_cases": [
+    "backend/tests/test_operational_vertical_slice.py::test_expert_operational_baseline_allows_direct_creation",
+    "backend/tests/test_execution_authority_3a.py::test_legacy_route_occurrence_endpoint_accepts_public_milestone_identity",
+    "backend/tests/test_phase3_reported_facts.py::test_http_owner_only_reopen_and_cross_tenant_fail_closed",
+    "backend/tests/test_organization_shipment_stages.py::test_exact_closure_refusal_warning_only_success_and_unified_history",
+    "backend/tests/test_phase3_cargo_delivery.py::test_http_permissions_replay_correction_conflict_and_reload",
+    "backend/tests/test_phase3_closure.py::test_normal_close_idempotency_terminal_and_pinned_policy",
+    "backend/tests/test_phase3_closure.py::test_policy_and_close_authority_no_store_and_pure_read",
+    "backend/tests/test_expert_membership_permissions.py::test_organization_expert_provisioning_receives_operational_baseline",
+    "backend/tests/test_admin_capability_composition.py::test_system_admin_has_no_implicit_tenant_capability",
+    "backend/tests/test_phase3_closure.py::test_live_authority_denies_close_without_partial_evidence[cross_tenant]",
+    "backend/tests/test_execution_authority_3a.py::test_leg_guard_and_explicit_shipment_cancel[cancelled]",
+    "backend/tests/test_organization_shipment_stages.py::test_projectless_configuration_order_authority_pinning_and_immutability",
+    "backend/tests/test_admin_capability_composition.py::test_bootstrap_composes_both_capabilities_idempotently_with_audit"
+  ],
+  "production_accessed": false,
+  "preserved_walkthrough_accessed": false,
+  "business_actions_on_preserved_walkthrough": 0
+}

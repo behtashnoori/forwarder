@@ -1,0 +1,31 @@
+{
+  "result": "PASS",
+  "executed_at_utc": "2026-10-01T17:51:39.1445748Z",
+  "product_sha": "2f6e28f3e260c770c302e13a6444ce46758d5421",
+  "environment": "owned disposable local/UAT PostgreSQL",
+  "postgresql_major": 18,
+  "alembic_head": "20261015_org_shipment_stages",
+  "browser": "Google Chrome via Playwright",
+  "synthetic_data_only": true,
+  "production_accessed": false,
+  "preserved_walkthrough_accessed": false,
+  "business_actions_on_preserved_walkthrough": 0,
+  "browser_test_count": 12,
+  "journey_count": 14,
+  "product_journeys": [
+    "expert home priority and exception queue",
+    "shipment list priority queue at desktop and mobile widths",
+    "five-second shipment summary with stage progress task readiness and one next action",
+    "representative all-stages-complete state with Final Delivery ahead of warning-only enrichment",
+    "expert Request and Quote commercial progress and state-derived next action",
+    "customer Request and Quote current action with progressive disclosure",
+    "route and execution decomposition",
+    "closure readiness without a closure command",
+    "organization admin semantic IA and platform authority separation",
+    "normal expert operational overview shipment context and history",
+    "fixed owner and cross-tenant isolation",
+    "empty and temporary-error states",
+    "customer account quote history response recovery and tenant admin",
+    "capability-only public tracking and anonymous request intake"
+  ]
+}
