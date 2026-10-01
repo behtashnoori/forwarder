@@ -77,21 +77,27 @@ const expertRequest = {
   },
   cargo: {},
   dates: {},
-  timeline: [{
-    id: 1,
-    action: "customer_quote_response",
-    title: "مشتری درخواست مذاکره کرد",
-    description: "شرایط پرداخت نیاز به هماهنگی دارد",
-    created_at: "2026-09-21T10:30:00Z",
-    created_by: "مشتری",
-  }],
+  timeline: [
+    {
+      id: 1,
+      action: "customer_quote_response",
+      title: "مشتری درخواست مذاکره کرد",
+      description: "شرایط پرداخت نیاز به هماهنگی دارد",
+      created_at: "2026-09-21T10:30:00Z",
+      created_by: "مشتری",
+    },
+  ],
   messages: [],
   has_unread: false,
   commercial: {
     request_status: "waiting_for_customer",
     request_status_label_fa: "در انتظار جمع‌بندی کارشناس",
     latest_quote_response: "discussion" as const,
-    next_action: { code: "expert_review_negotiation", actor: "expert" as const, label_fa: "بررسی درخواست مذاکره" },
+    next_action: {
+      code: "expert_review_negotiation",
+      actor: "expert" as const,
+      label_fa: "بررسی درخواست مذاکره",
+    },
   },
   latest_quote: {
     ...q1,
@@ -131,7 +137,10 @@ function renderCustomer() {
     <I18nProvider>
       <MemoryRouter initialEntries={["/customer/requests/42"]}>
         <Routes>
-          <Route path="/customer/requests/:requestId" element={<CustomerRequestDetail />} />
+          <Route
+            path="/customer/requests/:requestId"
+            element={<CustomerRequestDetail />}
+          />
         </Routes>
       </MemoryRouter>
     </I18nProvider>,
@@ -162,13 +171,32 @@ describe("Simple Quote Communication surfaces", () => {
       can_change: true,
     });
     vi.mocked(api.searchRequestOrganizationCustomers).mockResolvedValue({
-      customers: [{ id: 8, name: "مشتری سازمانی", company_name: "شرکت آزمون", phone: "09120000008" }],
-      pagination: { page: 1, per_page: 8, total: 1, pages: 1, has_next: false, has_prev: false },
+      customers: [
+        {
+          id: 8,
+          name: "مشتری سازمانی",
+          company_name: "شرکت آزمون",
+          phone: "09120000008",
+        },
+      ],
+      pagination: {
+        page: 1,
+        per_page: 8,
+        total: 1,
+        pages: 1,
+        has_next: false,
+        has_prev: false,
+      },
     });
     vi.mocked(api.linkRequestOrganizationCustomer).mockResolvedValue({
       operation: "link",
       request_public_id: expertRequest.public_id,
-      customer: { id: 8, name: "مشتری سازمانی", company_name: "شرکت آزمون", phone: "09120000008" },
+      customer: {
+        id: 8,
+        name: "مشتری سازمانی",
+        company_name: "شرکت آزمون",
+        phone: "09120000008",
+      },
       has_available_customers: true,
       can_change: true,
     });
@@ -180,7 +208,9 @@ describe("Simple Quote Communication surfaces", () => {
     const user = userEvent.setup();
     renderCustomer();
 
-    expect(await screen.findByRole("button", { name: "تأیید پیشنهاد" })).toBeVisible();
+    expect(
+      await screen.findByRole("button", { name: "تأیید پیشنهاد" }),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "نیاز به گفتگو" })).toBeVisible();
     expect(screen.getByRole("button", { name: "رد پیشنهاد" })).toBeVisible();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
@@ -188,11 +218,17 @@ describe("Simple Quote Communication surfaces", () => {
     await user.click(screen.getByRole("button", { name: "نیاز به گفتگو" }));
     const message = screen.getByLabelText("پیام کوتاه برای کارشناس");
     expect(message).toHaveAttribute("maxlength", "500");
-    expect(screen.getByText("این پیام مبلغ یا ارز پیشنهاد رسمی را تغییر نمی‌دهد.")).toBeVisible();
-    expect(screen.getByRole("button", { name: "ارسال درخواست گفتگو" })).toBeDisabled();
+    expect(
+      screen.getByText("این پیام مبلغ یا ارز پیشنهاد رسمی را تغییر نمی‌دهد."),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "ارسال درخواست گفتگو" }),
+    ).toBeDisabled();
 
     await user.type(message, "لطفاً درباره زمان پرداخت صحبت کنیم");
-    await user.click(screen.getByRole("button", { name: "ارسال درخواست گفتگو" }));
+    await user.click(
+      screen.getByRole("button", { name: "ارسال درخواست گفتگو" }),
+    );
     await waitFor(() =>
       expect(api.submitQuoteResponse).toHaveBeenCalledWith(
         q1.public_id,
@@ -216,13 +252,21 @@ describe("Simple Quote Communication surfaces", () => {
     });
     renderCustomer();
 
-    expect(await screen.findByText("<script>این فقط متن است</script>")).toBeVisible();
+    expect(
+      await screen.findByText("<script>این فقط متن است</script>"),
+    ).toBeVisible();
     expect(document.querySelector("script")).toBeNull();
     expect(document.body).toHaveTextContent("۲۰۲۶");
     expect(document.body).toHaveTextContent("۱۴۰۵");
-    expect(screen.queryByRole("button", { name: "تأیید پیشنهاد" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "نیاز به گفتگو" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "رد پیشنهاد" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "تأیید پیشنهاد" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "نیاز به گفتگو" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "رد پیشنهاد" }),
+    ).not.toBeInTheDocument();
     expect(document.documentElement.dir).toBe("rtl");
   });
 
@@ -234,12 +278,19 @@ describe("Simple Quote Communication surfaces", () => {
     renderCustomer();
 
     expect(await screen.findByText("پیشنهاد (قیمت)")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "تأیید پیشنهاد" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "نیاز به گفتگو" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "رد پیشنهاد" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "تأیید پیشنهاد" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "نیاز به گفتگو" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "رد پیشنهاد" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the expert the discussion, immutable quote history, and official revision action", async () => {
+    const user = userEvent.setup();
     render(
       <I18nProvider>
         <MemoryRouter initialEntries={["/expert/requests/42"]}>
@@ -250,17 +301,26 @@ describe("Simple Quote Communication surfaces", () => {
       </I18nProvider>,
     );
 
-    expect((await screen.findAllByText("مشتری نیاز به گفتگو دارد")).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("شرایط پرداخت نیاز به هماهنگی دارد").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole("button", { name: "صدور پیشنهاد بازنگری‌شده" })).toBeVisible();
-    expect(screen.getByText("تاریخچه پیشنهادها")).toBeVisible();
+    expect(
+      (await screen.findAllByText("مشتری نیاز به گفتگو دارد")).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("شرایط پرداخت نیاز به هماهنگی دارد").length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByRole("button", { name: "صدور پیشنهاد بازنگری‌شده" }),
+    ).toBeVisible();
+    await user.click(screen.getByText(/تاریخچه پیشنهادها/));
     expect(screen.getByText("درخواست بازنگری نسخه اول")).toBeVisible();
     expect(document.body).toHaveTextContent("۱٬۲۵۰٬۰۰۰ یورو (EUR)");
     expect(document.body).toHaveTextContent("۱٬۵۰۰٬۰۰۰ دلار آمریکا (USD)");
     expect(document.body).toHaveTextContent("۲۰۲۶");
     expect(document.body).toHaveTextContent("۱۴۰۵");
+    await user.click(screen.getByText(/تایم‌لاین \(/));
     expect(screen.getByText("مشتری درخواست مذاکره کرد")).toBeVisible();
-    expect(screen.queryByText("customer_quote_response")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("customer_quote_response"),
+    ).not.toBeInTheDocument();
   });
 
   it("lets the owning Expert select and link an existing organization Customer", async () => {
@@ -268,18 +328,36 @@ describe("Simple Quote Communication surfaces", () => {
     render(
       <I18nProvider>
         <MemoryRouter initialEntries={["/expert/requests/42"]}>
-          <Routes><Route path="/expert/requests/:id" element={<RequestDetail />} /></Routes>
+          <Routes>
+            <Route path="/expert/requests/:id" element={<RequestDetail />} />
+          </Routes>
         </MemoryRouter>
       </I18nProvider>,
     );
 
-    await screen.findByText("هنوز مشتری سازمان برای این درخواست انتخاب نشده است.");
-    await user.type(screen.getByPlaceholderText("جستجو با نام یا نام شرکت"), "شرکت آزمون");
-    await user.click(screen.getByRole("button", { name: "جستجوی مشتری سازمان" }));
-    await user.click(await screen.findByRole("button", { name: /مشتری سازمانی/ }));
-    await user.click(screen.getByRole("button", { name: "اتصال مشتری انتخاب‌شده" }));
+    await screen.findByText(
+      "هنوز مشتری سازمان برای این درخواست انتخاب نشده است.",
+    );
+    await user.type(
+      screen.getByPlaceholderText("جستجو با نام یا نام شرکت"),
+      "شرکت آزمون",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "جستجوی مشتری سازمان" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /مشتری سازمانی/ }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "اتصال مشتری انتخاب‌شده" }),
+    );
 
-    await waitFor(() => expect(api.linkRequestOrganizationCustomer).toHaveBeenCalledWith(expertRequest.public_id, 8));
+    await waitFor(() =>
+      expect(api.linkRequestOrganizationCustomer).toHaveBeenCalledWith(
+        expertRequest.public_id,
+        8,
+      ),
+    );
     expect(await screen.findByText("شرکت آزمون")).toBeVisible();
   });
 });

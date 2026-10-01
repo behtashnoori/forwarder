@@ -50,6 +50,17 @@ vi.mock("@/i18n", () => ({
       "customer.quoteTitle": "پیشنهاد قیمت",
       "customer.quoteHistory": "تاریخچه پیشنهادها",
       "customer.noQuote": "هنوز پیشنهاد قیمتی ثبت نشده است.",
+      "customer.quoteAwaitingResponse": "در انتظار پاسخ شما",
+      "customer.quoteAccepted": "پیشنهاد پذیرفته شد",
+      "customer.quoteDiscussion": "نیاز به گفتگو ثبت شد",
+      "customer.quoteDeclined": "پیشنهاد رد شد",
+      "customer.quoteValidUntil": "اعتبار پیشنهاد",
+      "customer.quoteAccept": "پذیرش پیشنهاد",
+      "customer.quoteNeedsDiscussion": "نیاز به گفتگو",
+      "customer.quoteDecline": "رد پیشنهاد",
+      "customer.quoteDiscussionMessage": "پیام گفتگو",
+      "customer.quoteDiscussionPlaceholder": "توضیح خود را بنویسید",
+      "customer.quoteSendDiscussion": "ارسال پیام گفتگو",
       "customer.backToPanel": "بازگشت به درخواست‌ها",
       "requestForm.forwarderSuggestionOption": "انتخاب روش مناسب را به فورواردر می‌سپارم",
       "requestForm.customerChoiceOption": "خودم روش حمل را انتخاب می‌کنم",
@@ -114,10 +125,12 @@ describe("authenticated Customer request hardening", () => {
     expect(screen.getByText(expectedForm)).toBeInTheDocument();
   });
 
-  it("renders submitted facts before the empty Quote state and the current safe assignee", async () => {
+  it("prioritizes the commercial state and keeps submitted facts available on demand", async () => {
+    const user = userEvent.setup();
     vi.mocked(portalApi.fetchCustomerRequest).mockResolvedValue(detailFixture());
     render(<MemoryRouter initialEntries={["/customer/requests/request-public"]}><Routes><Route path="/customer/requests/:requestId" element={<CustomerPortalRequestDetail />} /></Routes></MemoryRouter>);
-    expect(await screen.findByText("علی رضایی")).toBeInTheDocument();
+    expect((await screen.findAllByText("علی رضایی")).length).toBeGreaterThanOrEqual(1);
+    await user.click(screen.getAllByText("جزئیات درخواست")[0]);
     const routeCard = screen.getByRole("heading", { name: "مسیر / مبدا و مقصد" }).closest(".rounded-lg");
     expect(routeCard).toHaveTextContent("تهران");
     expect(routeCard).toHaveTextContent("اصفهان");
@@ -130,13 +143,13 @@ describe("authenticated Customer request hardening", () => {
     expect(screen.getByText("با هماهنگی قبلی تحویل شود")).toBeInTheDocument();
     const cargoHeading = screen.getByRole("heading", { name: "اقلام کالا" });
     const noQuote = screen.getAllByText("هنوز پیشنهاد قیمتی ثبت نشده است.")[0];
-    expect(cargoHeading.compareDocumentPosition(noQuote) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(noQuote.compareDocumentPosition(cargoHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("shows truthful pending assignment when no Expert is committed", async () => {
     vi.mocked(portalApi.fetchCustomerRequest).mockResolvedValue(detailFixture(false));
     render(<MemoryRouter initialEntries={["/customer/requests/request-public"]}><Routes><Route path="/customer/requests/:requestId" element={<CustomerPortalRequestDetail />} /></Routes></MemoryRouter>);
-    expect(await screen.findByText("در حال تخصیص")).toBeInTheDocument();
+    expect((await screen.findAllByText("در حال تخصیص")).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("درخواست شما ثبت شد و به‌زودی به کارشناس مربوط ارجاع می‌شود.")).toBeInTheDocument();
     await waitFor(() => expect(portalApi.fetchCustomerRequest).toHaveBeenCalledWith("request-public"));
   });
@@ -156,5 +169,39 @@ describe("authenticated Customer request hardening", () => {
     render(<MemoryRouter initialEntries={["/customer/requests/request-public"]}><Routes><Route path="/customer/requests/:requestId" element={<CustomerPortalRequestDetail />} /></Routes></MemoryRouter>);
     expect(await screen.findByText("بندرعباس، هرمزگان")).toBeInTheDocument();
     expect(screen.getByText("مقصد در ایران")).toBeInTheDocument();
+  });
+
+  it("shows one dominant response action and removes response controls after commercial closure", async () => {
+    const currentQuote = {
+      public_id: "quote-public",
+      response_version: 1,
+      amount: 1250000,
+      currency: "IRR",
+      created_at: "2026-09-27T11:00:00Z",
+      customer_response: null,
+    };
+    vi.mocked(portalApi.fetchCustomerRequest).mockResolvedValue({
+      ...detailFixture(),
+      status: "in_progress",
+      latest_quote: currentQuote,
+      quote_history: [currentQuote],
+    });
+    const { unmount } = render(<MemoryRouter initialEntries={["/customer/requests/request-public"]}><Routes><Route path="/customer/requests/:requestId" element={<CustomerPortalRequestDetail />} /></Routes></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: "پیگیری درخواست و پیشنهاد" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "مشاهده و پاسخ به پیشنهاد" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "پذیرش پیشنهاد" })).toBeInTheDocument();
+    unmount();
+
+    vi.mocked(portalApi.fetchCustomerRequest).mockResolvedValue({
+      ...detailFixture(),
+      status: "won",
+      latest_quote: { ...currentQuote, customer_response: "accepted" },
+      quote_history: [{ ...currentQuote, customer_response: "accepted" }],
+    });
+    render(<MemoryRouter initialEntries={["/customer/requests/request-public"]}><Routes><Route path="/customer/requests/:requestId" element={<CustomerPortalRequestDetail />} /></Routes></MemoryRouter>);
+    expect(await screen.findByText("فرایند تجاری جمع‌بندی شده است")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "پذیرش پیشنهاد" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "نیاز به گفتگو" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "رد پیشنهاد" })).not.toBeInTheDocument();
   });
 });
