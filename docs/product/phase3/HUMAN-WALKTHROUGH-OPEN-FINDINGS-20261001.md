@@ -96,9 +96,9 @@ The final evidence index below binds each result to its tested candidate.
 | HW_DOC_003 | Documents | MEDIUM | Technical operator wording | Materialization-oriented copy | ثبت مدارک مورد نیاز این محموله and concise relationship explanation | Frontend readiness tests; browser Documents | RESOLVED |
 | HW_DOC_004 | Closed Documents | HIGH | Mutation controls visible by default | Closed state not supplied to requirements/files/references | Default read-only; explicit historical repair under clarified Product authority; existing backend new-operation denials retained | PG closed-command denial and audited historical repair with frozen ClosureDecision; closed browser toggle and no-upload default | RESOLVED |
 | HW_HISTORY_002 | History | HIGH | Closure category empty | Client filtered only current unfiltered page; authoritative closure branch already existed | Server category filter/count before pagination across composed feed | PG closure beyond first 50 / category page size 1 / immutable decision identity; closure browser category | RESOLVED |
-| HW_HISTORY_003 | History | MEDIUM | Reported and other primary English labels | Incomplete presentation mapping | Semantic Persian event titles without enum changes | Unified History frontend; full lifecycle PG/browser; preserved read-only check pending | RESOLVED |
+| HW_HISTORY_003 | History | MEDIUM | Reported and other primary English labels | Incomplete presentation mapping | Semantic Persian event titles without enum changes | Unified History frontend; full lifecycle PG/browser; preserved read-only PASS | RESOLVED |
 | HW_HISTORY_DENSITY | History | UX | Repetitive technical metadata | Expanded recorded/source/provenance/version fields | What/when/who primary; technical audit detail retained in collapsed disclosure | Unified History tests; closure category desktop/mobile | RESOLVED |
-| CLOSED_SUMMARY_SEMANTICS | Summary | UX | Closed readiness appears unfinished | Shared active/closed guidance labels | کامل بودن اطلاعات and informational warnings; no operational primary CTA; unknown cargo remains unknown | Guidance frontend; closed Summary browser; preserved read-only check pending | RESOLVED |
+| CLOSED_SUMMARY_SEMANTICS | Summary | UX | Closed readiness appears unfinished | Shared active/closed guidance labels | کامل بودن اطلاعات and informational warnings; no operational primary CTA; unknown cargo remains unknown | Guidance frontend; closed Summary browser; preserved read-only PASS | RESOLVED |
 | HW_DATE_TIME_RTL | Affected forms | MEDIUM | US date placeholders, raw road, ambiguous direction and units | Native datetime display and inconsistent presentation helpers | Existing UTC converter with Persian digit entry and dual-calendar hint; localized transport/unit labels; explicit از…به… direction | Date converter/control tests; TypeScript/build; Route Reference/ETA/closure/browser desktop | RESOLVED |
 
 ## Group accounting
@@ -196,6 +196,60 @@ FOCUSED_TESTS=PASS; POSTGRESQL_RESULT=PASS; FRONTEND_RESULT=PASS;
 JOURNEY_RESULT=PASS (36 selected browser tests, including 12 guided tests).
 All 18 unique findings, including all 9 HIGH findings, are RESOLVED.
 The hash-bound proof index is `HUMAN-WALKTHROUGH-OPEN-FINDINGS-20261001-EVIDENCE.json`.
-Controlled integration and preserved-runtime refresh are pending.
+Controlled integration fast-forwarded `integration/golden-controlled` to
+`58478e5b4b9f3c58903e65a347a41e584cc038a5`, pushed, fetched and verified 0/0 before
+refreshing the same preserved runtime. The final evidence-only commit follows
+this integration; its hash is the final EVIDENCE_SHA / FINAL_CANONICAL_SHA and is
+recorded in the local runtime manifest and completion report.
 Engineering Complete=YES; Product Complete=NO; Release Ready=NO;
 Release Complete=NO; HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS.
+
+## Preserved runtime verification — completed 2026-10-02 local time
+
+Same runtime root, hostname, database, PostgreSQL 18 process (PID 266136), data
+directory and migration head. Only the owned backend/frontend processes were
+restarted after canonical integration. No migration, seed, Location, Route
+Reference, upload or operational command was performed on the preserved runtime.
+
+Read-only Chrome proof at 1440×1000: Closure category contains the one original
+decision, titled «پرونده بسته شد»; «Reported» is absent from primary History;
+closed Summary shows «کامل بودن اطلاعات», 5/5 stages and historical information
+warnings with no operational primary CTA. Documents are read-only with a separate
+historical-repair entry and collapsed transport references. The canonical picker
+returns all 249 countries and the correct Iran/Isfahan/Hormozgan labels/identities.
+Screenshots were visually inspected after the document list finished loading.
+
+Verification used an existing active Expert session, without login/session
+writes. Browser interception allowed only GET/HEAD/OPTIONS API requests:
+write attempts=0, browser errors=0, API errors=0. Temporary authentication material
+was deleted. Early verifier attempts corrected a runtime-key lookup and scoped
+History counting to its own list; they made no database writes.
+
+Full data-only snapshots at mission entry, immediately before refresh and after
+the final read-only verification have the identical normalized SHA-256:
+`CB8E7285B343EA68E632F59BBE228CEDA16C1E8EE9CAE183C032908C9736D5DB`.
+Normalization excludes only random pg_dump restrict/unrestrict tokens, joins
+UTF-8 lines with LF and retains a final LF. Database rows and sequence values
+remain unchanged. Protected-fact JSON comparison also matches exactly.
+
+Preserved: CLOSED Shipment `c66be7ef-ee20-4d39-a985-a3db5bd611db`; Request/Quote,
+route/execution/cargo and every audit/history row; planned allocation 100;
+actual allocation 95; actual cargo UNKNOWN; current explicit final delivery 95;
+five completed stages; departure/arrival; manual position «نزدیک مرز»; immutable
+NORMAL ClosureDecision `a7eb41d7-e2f8-49b7-80b7-7a0593960c96`. The older nonfinal
+95 delivery remains historical and is not added to its superseding final 95.
+
+Runtime evidence: `D:\1-webapp\forwarder-human-walkthrough-runtime\open-findings-20261001`.
+Receipt: `preservation-receipt.json`; browser result: `readonly-browser-result.json`;
+screenshots: `preserved-closed-summary.png`, `preserved-closure-history.png`,
+`preserved-localized-history.png`, `preserved-documents-readonly.png`,
+`preserved-geography-readonly.png`. Hashes are included in the evidence index.
+
+WALKTHROUGH_DATABASE_PRESERVED=YES;
+WALKTHROUGH_CLOSED_SHIPMENT_PRESERVED=YES;
+WALKTHROUGH_BUSINESS_ACTIONS_PERFORMED=0;
+PRODUCTION_ACCESSED=NO; PRODUCTION_MUTATED=NO;
+DEPLOYMENT_PERFORMED=NO; RELEASE_CREATED=NO;
+HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS; RELEASE_READY=NO.
+
+**PASS — HUMAN WALKTHROUGH OPEN FINDINGS CONSOLIDATED AND QUALIFIED**
