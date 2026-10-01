@@ -13,6 +13,7 @@ import { CargoEtaPanel } from "@/components/CargoEta";
 
 const statuses = { planned: "برنامه‌ریزی‌شده", in_progress: "در حال انجام", completed: "تکمیل‌شده", closed: "بسته‌شده", cancelled: "لغوشده" };
 const contexts = { SHIPMENT: "پرونده حمل", CARGO: "کالای شما", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل", DELIVERY: "تحویل کالای شما" };
+const modes: Record<string, string> = { road: "جاده‌ای", rail: "ریلی", sea: "دریایی", air: "هوایی", combined: "ترکیبی" };
 const time = (value: string) => formatDualCalendarInstant(value, "fa-IR");
 const amount = (value: string | null) => value === null ? "نامشخص" : Number(value).toLocaleString("fa-IR", { maximumFractionDigits: 6 });
 const unit = (value: string) => formatUnitSymbol(value, "fa-IR");
@@ -50,7 +51,7 @@ export default function CustomerPortalShipments() {
     {loading ? <p role="status">در حال دریافت حمل‌ها…</p> : data && <>
       <p className="text-sm text-slate-600">{data.pagination.total.toLocaleString("fa-IR")} پرونده در دسترس شما</p>
       {!data.items.length ? <Card><CardContent className="p-6">حملی در این فهرست برای شما در دسترس نیست.</CardContent></Card> : data.items.map(item => <Card key={item.public_id}>
-        <CardHeader><CardTitle className="text-lg">پرونده حمل <span dir="ltr">{item.public_id.slice(0, 8)}</span></CardTitle><p className="text-sm">وضعیت کلی پرونده: {statuses[item.status]}</p></CardHeader>
+        <CardHeader><CardTitle className="text-lg">پرونده حمل</CardTitle><p className="text-sm">وضعیت کلی پرونده: {statuses[item.status] || "وضعیت ثبت‌شده"}</p><details className="text-xs text-slate-500"><summary>شناسه فنی</summary><bdi dir="ltr">{item.public_id}</bdi></details></CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-3"><div className="space-y-2 text-sm text-slate-600"><p>ایجاد: {time(item.created_at)}</p>{item.shared_transport && <p>این حمل به‌صورت مشترک انجام می‌شود.</p>}</div>
           <Button asChild variant="outline"><Link to={`/customer/shipments/${item.public_id}`}>مشاهده پرونده حمل</Link></Button></CardContent>
       </Card>)}
@@ -71,8 +72,8 @@ export function CustomerPortalShipmentDetail() {
     <div className="flex flex-wrap items-center justify-between gap-2"><Button asChild variant="ghost"><Link to="/customer/shipments">بازگشت به حمل‌های من</Link></Button><Button variant="outline" onClick={refresh}>تازه‌سازی</Button></div>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-800">{error}</p>}
     {loading ? <p role="status">در حال دریافت پرونده حمل…</p> : data && <>
-      <Card id="customer-shipment-summary" className="scroll-mt-24"><CardHeader><h1 className="text-2xl font-semibold leading-none tracking-tight">پرونده حمل <span dir="ltr">{data.public_id.slice(0, 8)}</span></h1></CardHeader><CardContent className="space-y-2">
-        <p>وضعیت کلی پرونده: <strong>{statuses[data.status]}</strong></p>
+      <Card id="customer-shipment-summary" className="scroll-mt-24"><CardHeader><h1 className="text-2xl font-semibold leading-none tracking-tight">پرونده حمل</h1><details className="text-xs text-slate-500"><summary>شناسه فنی</summary><bdi dir="ltr">{data.public_id}</bdi></details></CardHeader><CardContent className="space-y-2">
+        <p>وضعیت کلی پرونده: <strong>{statuses[data.status] || "وضعیت ثبت‌شده"}</strong></p>
         {data.shared_transport && <p className="rounded-lg bg-blue-50 p-3 text-blue-900">این حمل به‌صورت مشترک انجام می‌شود.</p>}
         <p className="text-sm text-slate-600">وضعیت و مقدار تحویل هر کالا در بخش همان کالا نمایش داده می‌شود.</p>
       </CardContent></Card>
@@ -84,7 +85,7 @@ export function CustomerPortalShipmentDetail() {
           {item.excess !== null && Number(item.excess) > 0 && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">تحویل ثبت‌شده {amount(item.excess)} {unit(item.uom_symbol)} بیش از مقدار واقعی شناخته‌شده است.</p>}
         </CardContent></Card>)}</div></section>
       <Card><CardHeader><h2 className="text-2xl font-semibold leading-none tracking-tight">مسیر کالاهای من</h2><p className="text-sm text-slate-600">برنامه مسیر و نقاط اصلی مربوط به کالاهای شما</p></CardHeader><CardContent className="space-y-4">{data.routes.map(route => <section key={route.cargo_public_id} className="space-y-2"><h3 className="font-semibold">{cargoName(route.cargo_public_id)}</h3>
-        {route.legs.length ? <ol className="space-y-2">{route.legs.map((leg, index) => <li key={index} className="rounded-lg bg-slate-50 p-3 text-sm"><span>{leg.origin || "مبدأ تعریف نشده"} ← {leg.destination || "مقصد تعریف نشده"}</span><p className="mt-1 text-slate-600">{leg.mode || "روش حمل تعریف نشده"}</p></li>)}</ol> : <p className="text-sm text-slate-600">مسیر این کالا هنوز تعریف نشده است.</p>}
+        {route.legs.length ? <ol className="space-y-2">{route.legs.map((leg, index) => <li key={index} className="rounded-lg bg-slate-50 p-3 text-sm"><span>{leg.origin || "مبدأ تعریف نشده"} ← {leg.destination || "مقصد تعریف نشده"}</span><p className="mt-1 text-slate-600">{leg.mode ? modes[leg.mode.toLowerCase()] || "روش حمل ثبت‌شده" : "روش حمل تعریف نشده"}</p></li>)}</ol> : <p className="text-sm text-slate-600">مسیر این کالا هنوز تعریف نشده است.</p>}
       </section>)}</CardContent></Card>
       <Card><CardHeader><h2 className="text-2xl font-semibold leading-none tracking-tight">آخرین موقعیت‌های گزارش‌شده</h2><p className="text-sm text-slate-600">گزارش‌های مجاز برای بخش‌های مختلف حمل؛ هر گزارش زمان و منبع خودش را دارد.</p></CardHeader><CardContent className="space-y-3">{data.reported_locations.length ? data.reported_locations.map(report => <Report key={report.public_id} report={report} />) : <p>موقعیت گزارش‌شده‌ای در دسترس نیست.</p>}{data.reported_locations.length === 100 && <p className="text-sm">۱۰۰ گزارش اخیر نمایش داده می‌شود.</p>}</CardContent></Card>
       <Card id="customer-shipment-documents" className="scroll-mt-24"><CardHeader><h2 className="text-2xl font-semibold leading-none tracking-tight">اسناد حمل من</h2></CardHeader><CardContent className="space-y-3">{data.documents.items.length ? data.documents.items.map(item => <article key={item.public_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div><strong dir="ltr">{item.filename}</strong><p className="text-sm text-slate-600">{contexts[item.context_type]} · نسخه {item.version}</p></div><Button variant="outline" onClick={() => download(item.public_id, item.filename)}>دریافت سند</Button></article>) : <p>سندی در این صفحه برای شما در دسترس نیست.</p>}<Pages label="صفحه‌بندی اسناد" value={data.documents} onChange={value => page("documents_page", value)} /></CardContent></Card>

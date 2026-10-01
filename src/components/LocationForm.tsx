@@ -35,6 +35,7 @@ import {
 } from "@/lib/api";
 import { submitShipmentRequestForCurrentCustomer } from "@/lib/customerPortalApi";
 import { useI18n } from "@/i18n";
+import { formatUnitSymbol } from "@/lib/formatQuantity";
 
 interface LocationFormData {
   // Domestic shipping fields
@@ -1095,7 +1096,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 {submittedCargoItems.map((item) => (
                   <li key={item.public_id} className="rounded bg-muted/40 p-2 text-sm">
                     <strong>{item.position}. {item.description || item.cargo_type?.fa_name || item.cargo_type?.en_name}</strong>
-                    {item.quantity && item.uom && <p dir="ltr">{item.quantity} {item.uom.symbol}</p>}
+                    {item.quantity && item.uom && <p dir="auto">{item.quantity} {formatUnitSymbol(item.uom.symbol, language === "fa" ? "fa-IR" : "en-US")}</p>}
                   </li>
                 ))}
               </ol>
@@ -1464,7 +1465,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 </Label>
                 <Input
                   aria-label={language === "fa" ? "جست‌وجوی کشور مبدأ" : "Search origin country"}
-                  placeholder={language === "fa" ? "جست‌وجوی کشور / Country" : "Search country"}
+                  placeholder={language === "fa" ? "جست‌وجوی کشور" : "Search country"}
                   value={countrySearch.origin}
                   onChange={(event) => setCountrySearch((value) => ({ ...value, origin: event.target.value }))}
                 />
@@ -1558,7 +1559,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 </Label>
                 <Input
                   aria-label={language === "fa" ? "جست‌وجوی کشور مقصد" : "Search destination country"}
-                  placeholder={language === "fa" ? "جست‌وجوی کشور / Country" : "Search country"}
+                  placeholder={language === "fa" ? "جست‌وجوی کشور" : "Search country"}
                   value={countrySearch.destination}
                   onChange={(event) => setCountrySearch((value) => ({ ...value, destination: event.target.value }))}
                 />

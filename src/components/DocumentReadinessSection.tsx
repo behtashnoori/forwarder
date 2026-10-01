@@ -21,6 +21,12 @@ const assessmentLabel: Record<string, string> = {
   APPROVED: "تأیید شده", REJECTED: "رد شده", VERIFIED: "راستی‌آزمایی شده",
 };
 const formatDate = (value: string) => formatDualCalendarInstant(value, "fa-IR");
+const actionLabel: Record<string, string> = {
+  READY: "آماده‌سازی عملیات",
+  IN_PROGRESS: "آغاز عملیات",
+  COMPLETED: "تکمیل عملیات",
+  CLOSED: "بستن پرونده",
+};
 
 export default function DocumentReadinessSection({
   shipmentPublicId, shipmentVersion, shipmentReference, projectReference, sourceRequestId, readOnly = false,
@@ -74,14 +80,15 @@ export default function DocumentReadinessSection({
   return <section className="space-y-5 rounded border bg-white p-5" aria-label="اسناد محموله" dir="rtl">
     <div>
       <h3 className="text-lg font-semibold">اسناد محموله</h3>
-      <p className="mt-1 text-sm text-slate-600">محموله: {shipmentReference || shipmentPublicId}{projectReference ? ` · پروژه: ${projectReference}` : ""}</p>
+      <p className="mt-1 text-sm text-slate-600">پرونده حمل جاری{shipmentReference ? ` · ${shipmentReference}` : ""}</p>
+      {(shipmentPublicId || projectReference) && <details className="mt-1 text-xs text-slate-500"><summary>شناسه‌های فنی</summary><p><bdi dir="ltr">{shipmentPublicId}</bdi>{projectReference ? <> · <bdi dir="ltr">{projectReference}</bdi></> : null}</p></details>}
       <p className="mt-2 rounded bg-slate-50 p-3 text-sm text-slate-700">الزامات اسناد در سطح پروژه تعریف می‌شوند و برای هر محموله به‌صورت مستقل اعمال می‌شوند. فایل‌های بارگذاری‌شده در پرونده درخواست نگهداری می‌شوند و در صورت انطباق می‌توانند به الزامات هر محموله مرتبط شوند. یک فایل پرونده ممکن است سند مرتبط چند محموله باشد؛ مالک فایل همچنان پرونده درخواست است.</p>
     </div>
     {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
     {loading && <p>در حال دریافت وضعیت اسناد…</p>}
     {!loading && !preview?.initialized && !readOnly && <div className="rounded border p-3">
       <p>{preview?.requirements.length || 0} الزام پیکربندی‌شده برای اعمال روی این محموله آماده است.</p>
-      {preview?.findings.map((finding) => <p key={finding.code}>{finding.message}</p>)}
+      {preview?.findings.map((finding) => <p key={finding.code}>پیکربندی اسناد نیازمند بررسی است.</p>)}
       <Button className="mt-2" disabled={busy || !preview?.confirmation_allowed} onClick={() => void run(() => materializeDocumentRequirements(shipmentPublicId, shipmentVersion))}>اعمال مستقل الزامات برای این محموله</Button>
     </div>}
     {!loading && rows.length > 0 && <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="خلاصه وضعیت اسناد">
@@ -96,9 +103,9 @@ export default function DocumentReadinessSection({
       patch={(value) => patch(requirement.public_id, value)} busy={busy} readOnly={readOnly}
       run={run} shipmentPublicId={shipmentPublicId} sourceRequestId={sourceRequestId} />)}
     {next && <div className="rounded border p-3"><h4 className="font-medium">وضعیت اسناد برای اقدام بعدی</h4>
-      <p>{next.allowed ? "آماده" : "مسدود"} برای {next.target_action}</p>
-      {next.blocking_requirements.map((b) => <p className="text-red-700" key={b.requirement_public_id + b.code}>{b.code}: {b.title}</p>)}
-      {next.warnings.map((w) => <p className="text-amber-700" key={w.requirement_public_id + w.code}>{w.code}: {w.title}</p>)}
+      <p>{next.allowed ? "آماده" : "مسدود"} برای {actionLabel[next.target_action] || "اقدام عملیاتی بعدی"}</p>
+      {next.blocking_requirements.map((b) => <div className="text-red-700" key={b.requirement_public_id + b.code}><p>{b.title}</p><details className="text-xs"><summary>جزئیات فنی</summary><bdi dir="ltr">{b.code}</bdi></details></div>)}
+      {next.warnings.map((w) => <div className="text-amber-700" key={w.requirement_public_id + w.code}><p>{w.title}</p><details className="text-xs"><summary>جزئیات فنی</summary><bdi dir="ltr">{w.code}</bdi></details></div>)}
     </div>}
   </section>;
 }

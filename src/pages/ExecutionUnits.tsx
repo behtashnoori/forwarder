@@ -27,6 +27,7 @@ import OperationalEventLocationSelector, {
   type OperationalEventLocation,
 } from "@/components/OperationalEventLocationSelector";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
+import { formatUnitSymbol } from "@/lib/formatQuantity";
 
 const statusLabels: Record<string, string> = {
   not_started: "شروع‌نشده",
@@ -47,6 +48,7 @@ const yesNo = [
   { value: "true", label: "بله" },
   { value: "false", label: "خیر" },
 ];
+const unit = (value: string) => formatUnitSymbol(value, "fa-IR");
 
 export default function ExecutionUnits() {
   const { projectId = "" } = useParams();
@@ -312,7 +314,7 @@ export default function ExecutionUnits() {
                   </td>
                   <td>
                     <Badge variant="outline">
-                      {statusLabels[u.lifecycle_status] || u.lifecycle_status}
+                      {statusLabels[u.lifecycle_status] || "وضعیت ثبت‌شده"}
                     </Badge>
                   </td>
                   <td>
@@ -438,7 +440,7 @@ export default function ExecutionUnits() {
                       <option value={x.public_id} key={x.public_id}>
                         {x.description} ·{" "}
                         {x.cargo_owner?.public_label || "نامشخص"} · {x.quantity}{" "}
-                        {x.uom.symbol}
+                        {unit(x.uom.symbol)}
                       </option>
                     ))}
                   </select>
@@ -454,13 +456,16 @@ export default function ExecutionUnits() {
                   <ul className="space-y-2 text-sm">
                     {shared.allocations.map((a) => (
                       <li className="rounded bg-muted/40 p-2" key={a.public_id}>
-                        {a.description} — {a.allocated_quantity} {a.uom.symbol}
+                        {a.description} — {a.allocated_quantity} {unit(a.uom.symbol)}
                         <br />
                         <span className="text-muted-foreground">
-                          صاحب کالا: {a.cargo_owner?.public_label || "نامشخص"} ·
-                          محموله: <span dir="ltr">{a.shipment_public_id}</span>
+                          صاحب کالا: {a.cargo_owner?.public_label || "نامشخص"}
                           {a.project && <> · پروژه: {a.project.code}</>}
                         </span>
+                        <details className="text-xs text-muted-foreground">
+                          <summary>شناسه فنی محموله</summary>
+                          <bdi dir="ltr">{a.shipment_public_id}</bdi>
+                        </details>
                         <Button
                           variant="ghost"
                           className="ms-2 h-7"

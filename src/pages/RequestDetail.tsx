@@ -53,6 +53,7 @@ import {
   formatMoney as formatBusinessMoney,
   formatQuantity,
   formatQuoteMoney,
+  formatUnitSymbol,
 } from "@/lib/formatQuantity";
 import {
   addMessage,
@@ -2031,7 +2032,7 @@ const TrackingManagementCard = ({
                       {u.allocated_cargo
                         .map(
                           (c) =>
-                            `${c.cargo_name} — ${formatQuantity(c.allocated_quantity, locale)} ${c.uom_symbol}`,
+                            `${c.cargo_name} — ${formatQuantity(c.allocated_quantity, locale)} ${formatUnitSymbol(c.uom_symbol, locale)}`,
                         )
                         .join(" · ")}
                     </p>

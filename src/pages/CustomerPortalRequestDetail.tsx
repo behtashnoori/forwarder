@@ -28,7 +28,7 @@ import {
   formatDualCalendarDate,
   formatDualCalendarInstant,
 } from "@/lib/dualCalendar";
-import { formatQuoteMoney } from "@/lib/formatQuantity";
+import { formatQuoteMoney, formatUnitSymbol } from "@/lib/formatQuantity";
 import { isLocalDateBeforeToday } from "@/lib/localDate";
 import { useI18n } from "@/i18n";
 
@@ -562,7 +562,7 @@ export default function CustomerPortalRequestDetail() {
                           )}
                           {item.quantity && item.uom && (
                             <p className="mt-1 text-sm" dir="ltr">
-                              {item.quantity} {item.uom.symbol}
+                              {item.quantity} {formatUnitSymbol(item.uom.symbol, locale)}
                             </p>
                           )}
                         </li>

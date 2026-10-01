@@ -33,6 +33,19 @@ const severityLabel: Record<string, string> = {
   info: "اطلاع عملیاتی",
 };
 
+const attentionSourceLabel: Record<string, string> = {
+  exception: "استثنای عملیاتی",
+  action: "اقدام عملیاتی",
+  sla: "تعهد زمانی",
+  fact: "واقعیت عملیاتی",
+};
+
+const freshnessLabel: Record<string, string> = {
+  FRESH: "به‌روز",
+  STALE: "نیازمند به‌روزرسانی",
+  UNKNOWN: "تازگی نامشخص",
+};
+
 const slaTone: Record<string, string> = {
   BREACHED: "bg-red-100 text-red-800",
   WARNING: "bg-amber-100 text-amber-900",
@@ -165,7 +178,7 @@ export default function OperationalWorkspace() {
                           {item.why && <p className="text-sm"><b>چرا:</b> {item.why}</p>}
                           <p className="text-sm text-slate-600"><b>اثر زمان:</b> {item.time_effect || formatDualCalendarInstant(item.due_at, locale, { fallback: "موعد مستقلی ثبت نشده" })}</p>
                           {item.next_action && <p className="text-sm text-blue-800"><b>پیگیری بعدی:</b> {item.next_action}</p>}
-                          <p className="text-xs text-slate-500">منبع: {item.source.type} · نسخه {item.source.version}{item.freshness?.status ? ` · تازگی: ${item.freshness.status}` : ""}</p>
+                          <p className="text-xs text-slate-500">منبع: {attentionSourceLabel[item.source.type.toLocaleLowerCase()] || "رکورد عملیاتی"} · نسخه {item.source.version}{item.freshness?.status ? ` · تازگی: ${freshnessLabel[item.freshness.status] || "وضعیت ثبت‌شده"}` : ""}</p>
                         </CardContent>
                       </Card>
                     </Link>

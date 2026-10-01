@@ -22,7 +22,7 @@ function localDateTimeValue(date: Date) {
 
 export default function OipSituationDetailPage() {
   const { id = "" } = useParams();
-  const { direction, locale } = useI18n();
+  const { direction, locale, businessLabel } = useI18n();
   const [row, setRow] = useState<OipSituationDetail>();
   const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState<DispositionAction>();
@@ -84,7 +84,7 @@ export default function OipSituationDetailPage() {
         Number.isNaN(until.valueOf()) ||
         until <= new Date()
       ) {
-        setError("Snooze until must be a valid future time.");
+        setError("زمان تعویق باید زمانی معتبر در آینده باشد.");
         return;
       }
       void act("snooze", { reason: reason.trim(), until: until.toISOString() });
@@ -99,23 +99,24 @@ export default function OipSituationDetailPage() {
         {error}
       </main>
     );
-  if (!row) return <main className="p-8">Loading…</main>;
+  if (!row) return <main className="p-8">در حال بارگذاری…</main>;
   const canManage = row.decision_context.permissions.can_manage;
   const health = row.projection_health;
 
   return (
     <main className="min-h-screen bg-slate-50 p-4 md:p-8" dir={direction}>
       <div className="mx-auto max-w-5xl space-y-5">
-        <Link to="/operations/work-queue">← Attention queue</Link>
+        <Link to="/operations/work-queue">← بازگشت به صف پیگیری</Link>
         <header>
-          <h1 className="text-2xl font-bold">{row.type}</h1>
+          <h1 className="text-2xl font-bold">{businessLabel(row.type)}</h1>
           <p>
-            {row.subject.type}: {row.subject.public_id} · {row.status} ·
-            occurrence {row.occurrence_count} · version {row.version}
+            موضوع: {businessLabel(row.subject.type)} · وضعیت: {businessLabel(row.status)} ·
+            تکرار {row.occurrence_count.toLocaleString("fa-IR")} · نسخه {row.version.toLocaleString("fa-IR")}
           </p>
+          <details className="mt-2 text-xs text-slate-500"><summary className="cursor-pointer">شناسه فنی موضوع</summary><bdi>{row.subject.public_id}</bdi></details>
           {row.snoozed_until && (
             <p>
-              Snoozed until {formatDualCalendarInstant(row.snoozed_until, locale)}
+              تعویق تا {formatDualCalendarInstant(row.snoozed_until, locale)}
             </p>
           )}
           {error && (
@@ -129,7 +130,7 @@ export default function OipSituationDetailPage() {
                 disabled={!canManage || busy}
                 onClick={() => void act("acknowledge")}
               >
-                Acknowledge
+                ثبت مشاهده
               </Button>
             )}
             <Button
@@ -137,35 +138,35 @@ export default function OipSituationDetailPage() {
               disabled={!canManage || busy}
               onClick={() => void act("claim")}
             >
-              Claim
+              پذیرفتن مسئولیت
             </Button>
             <Button
               variant="outline"
               disabled={!canManage || busy}
               onClick={() => void act("start")}
             >
-              Start progress
+              شروع پیگیری
             </Button>
             <Button
               variant="outline"
               disabled={!canManage || busy}
               onClick={() => beginDisposition("snooze")}
             >
-              Snooze
+              تعویق
             </Button>
             <Button
               variant="outline"
               disabled={!canManage || busy}
               onClick={() => beginDisposition("resolve")}
             >
-              Resolve
+              حل‌شده
             </Button>
             <Button
               variant="destructive"
               disabled={!canManage || busy}
               onClick={() => beginDisposition("dismiss")}
             >
-              Dismiss
+              رد مورد
             </Button>
           </div>
         </header>
@@ -175,13 +176,13 @@ export default function OipSituationDetailPage() {
             <CardHeader>
               <CardTitle>
                 {pendingAction === "snooze"
-                  ? "Snooze situation"
-                  : `${pendingAction[0].toUpperCase()}${pendingAction.slice(1)} situation`}
+                  ? "تعویق مورد"
+                  : pendingAction === "resolve" ? "ثبت حل مورد" : "رد مورد"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <label className="block space-y-1">
-                <span className="font-medium">Reason</span>
+                <span className="font-medium">دلیل</span>
                 <Input
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
@@ -192,7 +193,7 @@ export default function OipSituationDetailPage() {
               </label>
               {pendingAction === "snooze" && (
                 <label className="block space-y-1">
-                  <span className="font-medium">Snooze until</span>
+                  <span className="font-medium">تعویق تا</span>
                   <Input
                     type="datetime-local"
                     value={snoozeUntil}
@@ -203,8 +204,7 @@ export default function OipSituationDetailPage() {
                 </label>
               )}
               <p id="disposition-help" className="text-sm text-slate-600">
-                The server validates the reason, time, permission, and current
-                version.
+                سرور دلیل، زمان، مجوز و نسخه جاری را اعتبارسنجی می‌کند.
               </p>
               <div className="flex gap-2">
                 <Button
@@ -215,14 +215,14 @@ export default function OipSituationDetailPage() {
                   }
                   onClick={submitDisposition}
                 >
-                  Confirm
+                  تأیید
                 </Button>
                 <Button
                   variant="outline"
                   disabled={busy}
                   onClick={cancelDisposition}
                 >
-                  Cancel
+                  انصراف
                 </Button>
               </div>
             </CardContent>
@@ -230,71 +230,61 @@ export default function OipSituationDetailPage() {
         )}
         <Card>
           <CardHeader>
-            <CardTitle>Decision context</CardTitle>
+            <CardTitle>زمینه تصمیم</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <p>
-              Severity {row.severity} · urgency {row.urgency} · priority{" "}
-              {row.priority}
+              شدت: {businessLabel(row.severity)} · فوریت: {businessLabel(row.urgency)} · اولویت: {businessLabel(row.priority)}
             </p>
             <p>
-              Active blockers: {row.decision_context.active_blockers.join(", ")}
+              موانع فعال: {row.decision_context.active_blockers.map((item) => businessLabel(item)).join("، ") || "موردی ثبت نشده است"}
             </p>
             <p>
-              Missing information:{" "}
-              {row.decision_context.missing_information.join(", ") ||
-                "None identified"}
+              اطلاعات ناقص: {row.decision_context.missing_information.map((item) => businessLabel(item)).join("، ") || "موردی شناسایی نشده است"}
             </p>
-            <p>Operational status: {row.status}</p>
+            <p>وضعیت عملیاتی: {businessLabel(row.status)}</p>
             <p>
-              Intelligence health: {health.health_state} · projection {health.projection_version} · policy {health.policy_version}
+              سلامت تحلیل: {businessLabel(health.health_state)} · نسخه برآورد {health.projection_version.toLocaleString("fa-IR")} · نسخه سیاست {health.policy_version.toLocaleString("fa-IR")}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Recommendation (advisory)</CardTitle>
+            <CardTitle>پیشنهاد راهنما</CardTitle>
           </CardHeader>
           <CardContent>
             <p>{row.recommendation.suggested_action}</p>
-            <p className="text-sm">
-              Authorized target:{" "}
-              {row.recommendation.allowed_command_reference.method}{" "}
-              {row.recommendation.allowed_command_reference.path}
-            </p>
-            <p className="text-xs">No automatic execution.</p>
+            <details className="mt-2 text-xs text-slate-500"><summary className="cursor-pointer">مرجع فنی اقدام مجاز</summary><bdi>{row.recommendation.allowed_command_reference.method} {row.recommendation.allowed_command_reference.path}</bdi></details>
+            <p className="text-xs">هیچ اقدامی خودکار اجرا نمی‌شود.</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Evidence</CardTitle>
+            <CardTitle>شواهد</CardTitle>
           </CardHeader>
           <CardContent>
             {row.evidence.map((e) => (
               <div className="border-b py-2" key={e.fact_public_id}>
                 <b>
-                  {e.source_domain} / {e.source_type}
+                  {businessLabel(e.source_domain)} / {businessLabel(e.source_type)}
                 </b>
                 <p>
-                  Source {e.source_public_id} · version {e.source_version} ·{" "}
-                  {e.validity}
+                  منبع ثبت‌شده · نسخه {e.source_version.toLocaleString("fa-IR")} · {businessLabel(e.validity)}
                 </p>
-                <p className="text-xs">
-                  Fact {e.fact_public_id} · Signal {e.signal_public_id}
-                </p>
+                <details className="text-xs text-slate-500"><summary className="cursor-pointer">شناسه‌های فنی شاهد</summary><p><bdi>{e.source_public_id}</bdi> · <bdi>{e.fact_public_id}</bdi> · <bdi>{e.signal_public_id}</bdi></p></details>
               </div>
             ))}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Outcome and timeline</CardTitle>
+            <CardTitle>نتیجه و تاریخچه</CardTitle>
           </CardHeader>
           <CardContent>
             {row.timeline.map((e, i) => (
               <p key={`${e.at}-${i}`}>
-                {formatDualCalendarInstant(e.at, locale)} · {e.event} ·{" "}
-                {e.from || "—"} → {e.to}
+                {formatDualCalendarInstant(e.at, locale)} · {businessLabel(e.event)} ·{" "}
+                {businessLabel(e.from || "not_registered")} → {businessLabel(e.to)}
                 {e.reason ? ` · ${e.reason}` : ""}
               </p>
             ))}

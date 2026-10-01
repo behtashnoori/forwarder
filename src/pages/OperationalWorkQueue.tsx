@@ -23,7 +23,7 @@ const tone: Record<string, string> = {
 };
 
 export default function OperationalWorkQueue() {
-  const { direction, locale, t } = useI18n();
+  const { businessLabel, direction, locale, t } = useI18n();
   const [rows, setRows] = useState<OipSituation[]>([]);
   const [health, setHealth] = useState<OipProjectionHealth>();
   const [legacy, setLegacy] = useState<OperationalWorkItem[]>([]);
@@ -76,8 +76,12 @@ export default function OperationalWorkQueue() {
     <main className="min-h-screen bg-slate-50 p-4 md:p-8" dir={direction}>
       <div className="mx-auto max-w-6xl space-y-5">
         <header>
-          <Link to="/operations/shipments">← {t("operations.shipmentsTitle")}</Link>
-          <h1 className="mt-2 text-3xl font-bold">{t("operations.attentionTitle")}</h1>
+          <Link to="/operations/shipments">
+            ← {t("operations.shipmentsTitle")}
+          </Link>
+          <h1 className="mt-2 text-3xl font-bold">
+            {t("operations.attentionTitle")}
+          </h1>
           <p className="text-slate-600">{t("operations.attentionSubtitle")}</p>
         </header>
         {health && <ProjectionHealthNotice health={health} />}
@@ -105,35 +109,54 @@ export default function OperationalWorkQueue() {
                       <span
                         className={`rounded px-2 py-1 text-xs font-bold ${tone[row.priority]}`}
                       >
-                        {row.priority} {t("operations.priority")}
+                        {businessLabel(row.priority)}
                       </span>
                       <span className="rounded bg-slate-100 px-2 py-1 text-xs">
-                        {row.type}
+                        {businessLabel(row.type)}
                       </span>
                     </div>
                     <Link
                       className="text-lg font-bold underline"
                       to={`/operations/intelligence/${row.public_id}`}
                     >
-                      {row.subject.type}: {row.subject.public_id}
+                      {businessLabel(row.subject.type)} ·{" "}
+                      {businessLabel(row.type)}
                     </Link>
+                    <details className="text-xs text-slate-500">
+                      <summary>شناسه فنی موضوع</summary>
+                      <bdi dir="ltr">{row.subject.public_id}</bdi>
+                    </details>
                     <p>
                       {t("operations.why")}:{" "}
                       {row.priority_explanation.drivers
-                        .map((x) => `${x.name} ${x.value ?? t("operations.notSupplied")}`)
+                        .map(
+                          (x) =>
+                            `${businessLabel(x.name)} ${x.value ?? t("operations.notSupplied")}`,
+                        )
                         .join(" · ")}
                     </p>
                     <p>
-                      {t("operations.owner")}: {row.owner.state} · {t("operations.since")}{" "}
+                      {t("operations.owner")}: {businessLabel(row.owner.state)}{" "}
+                      · {t("operations.since")}{" "}
                       {formatDualCalendarInstant(row.first_detected_at, locale)}
                       {row.due_at
                         ? ` · ${t("operations.due")} ${formatDualCalendarInstant(row.due_at, locale)}`
                         : ""}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      {t("operations.policy")} {row.policy.id} {row.policy.version} · {t("operations.calculated")}{" "}
-                      {formatDualCalendarInstant(row.freshness.calculated_at, locale)}
-                    </p>
+                    <details className="text-xs text-slate-500">
+                      <summary>جزئیات محاسبه</summary>
+                      <p>
+                        {t("operations.policy")}{" "}
+                        <bdi dir="ltr">
+                          {row.policy.id} {row.policy.version}
+                        </bdi>{" "}
+                        · {t("operations.calculated")}{" "}
+                        {formatDualCalendarInstant(
+                          row.freshness.calculated_at,
+                          locale,
+                        )}
+                      </p>
+                    </details>
                   </div>
                   <div className="flex items-center gap-2">
                     {row.status === "OPEN" && (
@@ -142,7 +165,9 @@ export default function OperationalWorkQueue() {
                       </Button>
                     )}
                     <Link to={`/operations/intelligence/${row.public_id}`}>
-                      <Button variant="outline">{t("operations.decisionContext")}</Button>
+                      <Button variant="outline">
+                        {t("operations.decisionContext")}
+                      </Button>
                     </Link>
                   </div>
                 </CardContent>
@@ -159,11 +184,9 @@ export default function OperationalWorkQueue() {
                       {row.customer}
                     </Link>
                     <p>
-                      {row.milestone_type} · {row.reason}
+                      {businessLabel(row.milestone_type)} · {row.reason}
                     </p>
-                    <p className="text-xs">
-                      {t("operations.legacyWorkItem")}
-                    </p>
+                    <p className="text-xs">{t("operations.legacyWorkItem")}</p>
                   </div>
                   <Button onClick={() => void resolveLegacy(row)}>
                     {t("operations.resolve")}

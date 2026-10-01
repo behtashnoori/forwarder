@@ -112,7 +112,7 @@ describe("OperationalWorkspace", () => {
     expect(screen.getByText("کارشناس مسئول ثابت: کارشناس مالک")).toBeInTheDocument();
     expect(screen.getAllByText("تهران ← تبریز", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText("آخرین به‌روزرسانی:", { exact: false })).toHaveTextContent("خروج ثبت شد");
-    expect(screen.getByText("منبع: OperationalWorkItem · نسخه 3 · تازگی: FRESH")).toBeInTheDocument();
+    expect(screen.getByText("منبع: رکورد عملیاتی · نسخه 3 · تازگی: به‌روز")).toBeInTheDocument();
     expect(screen.getByText((_, element) => element?.textContent === "چرا: تأیید مرحله هنوز ثبت نشده است.")).toBeInTheDocument();
     expect(screen.getByText((_, element) => element?.textContent === "پیگیری بعدی: وضعیت مرحله را پیگیری کنید.")).toBeInTheDocument();
     expect(screen.getByText("نزدیک به نقض SLA")).toBeInTheDocument();

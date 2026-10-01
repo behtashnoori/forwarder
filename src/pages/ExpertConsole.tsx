@@ -28,7 +28,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageNav from "@/components/PageNav";
 import OperationsNav from "@/components/OperationsNav";
@@ -67,11 +73,21 @@ const kpiCountForBucket = (kpis: KPI | null, bucket: string): number => {
   return counts[bucket] ?? 0;
 };
 
-const commercialResponseLabel = (response: ExpertRequest["commercial"]["latest_quote_response"]) => {
+const commercialResponseLabel = (
+  response: ExpertRequest["commercial"]["latest_quote_response"],
+) => {
   if (response === "accepted") return "پذیرفته شده";
   if (response === "discussion") return "درخواست مذاکره";
   if (response === "declined") return "رد شده";
   return "پاسخی ثبت نشده";
+};
+
+const expertRoleLabel = (role: string | null | undefined) => {
+  if (role === "expert" || role === "business_expert") return "کارشناس";
+  if (role === "organization_admin") return "مدیر سازمان";
+  if (role === "platform_admin" || role === "system_admin")
+    return "مدیر سامانه";
+  return "کارشناس";
 };
 
 const ExpertConsole = () => {
@@ -145,7 +161,9 @@ const ExpertConsole = () => {
       }
 
       const expertsResponse = await fetchExperts();
-      const experts = Array.isArray(expertsResponse) ? expertsResponse : expertsResponse.experts;
+      const experts = Array.isArray(expertsResponse)
+        ? expertsResponse
+        : expertsResponse.experts;
       setCurrentExpert(experts[0]);
     } catch (error) {
       console.error("Error loading current expert:", error);
@@ -166,7 +184,8 @@ const ExpertConsole = () => {
       }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
   }, [loadKPIs, loadRequests]);
 
   const handleAssignToMe = async (requestId: string) => {
@@ -191,7 +210,11 @@ const ExpertConsole = () => {
 
   const handleStatusChange = async (requestId: string, newStatus: string) => {
     try {
-      await changeRequestStatus(requestId, newStatus, `تغییر وضعیت به ${newStatus}`);
+      await changeRequestStatus(
+        requestId,
+        newStatus,
+        `تغییر وضعیت به ${newStatus}`,
+      );
 
       toast({
         title: t("common.success"),
@@ -204,7 +227,11 @@ const ExpertConsole = () => {
         setActiveTab("in_progress");
       } else if (newStatus === "waiting_for_customer") {
         setActiveTab("waiting_for_customer");
-      } else if (newStatus === "closed" || newStatus === "won" || newStatus === "lost") {
+      } else if (
+        newStatus === "closed" ||
+        newStatus === "won" ||
+        newStatus === "lost"
+      ) {
         setActiveTab("completed");
       }
     } catch (error) {
@@ -255,15 +282,32 @@ const ExpertConsole = () => {
     let destination: string;
 
     if (route.shipping_type === "international") {
-      origin = [route.origin.international_city, route.origin.country].filter(Boolean).join("، ");
-      destination = [route.destination.international_city, route.destination.country].filter(Boolean).join("، ");
+      origin = [route.origin.international_city, route.origin.country]
+        .filter(Boolean)
+        .join("، ");
+      destination = [
+        route.destination.international_city,
+        route.destination.country,
+      ]
+        .filter(Boolean)
+        .join("، ");
       // Append the structured in-Iran destination point when present.
       if (route.iran_destination?.label) {
-        destination = [destination, route.iran_destination.label].filter(Boolean).join(" ← ");
+        destination = [destination, route.iran_destination.label]
+          .filter(Boolean)
+          .join(" ← ");
       }
     } else {
-      origin = [route.origin.city, route.origin.county, route.origin.province].filter(Boolean).join("، ");
-      destination = [route.destination.city, route.destination.county, route.destination.province].filter(Boolean).join("، ");
+      origin = [route.origin.city, route.origin.county, route.origin.province]
+        .filter(Boolean)
+        .join("، ");
+      destination = [
+        route.destination.city,
+        route.destination.county,
+        route.destination.province,
+      ]
+        .filter(Boolean)
+        .join("، ");
     }
 
     return {
@@ -297,7 +341,10 @@ const ExpertConsole = () => {
     { value: "assigned", label: statusLabel("assigned") },
     { value: "in_progress", label: statusLabel("in_progress") },
     { value: "quoted", label: statusLabel("quoted") },
-    { value: "waiting_for_customer", label: statusLabel("waiting_for_customer") },
+    {
+      value: "waiting_for_customer",
+      label: statusLabel("waiting_for_customer"),
+    },
     { value: "won", label: statusLabel("won") },
     { value: "lost", label: t("status.rejectedOrLost") },
     { value: "closed", label: t("status.closedOperational") },
@@ -338,37 +385,63 @@ const ExpertConsole = () => {
         <section className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-7">
             <div className="flex min-w-0 flex-col gap-4">
-              <div className="space-y-3"><PageNav backTo="/" showLogout className="flex-wrap" /><OperationsNav /></div>
+              <div className="space-y-3">
+                <PageNav backTo="/" showLogout className="flex-wrap" />
+                <OperationsNav />
+              </div>
               <div className="flex items-start gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
                   <BarChart3 className="h-7 w-7" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">{t("expert.title")}</h1>
-                  <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">{t("expert.subtitle")}</p>
+                  <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">
+                    {t("expert.title")}
+                  </h1>
+                  <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
+                    {t("expert.subtitle")}
+                  </p>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 sm:items-end">
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={refreshConsole} disabled={loading} className="rounded-full">
-                  <RefreshCw className={`ml-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshConsole}
+                  disabled={loading}
+                  className="rounded-full"
+                >
+                  <RefreshCw
+                    className={`ml-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                  />
                   {t("common.refresh")}
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="rounded-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                    >
                       <User className="ml-2 h-4 w-4" />
-                      {currentExpert ? currentExpert.full_name : t("expert.profileFallback")}
+                      {currentExpert
+                        ? currentExpert.full_name
+                        : t("expert.profileFallback")}
                       <ChevronDown className="mr-2 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <div className="border-b px-3 py-2">
-                      <p className="text-sm font-medium">{currentExpert?.full_name || t("expert.profileFallback")}</p>
-                      <p className="text-xs text-slate-500">{currentExpert?.role || t("common.roleExpert")}</p>
+                      <p className="text-sm font-medium">
+                        {currentExpert?.full_name ||
+                          t("expert.profileFallback")}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {expertRoleLabel(currentExpert?.role)}
+                      </p>
                     </div>
                     <DropdownMenuItem
                       onClick={async () => {
@@ -394,21 +467,34 @@ const ExpertConsole = () => {
               <CardContent className="p-5 sm:p-6">
                 <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-700">{t("expert.kpiSummary")}</p>
-                    <h2 className="mt-1 text-xl font-bold text-slate-950">{t("expert.todayOperationalView")}</h2>
+                    <p className="text-sm font-medium text-blue-700">
+                      {t("expert.kpiSummary")}
+                    </p>
+                    <h2 className="mt-1 text-xl font-bold text-slate-950">
+                      {t("expert.todayOperationalView")}
+                    </h2>
                   </div>
                   <div className="rounded-2xl bg-slate-50 px-4 py-3 text-right">
-                    <p className="text-xs text-slate-500">{t("expert.totalVisibleRequests")}</p>
-                    <p className="text-2xl font-bold text-slate-950">{totalKpiCount}</p>
+                    <p className="text-xs text-slate-500">
+                      {t("expert.totalVisibleRequests")}
+                    </p>
+                    <p className="text-2xl font-bold text-slate-950">
+                      {totalKpiCount}
+                    </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   {metricCards.map((metric) => {
                     const Icon = metric.icon;
                     return (
-                      <div key={metric.label} className={`rounded-2xl border p-4 ${metric.tone}`}>
+                      <div
+                        key={metric.label}
+                        className={`rounded-2xl border p-4 ${metric.tone}`}
+                      >
                         <div className="mb-4 flex items-center justify-between gap-3">
-                          <span className="text-xs font-medium">{metric.label}</span>
+                          <span className="text-xs font-medium">
+                            {metric.label}
+                          </span>
                           <Icon className="h-5 w-5" />
                         </div>
                         <p className="text-2xl font-bold">{metric.value}</p>
@@ -449,14 +535,22 @@ const ExpertConsole = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={clearFilters} className="h-11 rounded-2xl">
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+                className="h-11 rounded-2xl"
+              >
                 {t("common.clearFilters")}
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-4"
+        >
           <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
             {statusItems.map((item) => (
               <TabsTrigger
@@ -466,7 +560,10 @@ const ExpertConsole = () => {
               >
                 {item.label}
                 {Boolean(kpiCountForBucket(kpis, item.value)) && (
-                  <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
+                  <Badge
+                    variant="secondary"
+                    className="mr-2 bg-white/20 text-current"
+                  >
                     {kpiCountForBucket(kpis, item.value)}
                   </Badge>
                 )}
@@ -477,8 +574,12 @@ const ExpertConsole = () => {
           <TabsContent value={activeTab} className="space-y-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-950">{t("expert.freightRequests")}</h2>
-                <p className="mt-1 text-sm text-slate-500">{tf("expert.showingRequests", { count: requests.length })}</p>
+                <h2 className="text-xl font-bold text-slate-950">
+                  {t("expert.freightRequests")}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {tf("expert.showingRequests", { count: requests.length })}
+                </p>
               </div>
               <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-500 shadow-sm">
                 {t("expert.sortNewest")}
@@ -495,8 +596,12 @@ const ExpertConsole = () => {
               <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
                 <CardContent className="p-10 text-center">
                   <Package className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-                  <p className="font-medium text-slate-700">{t("expert.noRequestsTitle")}</p>
-                  <p className="mt-1 text-sm text-slate-500">{t("expert.noRequestsDescription")}</p>
+                  <p className="font-medium text-slate-700">
+                    {t("expert.noRequestsTitle")}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {t("expert.noRequestsDescription")}
+                  </p>
                 </CardContent>
               </Card>
             ) : (
@@ -507,7 +612,9 @@ const ExpertConsole = () => {
                     <Card
                       key={request.id}
                       className={`rounded-3xl border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-                        request.has_unread ? "border-blue-200 ring-1 ring-blue-100" : "border-slate-200"
+                        request.has_unread
+                          ? "border-blue-200 ring-1 ring-blue-100"
+                          : "border-slate-200"
                       }`}
                     >
                       <CardContent className="p-4 sm:p-5">
@@ -517,20 +624,37 @@ const ExpertConsole = () => {
                               <div className="rounded-2xl bg-slate-950 px-3 py-2 text-sm font-bold text-white">
                                 {request.tracking_number}
                               </div>
-                              <Badge variant="outline" className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}>
+                              <Badge
+                                variant="outline"
+                                className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}
+                              >
                                 {request.commercial.request_status_label_fa}
                               </Badge>
-                              {request.has_unread && <Badge className="rounded-full bg-blue-600 text-white">{t("common.unread")}</Badge>}
+                              {request.has_unread && (
+                                <Badge className="rounded-full bg-blue-600 text-white">
+                                  {t("common.unread")}
+                                </Badge>
+                              )}
                             </div>
 
                             <div className="grid gap-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-3 text-sm md:grid-cols-2">
                               <div>
-                                <p className="text-xs text-slate-500">آخرین پاسخ مشتری</p>
-                                <p className="mt-1 font-semibold text-slate-900">{commercialResponseLabel(request.commercial.latest_quote_response)}</p>
+                                <p className="text-xs text-slate-500">
+                                  آخرین پاسخ مشتری
+                                </p>
+                                <p className="mt-1 font-semibold text-slate-900">
+                                  {commercialResponseLabel(
+                                    request.commercial.latest_quote_response,
+                                  )}
+                                </p>
                               </div>
                               <div>
-                                <p className="text-xs text-slate-500">اقدام بعدی</p>
-                                <p className="mt-1 font-semibold text-slate-900">{request.commercial.next_action.label_fa}</p>
+                                <p className="text-xs text-slate-500">
+                                  اقدام بعدی
+                                </p>
+                                <p className="mt-1 font-semibold text-slate-900">
+                                  {request.commercial.next_action.label_fa}
+                                </p>
                               </div>
                             </div>
 
@@ -540,8 +664,13 @@ const ExpertConsole = () => {
                                   <User className="h-4 w-4" />
                                   {t("common.customerName")}
                                 </div>
-                                <p className="truncate text-sm font-semibold text-slate-900">{request.customer.name}</p>
-                                <p className="mt-1 text-xs text-slate-500" dir="ltr">
+                                <p className="truncate text-sm font-semibold text-slate-900">
+                                  {request.customer.name}
+                                </p>
+                                <p
+                                  className="mt-1 text-xs text-slate-500"
+                                  dir="ltr"
+                                >
                                   {request.customer.phone}
                                 </p>
                               </div>
@@ -551,7 +680,9 @@ const ExpertConsole = () => {
                                   <MapPin className="h-4 w-4" />
                                   {t("common.origin")}
                                 </div>
-                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">{route.origin}</p>
+                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">
+                                  {route.origin}
+                                </p>
                               </div>
 
                               <div className="rounded-2xl bg-slate-50 p-3">
@@ -559,7 +690,9 @@ const ExpertConsole = () => {
                                   <MapPin className="h-4 w-4" />
                                   {t("common.destination")}
                                 </div>
-                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">{route.destination}</p>
+                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">
+                                  {route.destination}
+                                </p>
                               </div>
 
                               <div className="rounded-2xl bg-slate-50 p-3">
@@ -567,37 +700,68 @@ const ExpertConsole = () => {
                                   <Truck className="h-4 w-4" />
                                   {t("transport.requestMethod")}
                                 </div>
-                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">{formatTransport(request)}</p>
+                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">
+                                  {formatTransport(request)}
+                                </p>
                               </div>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
                               <span className="flex items-center gap-1">
                                 <CalendarDays className="h-4 w-4" />
-                                {t("expert.createdPrefix")}: {formatDualCalendarInstant(request.created_at, locale, { includeTime: false })}
+                                {t("expert.createdPrefix")}:{" "}
+                                {formatDualCalendarInstant(
+                                  request.created_at,
+                                  locale,
+                                  { includeTime: false },
+                                )}
                               </span>
                               {request.cargo.description && (
                                 <span className="flex min-w-0 items-center gap-1">
                                   <Package className="h-4 w-4 shrink-0" />
-                                  <span className="truncate">{request.cargo.description}</span>
+                                  <span className="truncate">
+                                    {request.cargo.description}
+                                  </span>
                                 </span>
                               )}
                             </div>
                           </div>
 
                           <div className="flex flex-col gap-2 sm:flex-row xl:w-40 xl:flex-col xl:justify-center">
-                            <Button className="rounded-2xl bg-blue-600 hover:bg-blue-700" onClick={() => navigate(`/expert/requests/${request.public_id}`)}>
+                            <Button
+                              className="rounded-2xl bg-blue-600 hover:bg-blue-700"
+                              onClick={() =>
+                                navigate(
+                                  `/expert/requests/${request.public_id}`,
+                                )
+                              }
+                            >
                               <Eye className="ml-2 h-4 w-4" />
                               {t("expert.viewDetails")}
                             </Button>
                             {request.status === "new" && (
-                              <Button variant="outline" className="rounded-2xl" onClick={() => handleAssignToMe(request.public_id)}>
+                              <Button
+                                variant="outline"
+                                className="rounded-2xl"
+                                onClick={() =>
+                                  handleAssignToMe(request.public_id)
+                                }
+                              >
                                 <User className="ml-2 h-4 w-4" />
                                 {t("expert.assignToMe")}
                               </Button>
                             )}
                             {request.status === "assigned" && (
-                              <Button variant="outline" className="rounded-2xl" onClick={() => handleStatusChange(request.public_id, "in_progress")}>
+                              <Button
+                                variant="outline"
+                                className="rounded-2xl"
+                                onClick={() =>
+                                  handleStatusChange(
+                                    request.public_id,
+                                    "in_progress",
+                                  )
+                                }
+                              >
                                 <Clock className="ml-2 h-4 w-4" />
                                 {t("expert.startFollowUp")}
                               </Button>
@@ -613,13 +777,27 @@ const ExpertConsole = () => {
 
             <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
               <CardContent className="flex flex-col gap-3 p-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                <span>{tf("expert.showingCurrentPage", { count: requests.length })}</span>
+                <span>
+                  {tf("expert.showingCurrentPage", { count: requests.length })}
+                </span>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="rounded-full" disabled>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    disabled
+                  >
                     {t("common.previous")}
                   </Button>
-                  <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">{t("common.pageOne")}</span>
-                  <Button variant="outline" size="sm" className="rounded-full" disabled>
+                  <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">
+                    {t("common.pageOne")}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    disabled
+                  >
                     {t("common.next")}
                   </Button>
                 </div>

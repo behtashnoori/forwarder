@@ -32,6 +32,7 @@ import {
   type LogisticsPointView,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import { formatUnitSymbol } from "@/lib/formatQuantity";
 
 type Source = "direct" | "accepted_quote";
 type Side = {
@@ -71,20 +72,17 @@ const backendMessages: Record<string, string> = {
     "عملیات مستقیم نمی‌تواند سابقهٔ قیمت داشته باشد.",
   INVALID_ROUTE_TIMELINE: "زمان برنامه‌ریزی‌شدهٔ رسیدن باید پس از حرکت باشد.",
   FORBIDDEN_OPERATION: "مجوز ایجاد این عملیات را ندارید.",
-  TENANT_SCOPE_VIOLATION:
-    "سازمان عملیاتی فعال شما قابل تشخیص نیست.",
+  TENANT_SCOPE_VIOLATION: "سازمان عملیاتی فعال شما قابل تشخیص نیست.",
   RESOURCE_NOT_FOUND: "یکی از گزینه‌های حاکم‌شدهٔ انتخابی دیگر در دسترس نیست.",
   IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD:
     "این درخواست هنگام ارسال تغییر کرده است؛ آن را بررسی و دوباره ارسال کنید.",
-  OPERATIONAL_SHIPMENT_ALREADY_EXISTS: "این قیمت قبلاً به پروندهٔ حمل تبدیل شده است.",
+  OPERATIONAL_SHIPMENT_ALREADY_EXISTS:
+    "این قیمت قبلاً به پروندهٔ حمل تبدیل شده است.",
   SOURCE_CAPABILITY_NOT_APPLICABLE:
     "این قابلیت برای منبع انتخاب‌شده قابل اعمال نیست.",
-  LOCATION_MAPPING_REQUIRED:
-    "موقعیت انتخاب‌شده برای عملیات مجاز نیست.",
-  LOCATION_ANCESTRY_MISMATCH:
-    "ساختار موقعیت انتخاب‌شده ناسازگار است.",
-  PROJECT_CUSTOMER_MISMATCH:
-    "پروژهٔ انتخاب‌شده متعلق به این مشتری نیست.",
+  LOCATION_MAPPING_REQUIRED: "موقعیت انتخاب‌شده برای عملیات مجاز نیست.",
+  LOCATION_ANCESTRY_MISMATCH: "ساختار موقعیت انتخاب‌شده ناسازگار است.",
+  PROJECT_CUSTOMER_MISMATCH: "پروژهٔ انتخاب‌شده متعلق به این مشتری نیست.",
 };
 const errorText = (error: unknown) =>
   error instanceof ApiError
@@ -209,7 +207,7 @@ function SearchSelect<T>({
 }
 
 export default function NewOperation() {
-  const { t, direction } = useI18n();
+  const { t, direction, businessLabel } = useI18n();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const requestedSource = params.get("source");
@@ -227,14 +225,21 @@ export default function NewOperation() {
   const [quoteId, setQuoteId] = useState(params.get("accepted_quote_id") || "");
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
-  const [countryQuery, setCountryQuery] = useState({ origin: "", destination: "" });
+  const [countryQuery, setCountryQuery] = useState({
+    origin: "",
+    destination: "",
+  });
   const [originCities, setOriginCities] = useState<InternationalCity[]>([]);
   const [destinationCities, setDestinationCities] = useState<
     InternationalCity[]
   >([]);
   const [iran, setIran] = useState<IranDestinationOption[]>([]);
-  const [logisticsPoints, setLogisticsPoints] = useState<LogisticsPointView[]>([]);
-  const [preferredPointIds, setPreferredPointIds] = useState<Set<string>>(new Set());
+  const [logisticsPoints, setLogisticsPoints] = useState<LogisticsPointView[]>(
+    [],
+  );
+  const [preferredPointIds, setPreferredPointIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [cargoOptions, setCargoOptions] = useState<ShipmentCargoOptions>({
     catalog: [],
     cargo_types: [],
@@ -308,7 +313,9 @@ export default function NewOperation() {
       .then((response) => setIran(response.data))
       .catch((caught) => setSelectorError(errorText(caught)));
     listLogisticsPoints({ active: "true", per_page: 100 })
-      .then((response) => setLogisticsPoints(response.items.filter((point) => point.is_active)))
+      .then((response) =>
+        setLogisticsPoints(response.items.filter((point) => point.is_active)),
+      )
       .catch(() => setFacilityError("امکان دریافت نقاط عملیاتی وجود ندارد."))
       .finally(() => setFacilityLoading(false));
   }, []);
@@ -402,18 +409,28 @@ export default function NewOperation() {
       return;
     }
     listProjectLogisticsPoints(projectId)
-      .then((response) => setPreferredPointIds(new Set(response.items.filter((item) => item.is_active).map((item) => item.logistics_point.public_id))))
+      .then((response) =>
+        setPreferredPointIds(
+          new Set(
+            response.items
+              .filter((item) => item.is_active)
+              .map((item) => item.logistics_point.public_id),
+          ),
+        ),
+      )
       .catch(() => setPreferredPointIds(new Set()));
   }, [projectId]);
   const rankedLogisticsPoints = useMemo(
-    () => [...logisticsPoints].sort((left, right) => Number(preferredPointIds.has(right.public_id)) - Number(preferredPointIds.has(left.public_id))),
+    () =>
+      [...logisticsPoints].sort(
+        (left, right) =>
+          Number(preferredPointIds.has(right.public_id)) -
+          Number(preferredPointIds.has(left.public_id)),
+      ),
     [logisticsPoints, preferredPointIds],
   );
 
-  const countryChange = (
-    sideName: "origin" | "destination",
-    id: string,
-  ) => {
+  const countryChange = (sideName: "origin" | "destination", id: string) => {
     const setter = sideName === "origin" ? setOrigin : setDestination;
     setter((side) => ({
       ...side,
@@ -424,11 +441,15 @@ export default function NewOperation() {
     }));
     if (sideName === "origin") setOriginCities([]);
     else setDestinationCities([]);
-    if (id === String(iranCountry?.id) && sideName === "destination") void loadIran();
+    if (id === String(iranCountry?.id) && sideName === "destination")
+      void loadIran();
   };
   const location = (side: Side): OperationalLocationRef | null => {
     if (side.locationMode === "facility" && side.logisticsPointId)
-      return { source_type: "logistics_point", source_id: side.logisticsPointId };
+      return {
+        source_type: "logistics_point",
+        source_id: side.logisticsPointId,
+      };
     const selected = iran.find(
       (option) =>
         `${option.identity.type}:${option.identity.id}` === side.iranId,
@@ -479,7 +500,10 @@ export default function NewOperation() {
     if (!arrival) next.arrival = t("operations.validation.arrival");
     if (departure && arrival && new Date(arrival) <= new Date(departure))
       next.timeline = t("operations.validation.timeline");
-    if ((selectedCargo || selectedRequestCargo) && (!cargoQuantity || Number(cargoQuantity) <= 0))
+    if (
+      (selectedCargo || selectedRequestCargo) &&
+      (!cargoQuantity || Number(cargoQuantity) <= 0)
+    )
       next.cargoQuantity = "Enter a positive cargo quantity.";
     if ((selectedCargo || selectedRequestCargo) && !cargoUomId)
       next.cargoUom = "Select a unit of measure.";
@@ -514,7 +538,8 @@ export default function NewOperation() {
       source === "accepted_quote" && selectedRequestCargo
         ? [
             {
-              source_request_cargo_item_public_id: selectedRequestCargo.public_id,
+              source_request_cargo_item_public_id:
+                selectedRequestCargo.public_id,
               planned_quantity: cargoQuantity,
               ...(selectedCargo
                 ? { catalog_item_public_id: selectedCargo.public_id }
@@ -616,196 +641,255 @@ export default function NewOperation() {
           aria-label={`${label} روش تعیین مکان`}
           className="min-h-11 w-full rounded border px-3"
           value={side.locationMode}
-          onChange={(event) => setter({ ...initialSide, kind: side.kind, locationMode: event.target.value as Side["locationMode"] })}
+          onChange={(event) =>
+            setter({
+              ...initialSide,
+              kind: side.kind,
+              locationMode: event.target.value as Side["locationMode"],
+            })
+          }
         >
           <option value="facility">نقطه عملیاتی</option>
           <option value="geography">فقط موقعیت جغرافیایی</option>
         </select>
-        {side.locationMode === "facility" ? <>
-        <Label htmlFor={`${sideName}-logistics-point`}>نقطه عملیاتی</Label>
-        {facilityLoading ? <p role="status">در حال دریافت نقاط عملیاتی…</p> : null}
-        {facilityError ? <p role="alert">{facilityError}</p> : null}
-        <select
-          id={`${sideName}-logistics-point`}
-          aria-label={`${label} operational facility`}
-          className="min-h-11 w-full rounded border px-3"
-          value={side.logisticsPointId}
-          disabled={facilityLoading || Boolean(facilityError)}
-          onChange={(event) => setter({ ...side, logisticsPointId: event.target.value })}
-        >
-          <option value="">{facilityLoading ? "در حال دریافت نقاط عملیاتی…" : facilityError ? "دریافت نقاط عملیاتی ناموفق بود." : rankedLogisticsPoints.length ? t("operations.select") : "نقطه عملیاتی فعالی برای این سازمان ثبت نشده است."}</option>
-          {rankedLogisticsPoints.map((point) => (
-            <option key={point.public_id} value={point.public_id}>
-              {preferredPointIds.has(point.public_id) ? "★ " : ""}{point.fa_name} — {point.point_type.fa_name}
-            </option>
-          ))}
-        </select>
-        {side.logisticsPointId ? (
-          <p role="status">موقعیت جغرافیایی نقطه عملیاتی از داده مرجع سازمان تعیین می‌شود.</p>
-        ) : null}
-        </> : (
-        <>{side.kind === "domestic" && sideName === "destination" ? (
-          <SearchSelect
-            id="destination"
-            label={t("operations.iranDestination")}
-            value={side.iranId}
-            onChange={(value) => setter({ ...side, iranId: value })}
-            items={iran}
-            loading={loading === "iran"}
-            error={selectorError}
-            onSearch={loadIran}
-            getId={(option) =>
-              `${option.identity.type}:${option.identity.id}`
-            }
-            render={(option) => option.label}
-            required
-            fieldError={sideError}
-          />
-        ) : side.kind === "domestic" ? (
+        {side.locationMode === "facility" ? (
           <>
-            <Label htmlFor={`${sideName}-province`}>
-              <RequiredLabel required>{t("operations.province")}</RequiredLabel>
-            </Label>
+            <Label htmlFor={`${sideName}-logistics-point`}>نقطه عملیاتی</Label>
+            {facilityLoading ? (
+              <p role="status">در حال دریافت نقاط عملیاتی…</p>
+            ) : null}
+            {facilityError ? <p role="alert">{facilityError}</p> : null}
             <select
-              id={`${sideName}-province`}
-              aria-label={`${label} ${t("operations.province")}`}
-              data-field={sideName}
-              required
-              aria-required="true"
-              aria-invalid={!!sideError}
-              aria-describedby={sideError ? `${sideName}-error` : undefined}
+              id={`${sideName}-logistics-point`}
+              aria-label={`${label} operational facility`}
               className="min-h-11 w-full rounded border px-3"
-              value={side.provinceId}
+              value={side.logisticsPointId}
+              disabled={facilityLoading || Boolean(facilityError)}
               onChange={(event) =>
-                setter({ ...side, provinceId: event.target.value })
+                setter({ ...side, logisticsPointId: event.target.value })
               }
             >
-              <option value="">{t("operations.select")}</option>
-              {provinces.map((province) => (
-                <option key={province.id} value={province.id}>
-                  {province.name}
+              <option value="">
+                {facilityLoading
+                  ? "در حال دریافت نقاط عملیاتی…"
+                  : facilityError
+                    ? "دریافت نقاط عملیاتی ناموفق بود."
+                    : rankedLogisticsPoints.length
+                      ? t("operations.select")
+                      : "نقطه عملیاتی فعالی برای این سازمان ثبت نشده است."}
+              </option>
+              {rankedLogisticsPoints.map((point) => (
+                <option key={point.public_id} value={point.public_id}>
+                  {preferredPointIds.has(point.public_id) ? "★ " : ""}
+                  {point.fa_name} — {point.point_type.fa_name}
                 </option>
               ))}
             </select>
-            <FieldMessage id={`${sideName}-error`} message={sideError} />
+            {side.logisticsPointId ? (
+              <p role="status">
+                موقعیت جغرافیایی نقطه عملیاتی از داده مرجع سازمان تعیین می‌شود.
+              </p>
+            ) : null}
           </>
         ) : (
           <>
-            <Label htmlFor={`${sideName}-country`}>
-              <RequiredLabel required>{t("operations.country")}</RequiredLabel>
-            </Label>
-            <Input
-              aria-label={`${label} country search`}
-              value={countryQuery[sideName]}
-              placeholder={direction === "rtl" ? "جست‌وجوی کشور / Country" : "Search country"}
-              onChange={(event) => setCountryQuery((value) => ({ ...value, [sideName]: event.target.value }))}
-            />
-            <select
-              id={`${sideName}-country`}
-              aria-label={`${label} ${t("operations.country")}`}
-              required
-              aria-required="true"
-              className="min-h-11 w-full rounded border px-3"
-              value={side.countryId}
-              onChange={(event) =>
-                countryChange(sideName, event.target.value)
-              }
-            >
-              <option value="">{t("operations.select")}</option>
-              {countries.filter((country) => {
-                const query = countryQuery[sideName].trim().toLocaleLowerCase();
-                return !query || String(country.id) === side.countryId
-                  || [country.name, country.name_en, country.code].some((value) => value.toLocaleLowerCase().includes(query));
-              }).map((country) => (
-                <option key={country.id} value={country.id}>
-                  {country.name_en || country.name}
-                </option>
-              ))}
-            </select>
-            {isIran(side) ? (
-              sideName === "origin" ? (
-                <>
-                  <Label htmlFor="iranProvince">
-                    <RequiredLabel required>
-                      {t("operations.iranOriginProvince")}
-                    </RequiredLabel>
-                  </Label>
-                  <select
-                    id="iranProvince"
-                    aria-label={t("operations.iranOriginProvince")}
-                    data-field="origin"
-                    required
-                    aria-required="true"
-                    aria-invalid={!!sideError}
-                    aria-describedby={sideError ? "origin-error" : undefined}
-                    className="min-h-11 w-full rounded border px-3"
-                    value={side.provinceId}
-                    onChange={(event) =>
-                      setter({ ...side, provinceId: event.target.value })
-                    }
-                  >
-                    <option value="">{t("operations.select")}</option>
-                    {provinces.map((province) => (
-                      <option key={province.id} value={province.id}>
-                        {province.name}
-                      </option>
-                    ))}
-                  </select>
-                  <FieldMessage id="origin-error" message={sideError} />
-                  {side.provinceId && (
-                    <p role="status">
-                      {t("operations.derivedProvince")}:{" "}
-                      {
-                        provinces.find(
-                          (province) => String(province.id) === side.provinceId,
-                        )?.name
-                      }
-                    </p>
-                  )}
-                </>
-              ) : (
-                <SearchSelect
-                  id="destination"
-                  label={t("operations.iranDestination")}
-                  value={side.iranId}
-                  onChange={(value) => setter({ ...side, iranId: value })}
-                  items={iran}
-                  loading={loading === "iran"}
-                  error={selectorError}
-                  onSearch={loadIran}
-                  getId={(option) =>
-                    `${option.identity.type}:${option.identity.id}`
-                  }
-                  render={(option) => option.label}
-                  required
-                  fieldError={sideError}
-                />
-              )
-            ) : (
+            {side.kind === "domestic" && sideName === "destination" ? (
+              <SearchSelect
+                id="destination"
+                label={t("operations.iranDestination")}
+                value={side.iranId}
+                onChange={(value) => setter({ ...side, iranId: value })}
+                items={iran}
+                loading={loading === "iran"}
+                error={selectorError}
+                onSearch={loadIran}
+                getId={(option) =>
+                  `${option.identity.type}:${option.identity.id}`
+                }
+                render={(option) => option.label}
+                required
+                fieldError={sideError}
+              />
+            ) : side.kind === "domestic" ? (
               <>
-                <Label htmlFor={`${sideName}-city`}>
+                <Label htmlFor={`${sideName}-province`}>
                   <RequiredLabel required>
-                    {t("operations.internationalCity")}
+                    {t("operations.province")}
                   </RequiredLabel>
                 </Label>
-                <InternationalLocationSelector
-                  key={`${sideName}-${side.countryId}`}
-                  countryId={side.countryId}
-                  locale={direction === "rtl" ? "fa" : "en"}
-                  side={sideName}
-                  selected={cities.find((city) => String(city.id) === side.cityId) ?? null}
-                  fieldError={sideError}
-                  onChange={(city) => {
-                    if (sideName === "origin") setOriginCities(city ? [city] : []);
-                    else setDestinationCities(city ? [city] : []);
-                    setter({ ...side, cityId: city ? String(city.id) : "" });
-                  }}
-                />
+                <select
+                  id={`${sideName}-province`}
+                  aria-label={`${label} ${t("operations.province")}`}
+                  data-field={sideName}
+                  required
+                  aria-required="true"
+                  aria-invalid={!!sideError}
+                  aria-describedby={sideError ? `${sideName}-error` : undefined}
+                  className="min-h-11 w-full rounded border px-3"
+                  value={side.provinceId}
+                  onChange={(event) =>
+                    setter({ ...side, provinceId: event.target.value })
+                  }
+                >
+                  <option value="">{t("operations.select")}</option>
+                  {provinces.map((province) => (
+                    <option key={province.id} value={province.id}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
                 <FieldMessage id={`${sideName}-error`} message={sideError} />
+              </>
+            ) : (
+              <>
+                <Label htmlFor={`${sideName}-country`}>
+                  <RequiredLabel required>
+                    {t("operations.country")}
+                  </RequiredLabel>
+                </Label>
+                <Input
+                  aria-label={`${label} country search`}
+                  value={countryQuery[sideName]}
+                  placeholder={
+                    direction === "rtl" ? "جست‌وجوی کشور" : "Search country"
+                  }
+                  onChange={(event) =>
+                    setCountryQuery((value) => ({
+                      ...value,
+                      [sideName]: event.target.value,
+                    }))
+                  }
+                />
+                <select
+                  id={`${sideName}-country`}
+                  aria-label={`${label} ${t("operations.country")}`}
+                  required
+                  aria-required="true"
+                  className="min-h-11 w-full rounded border px-3"
+                  value={side.countryId}
+                  onChange={(event) =>
+                    countryChange(sideName, event.target.value)
+                  }
+                >
+                  <option value="">{t("operations.select")}</option>
+                  {countries
+                    .filter((country) => {
+                      const query = countryQuery[sideName]
+                        .trim()
+                        .toLocaleLowerCase();
+                      return (
+                        !query ||
+                        String(country.id) === side.countryId ||
+                        [country.name, country.name_en, country.code].some(
+                          (value) => value.toLocaleLowerCase().includes(query),
+                        )
+                      );
+                    })
+                    .map((country) => (
+                      <option key={country.id} value={country.id}>
+                        {country.name_en || country.name}
+                      </option>
+                    ))}
+                </select>
+                {isIran(side) ? (
+                  sideName === "origin" ? (
+                    <>
+                      <Label htmlFor="iranProvince">
+                        <RequiredLabel required>
+                          {t("operations.iranOriginProvince")}
+                        </RequiredLabel>
+                      </Label>
+                      <select
+                        id="iranProvince"
+                        aria-label={t("operations.iranOriginProvince")}
+                        data-field="origin"
+                        required
+                        aria-required="true"
+                        aria-invalid={!!sideError}
+                        aria-describedby={
+                          sideError ? "origin-error" : undefined
+                        }
+                        className="min-h-11 w-full rounded border px-3"
+                        value={side.provinceId}
+                        onChange={(event) =>
+                          setter({ ...side, provinceId: event.target.value })
+                        }
+                      >
+                        <option value="">{t("operations.select")}</option>
+                        {provinces.map((province) => (
+                          <option key={province.id} value={province.id}>
+                            {province.name}
+                          </option>
+                        ))}
+                      </select>
+                      <FieldMessage id="origin-error" message={sideError} />
+                      {side.provinceId && (
+                        <p role="status">
+                          {t("operations.derivedProvince")}:{" "}
+                          {
+                            provinces.find(
+                              (province) =>
+                                String(province.id) === side.provinceId,
+                            )?.name
+                          }
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <SearchSelect
+                      id="destination"
+                      label={t("operations.iranDestination")}
+                      value={side.iranId}
+                      onChange={(value) => setter({ ...side, iranId: value })}
+                      items={iran}
+                      loading={loading === "iran"}
+                      error={selectorError}
+                      onSearch={loadIran}
+                      getId={(option) =>
+                        `${option.identity.type}:${option.identity.id}`
+                      }
+                      render={(option) => option.label}
+                      required
+                      fieldError={sideError}
+                    />
+                  )
+                ) : (
+                  <>
+                    <Label htmlFor={`${sideName}-city`}>
+                      <RequiredLabel required>
+                        {t("operations.internationalCity")}
+                      </RequiredLabel>
+                    </Label>
+                    <InternationalLocationSelector
+                      key={`${sideName}-${side.countryId}`}
+                      countryId={side.countryId}
+                      locale={direction === "rtl" ? "fa" : "en"}
+                      side={sideName}
+                      selected={
+                        cities.find(
+                          (city) => String(city.id) === side.cityId,
+                        ) ?? null
+                      }
+                      fieldError={sideError}
+                      onChange={(city) => {
+                        if (sideName === "origin")
+                          setOriginCities(city ? [city] : []);
+                        else setDestinationCities(city ? [city] : []);
+                        setter({
+                          ...side,
+                          cityId: city ? String(city.id) : "",
+                        });
+                      }}
+                    />
+                    <FieldMessage
+                      id={`${sideName}-error`}
+                      message={sideError}
+                    />
+                  </>
+                )}
               </>
             )}
           </>
-        )}</>
         )}
       </fieldset>
     );
@@ -909,7 +993,7 @@ export default function NewOperation() {
                 onSearch={loadProjects}
                 getId={(project) => project.public_id}
                 render={(project) =>
-                  `${project.project_code} · ${project.lifecycle_status}`
+                  `${project.project_code} · ${businessLabel(project.lifecycle_status)}`
                 }
               />
             </CardContent>
@@ -935,7 +1019,7 @@ export default function NewOperation() {
                 onSearch={loadQuotes}
                 getId={(quote) => String(quote.id)}
                 render={(quote) =>
-                  `${quote.request_public_id} · ${quote.customer_label} · ${quote.route_label || "—"} · ${quote.quote_label}`
+                  `${direction === "rtl" ? "درخواست پذیرفته‌شده" : "Accepted request"} · ${quote.customer_label} · ${quote.route_label || "—"} · ${quote.quote_label}`
                 }
                 required
                 fieldError={fieldErrors.quote}
@@ -1054,16 +1138,21 @@ export default function NewOperation() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>کالای محموله / Shipment cargo</CardTitle>
+            <CardTitle>
+              {direction === "rtl" ? "کالای محموله" : "Shipment cargo"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              کاتالوگ توسط مدیر سازمان نگهداری می‌شود؛ کالای فعال را برای این محموله انتخاب کنید.
-              / Organization Admin maintains the catalog; select an active item for this shipment.
+              {direction === "rtl"
+                ? "فهرست کالا توسط مدیر سازمان نگهداری می‌شود؛ کالای فعال را برای این محموله انتخاب کنید."
+                : "The Organization Admin maintains the catalog; select an active item for this shipment."}
             </p>
             {source === "accepted_quote" && selectedQuote ? (
               <div className="space-y-2">
-                <Label htmlFor="request-cargo">کالای منبع در درخواست مشتری</Label>
+                <Label htmlFor="request-cargo">
+                  کالای منبع در درخواست مشتری
+                </Label>
                 {quoteCargoItems.length ? (
                   <select
                     id="request-cargo"
@@ -1081,7 +1170,8 @@ export default function NewOperation() {
                         value={item.public_id}
                         disabled={!item.operationally_ready}
                       >
-                        {item.position}. {item.description || item.cargo_type_name || "کالا"}
+                        {item.position}.{" "}
+                        {item.description || item.cargo_type_name || "کالا"}
                         {item.quantity
                           ? ` — ${Number(item.quantity).toLocaleString("fa-IR")} ${item.uom_name || item.uom_symbol || ""}`
                           : " — اطلاعات عملیاتی ناقص"}
@@ -1090,29 +1180,52 @@ export default function NewOperation() {
                   </select>
                 ) : (
                   <p className="rounded bg-slate-50 p-3 text-sm">
-                    این درخواست قلم کالای ثبت‌شده ندارد؛ ایجاد محموله بدون Cargo ادامه می‌یابد.
+                    این درخواست قلم کالای ثبت‌شده ندارد؛ ایجاد محموله بدون قلم
+                    کالا ادامه می‌یابد.
                   </p>
                 )}
-                <FieldMessage id="cargo-source-error" message={fieldErrors.cargoSource} />
+                <FieldMessage
+                  id="cargo-source-error"
+                  message={fieldErrors.cargoSource}
+                />
                 {selectedRequestCargo ? (
                   <p className="text-sm text-slate-700">
-                    درخواست‌شده: {Number(selectedRequestCargo.quantity).toLocaleString("fa-IR")} {selectedRequestCargo.uom_name || selectedRequestCargo.uom_symbol} · نوع کالا: {selectedRequestCargo.cargo_type_name || "نامشخص"}
+                    درخواست‌شده:{" "}
+                    {Number(selectedRequestCargo.quantity).toLocaleString(
+                      "fa-IR",
+                    )}{" "}
+                    {selectedRequestCargo.uom_name ||
+                      formatUnitSymbol(selectedRequestCargo.uom_symbol || "", direction === "rtl" ? "fa-IR" : "en-US")}{" "}
+                    · نوع کالا:{" "}
+                    {selectedRequestCargo.cargo_type_name || "نامشخص"}
                   </p>
                 ) : null}
               </div>
             ) : null}
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="cargo-catalog">Catalog item (optional)</Label>
+                <Label htmlFor="cargo-catalog">
+                  {direction === "rtl"
+                    ? "کالای استاندارد (اختیاری)"
+                    : "Catalog item (optional)"}
+                </Label>
                 <Input
-                  aria-label="Search commodities"
-                  placeholder="Search name, alias, codes, brand or model"
+                  aria-label={
+                    direction === "rtl" ? "جست‌وجوی کالا" : "Search commodities"
+                  }
+                  placeholder={
+                    direction === "rtl"
+                      ? "جست‌وجوی نام، نام جایگزین، کد، برند یا مدل"
+                      : "Search name, alias, codes, brand or model"
+                  }
                   value={cargoQuery}
                   onChange={(event) => setCargoQuery(event.target.value)}
                 />
                 <select
                   id="cargo-catalog"
-                  aria-label="Catalog item"
+                  aria-label={
+                    direction === "rtl" ? "کالای استاندارد" : "Catalog item"
+                  }
                   className="min-h-11 w-full rounded border px-3"
                   value={cargoCatalogId}
                   onChange={(event) => {
@@ -1125,56 +1238,110 @@ export default function NewOperation() {
                       setCargoUomId(item?.default_uom_public_id || "");
                   }}
                 >
-                  <option value="">Manual cargo / no catalog item in this step</option>
-                  {selectableCatalog.some((option) => option.preferred) && <optgroup label="Preferred for this project">
-                    {selectableCatalog.filter((option) => option.preferred).map((option) => (
-                      <option key={option.public_id} value={option.public_id}>★ {option.code} — {option.name}</option>
-                    ))}
-                  </optgroup>}
-                  <optgroup label="Other organization commodities">
-                    {selectableCatalog.filter((option) => !option.preferred).map((option) => (
-                      <option key={option.public_id} value={option.public_id}>{option.code} — {option.name}</option>
-                    ))}
+                  <option value="">
+                    {direction === "rtl"
+                      ? "بدون کالای استاندارد در این مرحله"
+                      : "Manual cargo / no catalog item in this step"}
+                  </option>
+                  {selectableCatalog.some((option) => option.preferred) && (
+                    <optgroup
+                      label={
+                        direction === "rtl"
+                          ? "پیشنهادی برای این پروژه"
+                          : "Preferred for this project"
+                      }
+                    >
+                      {selectableCatalog
+                        .filter((option) => option.preferred)
+                        .map((option) => (
+                          <option
+                            key={option.public_id}
+                            value={option.public_id}
+                          >
+                            ★ {option.code} — {option.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  <optgroup
+                    label={
+                      direction === "rtl"
+                        ? "سایر کالاهای سازمان"
+                        : "Other organization commodities"
+                    }
+                  >
+                    {selectableCatalog
+                      .filter((option) => !option.preferred)
+                      .map((option) => (
+                        <option key={option.public_id} value={option.public_id}>
+                          {option.code} — {option.name}
+                        </option>
+                      ))}
                   </optgroup>
                 </select>
-                <p className="text-xs text-muted-foreground">Project preferences change ranking only. Manual cargo can also be added after creation.</p>
+                <p className="text-xs text-muted-foreground">
+                  {direction === "rtl"
+                    ? "ترجیحات پروژه فقط ترتیب نمایش را تغییر می‌دهد؛ پس از ایجاد نیز می‌توان کالا را دستی افزود."
+                    : "Project preferences change ranking only. Manual cargo can also be added after creation."}
+                </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cargo-quantity">Quantity</Label>
+                <Label htmlFor="cargo-quantity">
+                  {direction === "rtl" ? "مقدار" : "Quantity"}
+                </Label>
                 <Input
                   id="cargo-quantity"
                   data-field="cargoQuantity"
-                  aria-label="Cargo quantity"
+                  aria-label={
+                    direction === "rtl" ? "مقدار کالا" : "Cargo quantity"
+                  }
                   type="number"
                   min="0.000001"
                   step="any"
-                  disabled={source === "accepted_quote" ? !selectedRequestCargo : !cargoCatalogId}
+                  disabled={
+                    source === "accepted_quote"
+                      ? !selectedRequestCargo
+                      : !cargoCatalogId
+                  }
                   value={cargoQuantity}
                   onChange={(event) => setCargoQuantity(event.target.value)}
                   aria-invalid={!!fieldErrors.cargoQuantity}
                 />
-                <FieldMessage id="cargo-quantity-error" message={fieldErrors.cargoQuantity} />
+                <FieldMessage
+                  id="cargo-quantity-error"
+                  message={fieldErrors.cargoQuantity}
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cargo-uom">Unit of measure</Label>
+                <Label htmlFor="cargo-uom">
+                  {direction === "rtl" ? "واحد اندازه‌گیری" : "Unit of measure"}
+                </Label>
                 <select
                   id="cargo-uom"
                   data-field="cargoUom"
-                  aria-label="Unit of measure"
+                  aria-label={
+                    direction === "rtl" ? "واحد اندازه‌گیری" : "Unit of measure"
+                  }
                   className="min-h-11 w-full rounded border px-3"
                   disabled={source === "accepted_quote" || !cargoCatalogId}
                   value={cargoUomId}
                   onChange={(event) => setCargoUomId(event.target.value)}
                   aria-invalid={!!fieldErrors.cargoUom}
                 >
-                  <option value="">Select…</option>
+                  <option value="">
+                    {direction === "rtl" ? "انتخاب…" : "Select…"}
+                  </option>
                   {cargoOptions.uoms.map((option) => (
                     <option key={option.public_id} value={option.public_id}>
-                      {option.name}{option.symbol ? ` (${option.symbol})` : ""}
+                      {option.name}
+                      {option.symbol ? ` (${option.symbol})` : ""}
                     </option>
                   ))}
                 </select>
-                <FieldMessage id="cargo-uom-error" message={fieldErrors.cargoUom} />
+                <FieldMessage
+                  id="cargo-uom-error"
+                  message={fieldErrors.cargoUom}
+                />
               </div>
             </div>
           </CardContent>
@@ -1209,17 +1376,27 @@ export default function NewOperation() {
             {selectedIranDestination && (
               <p role="status">
                 {t("operations.derivedProvince")}:{" "}
-                {selectedIranDestination.province?.name || selectedIranDestination.secondary_label}
+                {selectedIranDestination.province?.name ||
+                  selectedIranDestination.secondary_label}
               </p>
             )}
             {selectedCargo && (
               <p role="status">
-                Cargo: {selectedCargo.code} — {selectedCargo.name} · {cargoQuantity || "—"}
+                {direction === "rtl" ? "کالا" : "Cargo"}: {selectedCargo.code} —{" "}
+                {selectedCargo.name} ·{" "}
+                {cargoQuantity || "—"}
               </p>
             )}
             {selectedRequestCargo && (
               <p role="status">
-                منبع کالا: درخواست {selectedQuote?.request_public_id}، قلم {selectedRequestCargo.position} · درخواست‌شده {Number(selectedRequestCargo.quantity).toLocaleString("fa-IR")} {selectedRequestCargo.uom_name || selectedRequestCargo.uom_symbol} · برنامه {Number(cargoQuantity || 0).toLocaleString("fa-IR")} {selectedRequestCargo.uom_name || selectedRequestCargo.uom_symbol}
+                منبع کالا: درخواست پذیرفته‌شده، قلم{" "}
+                {selectedRequestCargo.position} · درخواست‌شده{" "}
+                {Number(selectedRequestCargo.quantity).toLocaleString("fa-IR")}{" "}
+                {selectedRequestCargo.uom_name ||
+                  formatUnitSymbol(selectedRequestCargo.uom_symbol || "", direction === "rtl" ? "fa-IR" : "en-US")}{" "}
+                · برنامه {Number(cargoQuantity || 0).toLocaleString("fa-IR")}{" "}
+                {selectedRequestCargo.uom_name ||
+                  formatUnitSymbol(selectedRequestCargo.uom_symbol || "", direction === "rtl" ? "fa-IR" : "en-US")}
               </p>
             )}
           </CardContent>

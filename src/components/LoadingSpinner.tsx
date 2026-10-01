@@ -6,16 +6,24 @@ interface LoadingSpinnerProps {
   className?: string;
 }
 
-const LoadingSpinner = ({ size = "md", text, className = "" }: LoadingSpinnerProps) => {
+const LoadingSpinner = ({
+  size = "md",
+  text,
+  className = "",
+}: LoadingSpinnerProps) => {
   const sizeClasses = {
     sm: "w-4 h-4",
-    md: "w-6 h-6", 
-    lg: "w-8 h-8"
+    md: "w-6 h-6",
+    lg: "w-8 h-8",
   };
 
   return (
     <div className={`flex items-center justify-center gap-2 ${className}`}>
-      <Loader2 role="status" aria-label="Loading" className={`animate-spin ${sizeClasses[size]}`} />
+      <Loader2
+        role="status"
+        aria-label="در حال بارگذاری"
+        className={`animate-spin ${sizeClasses[size]}`}
+      />
       {text && <span className="text-sm text-gray-600">{text}</span>}
     </div>
   );

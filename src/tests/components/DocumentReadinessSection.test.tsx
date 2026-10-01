@@ -39,7 +39,7 @@ describe("shipment document readiness", () => {
 
   it("renders Persian concepts, authoritative status counts, and contextual ownership help", async () => {
     render(<DocumentReadinessSection shipmentPublicId="shipment-opaque" shipmentVersion={3} />);
-    expect(await screen.findByText("بارنامه")).toBeInTheDocument();
+    expect((await screen.findAllByText("بارنامه")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("کسری")).toHaveLength(2);
     expect(screen.getByText(/مالک فایل همچنان پرونده درخواست است/)).toBeInTheDocument();
     expect(screen.getByText(/برای همین محموله ثبت شده است/)).toBeInTheDocument();

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
+import { formatUnitSymbol } from "@/lib/formatQuantity";
 
 const categories: Record<string, string> = {
   SHIPMENT: "محموله", ROUTE: "مسیر", ROUTE_OCCURRENCE: "رخداد مسیر",
@@ -54,7 +55,7 @@ export default function UnifiedShipmentHistory({ shipmentPublicId }: { shipmentP
             {item.stage_label && <p>مرحله عملیاتی: {item.stage_label}</p>}
             {item.cargo_label && <p>کالا: {item.cargo_label}</p>}
             {item.before_quantity != null && item.after_quantity != null && <p>مقدار: {Number(item.before_quantity).toLocaleString("fa-IR")} ← {Number(item.after_quantity).toLocaleString("fa-IR")}</p>}
-            {item.quantity != null && <p>مقدار: {Number(item.quantity).toLocaleString("fa-IR")} {item.uom_symbol || ""}</p>}
+            {item.quantity != null && <p>مقدار: {Number(item.quantity).toLocaleString("fa-IR")} {formatUnitSymbol(item.uom_symbol || "", locale)}</p>}
             {item.destination_label && <p>مقصد: {item.destination_label}</p>}
             {item.source_is_projection && <p>این مورد از وضعیت عملیات شناسایی شده است.</p>}
             {item.source_type && <p>منبع: {item.source_type === "direct" ? "عملیات مستقیم" : "درخواست و پیشنهاد پذیرفته‌شده"}</p>}

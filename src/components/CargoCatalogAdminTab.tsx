@@ -15,7 +15,7 @@ import {
   type CargoCatalogItem,
   type CargoShipmentUsage,
 } from "@/lib/api";
-import { formatQuantity } from "@/lib/formatQuantity";
+import { formatQuantity, formatUnitSymbol } from "@/lib/formatQuantity";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 const emptyForm = {
@@ -462,7 +462,7 @@ export default function CargoCatalogAdminTab() {
                   </a>
                   <p>
                     <bdi dir="ltr">
-                      {formatQuantity(row.quantity)} {row.uom}
+                      {formatQuantity(row.quantity)} {formatUnitSymbol(row.uom, "fa-IR")}
                     </bdi>{" "}
                     · {shipmentStatus[row.status] || "وضعیت ثبت‌شده"}
                   </p>
