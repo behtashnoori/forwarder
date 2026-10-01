@@ -135,6 +135,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   await expect(page).toHaveURL(/\/operations\/shipments\/[0-9a-f-]{36}$/i);
   const shipmentId = page.url().split("/").pop()!;
   await openShipmentSection(page, "route", shipmentId);
+  await page.locator("summary", { hasText: "جزئیات اجرای مسیر" }).click();
 
   // Give the active Shipment a real governed attention reason for Control Tower.
   const exceptionPanel = page.getByRole("heading", {
@@ -152,7 +153,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
 
   // Journey C: the persisted owner can mutate Shipment Documents.
   await openShipmentSection(page, "documents", shipmentId);
-  await expect(page.getByRole("heading", { name: "مدارک و مراجع حمل" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "اسناد محموله", exact: true })).toBeVisible();
   await page.getByLabel("نوع یا دسته تجاری سند").fill("بارنامه مالک ثابت");
   await page.getByLabel("انتخاب فایل سند").setInputFiles({
     name: "fixed-owner-proof.pdf",

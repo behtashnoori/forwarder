@@ -147,6 +147,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     await page.getByRole("link", { name: /مشاهده محموله مشتری عملیاتی آزمایشی/ }).click();
     await expect(page).toHaveURL(new RegExp(`/operations/shipments/${fixture.active_shipment_public_id}$`));
     await openShipmentSection(page, "route", fixture.active_shipment_public_id);
+    await page.locator("summary", { hasText: "جزئیات اجرای مسیر" }).click();
     await expect(page.getByRole("heading", { name: "مسائل عملیاتی" })).toBeVisible();
 
     const note = "استثنای مرورگری Phase 2";
