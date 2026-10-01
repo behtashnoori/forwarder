@@ -15,7 +15,7 @@ async function openShipment(page:Page,id:string){
   await page.goto("/operations/shipments?scope=all");
   const all=page.getByRole("button",{name:"نمایش همه وضعیت‌ها",exact:true});
   if(await all.isVisible())await all.click();
-  await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${id}"]`)).click();
+  await page.getByRole("link", { name: /^مشاهده محموله عملیاتی / }).and(page.locator(`a[href="/operations/shipments/${id}"]`)).click();
   await openShipmentSection(page,"closure",id);
   const region=page.getByRole("region",{name:"بررسی بستن پرونده"});
   await expect(region.getByRole("button",{name:"بررسی دوباره"})).toBeVisible();return region;

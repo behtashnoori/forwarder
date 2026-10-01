@@ -137,7 +137,7 @@ test("P3-01 — central definitions → organization activation → expert use �
 
   await login(page, "restricted");
   await openShipmentList(page);
-  const shipmentLink = page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`));
+  const shipmentLink = page.getByRole("link", { name: /^مشاهده محموله عملیاتی / }).and(page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`));
   await expect(shipmentLink).toBeVisible();
   await shipmentLink.click();
   await expect(page.locator("#shipment-overview h1")).toBeVisible();
@@ -170,7 +170,7 @@ test("P3-01 — central definitions → organization activation → expert use �
 
   await login(page, "restricted");
   await openShipmentList(page);
-  await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`)).click();
+  await page.getByRole("link", { name: /^مشاهده محموله عملیاتی / }).and(page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`)).click();
   await openShipmentSection(page, "cargo", fixture.shipment_a);
   await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible({ timeout: 15_000 });
   await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();

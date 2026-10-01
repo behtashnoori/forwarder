@@ -75,31 +75,79 @@ an explicit historical-repair entry retains existing authorized document
 commands. New operational commands remain denied by the backend. Closure is
 immutable; no blanket document-write denial or reopen is introduced.
 
-## Finding register (qualification pending)
+## Finding register
 
-| ID | Surface | Severity | Observed behavior | Root cause | Correction | Evidence | Status |
+Evidence root: `D:\1-webapp\forwarder-dev\human-open-findings-evidence`.
+The final evidence index below binds each result to its tested candidate.
+
+| ID | Surface | Severity | Observed behavior | Root cause | Implemented correction | Qualification evidence | Status |
 |---|---|---|---|---|---|---|---|
-| HW_GEO_001 | Country selectors | HIGH | Inconsistent country lists | Investigation pending | Pending | NOT_RUN | OPEN |
-| HW_GEO_002 | Canonical city | HIGH | Isfahan not found | Stored localized label is أصفهان; stable ID 418863 exists under 418862 | Pending | Read-only SQL | OPEN |
-| HW_GEO_003 | Admin1 | MEDIUM | هرمزجان | Localized catalog label for stable ID 131222 | Pending | Read-only SQL | OPEN |
-| HW_GEO_004 | City labels | POLISH | Mixed Persian/English | Primary option composition | Pending | Source inspection | OPEN |
-| HW_GEO_005 | Shared selectors | HIGH | Different results | Multiple consumer search contracts | Pending | Source inspection | OPEN |
-| HW_GEO_006 | Endpoint search | HIGH | Duplicate-looking Tehran | Investigation pending; canonical City is 112931 | Pending | Read-only SQL | OPEN |
-| HW_GEO_007 | Direct Operation | MEDIUM | Asymmetric endpoints | Legacy domestic/international side branches | Pending | NewOperation.tsx | OPEN |
-| HW_LOCATION_001 | Operational Location | HIGH | Missing inline creation journey | Shared picker not used on Direct Operation | Pending | CanonicalLocationPicker.tsx | OPEN |
-| HW_DIRECT_OP_GEO_001 | Direct Operation | HIGH | Mixed untyped choices | Legacy selector composition | Pending | NewOperation.tsx | OPEN |
-| HW_DOC_001 | Documents | HIGH/UX | Requirements/files/references/exceptions mixed | Page hierarchy | Pending | OperationalShipmentDetail.tsx | OPEN |
-| HW_DOC_002 | Documents | MEDIUM | Requirement/file relation unclear | Separate upload and requirement panels | Pending | Source inspection | OPEN |
-| HW_DOC_003 | Documents | MEDIUM | Technical operator wording | Presentation copy | Pending | DocumentReadinessSection.tsx | OPEN |
-| HW_DOC_004 | Closed Documents | HIGH | Mutation controls visible | Closed state not passed to components; backend audit pending | Pending | Source inspection | OPEN |
-| HW_HISTORY_002 | History | HIGH | Closure category empty | Client filters only current page; authoritative closure branch already exists | Pending | Source inspection | OPEN |
-| HW_HISTORY_003 | History | MEDIUM | English primary labels | Incomplete display localization | Pending | Source inspection | OPEN |
-| HW_HISTORY_DENSITY | History | UX | Repetitive technical metadata | All metadata expanded | Pending | Source inspection | OPEN |
-| CLOSED_SUMMARY_SEMANTICS | Summary | UX | Readiness shown as unfinished objective | Shared active/closed copy | Pending | Source inspection | OPEN |
-| HW_DATE_TIME_RTL | Affected surfaces | MEDIUM | Native US date placeholders, raw transport, arrows | Presentation controls | Pending | NOT_RUN | OPEN |
+| HW_GEO_001 | Country selectors | HIGH | Incomplete/inconsistent countries | Authenticated geography read hard-coded 14 countries rather than complete Country SOR | All active countries with explicit supported-depth flag; shared picker | PG geography; HW-GEO across Direct/Route Reference/Delivery/Admin | QUALIFICATION_PENDING |
+| HW_GEO_002 | Canonical city | HIGH | Isfahan unavailable | Existing City 418863 under Admin1 418862 stored as أصفهان; unnormalized search and silent 200-row cutoff | Normalized names/aliases, exact matches first, explicit paging, identity-based Persian display | PG search/pagination/parent test; HW-GEO Isfahan in all selectors | QUALIFICATION_PENDING |
+| HW_GEO_003 | Admin1 | MEDIUM | هرمزجان | Source localized name for GeoNames 131222 | Shared presentation erratum هرمزگان; source identity/row unchanged | PG stored-name preservation; HW-GEO | QUALIFICATION_PENDING |
+| HW_GEO_004 | City labels | POLISH | English/Persian primary labels mixed | Multiple primary option compositions | Persian-first typed labels; alternate names and IDs in details | HW-GEO desktop screenshots; picker tests | QUALIFICATION_PENDING |
+| HW_GEO_005 | Shared selectors | HIGH | Different results across surfaces | Legacy mixed endpoint reads versus bounded canonical read | Shared Country/Admin1/City picker/read contract for affected surfaces | HW-GEO same identities across five surfaces | QUALIFICATION_PENDING |
+| HW_GEO_006 | Endpoint search | HIGH | Two Tehran-looking choices | City id 17504 / GeoNames 112931 and InternationalCity id 57 / IRTHR mixed as primary cities | Primary cities from canonical City; stable-identity deduplication; physical references separately typed | Read-only source SQL; PG hierarchy; HW-GEO unique Tehran | QUALIFICATION_PENDING |
+| HW_GEO_007 | Direct Operation | MEDIUM | Asymmetric endpoints | Domestic/international side-specific branches | Both sides use Organization Location or shared canonical geography | Direct Operation tests; HW-GEO | QUALIFICATION_PENDING |
+| HW_LOCATION_001 | Organization Location | HIGH | Inline creation not discoverable | Direct Operation omitted existing shared picker flow | Inline minimum name and known geography; immediate PENDING_REVIEW selection; existing Admin review | PG create/use/enrich/approve/deactivate and frozen route snapshot; HW-GEO Admin journey | QUALIFICATION_PENDING |
+| HW_DIRECT_OP_GEO_001 | Direct Operation | HIGH | Mixed untyped endpoint choices | Legacy endpoint composition | Symmetric typed shared selectors; physical references in separate detail | Direct Operation frontend tests; HW-GEO; owner/cargo browser journeys | QUALIFICATION_PENDING |
+| HW_DOC_001 | Documents | HIGH/UX | Requirements/files/references/exceptions mixed | Page hierarchy; CSS grid overrode hidden exceptions attribute | Requirements and files primary, references collapsed; exceptions only render under Route | Closed Documents browser assertion and screenshot; document-context journey | QUALIFICATION_PENDING |
+| HW_DOC_002 | Documents | MEDIUM | File/requirement relationship unclear | Upload and readiness panels lacked contextual explanation | Independent upload explains it does not satisfy a requirement automatically; requirement shows exact associated file/version and source link | Readiness frontend tests; document-context upload/version/privacy journey | QUALIFICATION_PENDING |
+| HW_DOC_003 | Documents | MEDIUM | Technical operator wording | Materialization-oriented copy | ثبت مدارک مورد نیاز این محموله and concise relationship explanation | Frontend readiness tests; browser Documents | QUALIFICATION_PENDING |
+| HW_DOC_004 | Closed Documents | HIGH | Mutation controls visible by default | Closed state not supplied to requirements/files/references | Default read-only; explicit historical repair under clarified Product authority; existing backend new-operation denials retained | PG closed-command denial and audited historical repair with frozen ClosureDecision; closed browser toggle and no-upload default | QUALIFICATION_PENDING |
+| HW_HISTORY_002 | History | HIGH | Closure category empty | Client filtered only current unfiltered page; authoritative closure branch already existed | Server category filter/count before pagination across composed feed | PG closure beyond first 50 / category page size 1 / immutable decision identity; closure browser category | QUALIFICATION_PENDING |
+| HW_HISTORY_003 | History | MEDIUM | Reported and other primary English labels | Incomplete presentation mapping | Semantic Persian event titles without enum changes | Unified History frontend; full lifecycle PG/browser; preserved read-only check pending | QUALIFICATION_PENDING |
+| HW_HISTORY_DENSITY | History | UX | Repetitive technical metadata | Expanded recorded/source/provenance/version fields | What/when/who primary; technical audit detail retained in collapsed disclosure | Unified History tests; closure category desktop/mobile | QUALIFICATION_PENDING |
+| CLOSED_SUMMARY_SEMANTICS | Summary | UX | Closed readiness appears unfinished | Shared active/closed guidance labels | کامل بودن اطلاعات and informational warnings; no operational primary CTA; unknown cargo remains unknown | Guidance frontend; closed Summary browser; preserved read-only check pending | QUALIFICATION_PENDING |
+| HW_DATE_TIME_RTL | Affected forms | MEDIUM | US date placeholders, raw road, ambiguous direction and units | Native datetime display and inconsistent presentation helpers | Existing UTC converter with Persian digit entry and dual-calendar hint; localized transport/unit labels; explicit از…به… direction | Date converter/control tests; TypeScript/build; Route Reference/ETA/closure/browser desktop | QUALIFICATION_PENDING |
 
-## Results
+## Group accounting
 
+There are 18 unique findings. Group counts overlap where a single root-cause fix
+serves several surfaces; they must not be summed as unique findings.
+
+| Group | Finding mapping | FINDINGS_START |
+|---|---|---:|
+| GEOGRAPHY | HW_GEO_001–007 | 7 |
+| ORGANIZATION_LOCATION | HW_LOCATION_001 | 1 |
+| DIRECT_OPERATION | HW_DIRECT_OP_GEO_001, HW_GEO_007, HW_DATE_TIME_RTL | 3 |
+| ROUTE_REFERENCE | HW_GEO_001/002/004/005/006, HW_DATE_TIME_RTL | 6 |
+| DOCUMENTS | HW_DOC_001–004 | 4 |
+| UNIFIED_HISTORY | HW_HISTORY_002/003/DENSITY | 3 |
+| CLOSED_SHIPMENT_SUMMARY | CLOSED_SUMMARY_SEMANTICS | 1 |
+| DATE_TIME_RTL | HW_DATE_TIME_RTL | 1 |
+
+## Architecture / Product reconciliation
+
+- AUTHORIZED: affected picker/search/label behavior, document hierarchy,
+  category filtering, closed presentation and localized datetime controls.
+- PRESERVED: Country/Province/City and LogisticsPoint ownership; canonical
+  identities; legacy physical reference compatibility; Request/Quote and Cargo
+  lineage; permissions/tenant/owner scope; route topology; ETA_RULESET_V2;
+  delivery finality; immutable closure and audit facts.
+- PRESERVED: local datetime inputs are device-local wall-clock values converted
+  to UTC Instants by the existing helper. No timezone or stored timestamp change.
+- ADRs followed: 005 canonical location/snapshots, 030 readiness, 047 fixed owner,
+  050 document management/history, 061 exact document versions/visibility,
+  062 live customer entitlement, 064 delivery, 066 route-time basis, 067 ETA,
+  068 closure, 074 canonical geography and 075 shipment stages.
+- Architecture deviation: NONE. No new SOR, aggregate, workflow, geography source,
+  legal semantics or cross-domain write. Sole migration head unchanged:
+  `20261015_org_shipment_stages`; no migration or data repair required.
+- Rollback: revert product source and restart the local application; no database
+  rollback/reconciliation is needed or authorized.
+- References updated: `docs/API.md` and the architecture baseline's bounded shared
+  read-contract addendum. Frozen LPAF baseline remains unchanged.
+
+## Qualification and integration
+
+Final qualification is in progress. Failed attempts remain in the external
+local evidence directory; a later pass must explicitly supersede them. Test-only
+selector updates preserve normal UI navigation and assertions for the existing
+qualified Persian workspace. They do not grant new Product authority.
+
+PRODUCT_SHA=`46a475bf4eeece27a57d3f1a7a0e5eb004aa6482`.
+Subsequent commits contain test/fixture/reference updates only.
+Controlled integration and preserved-runtime refresh are pending.
 Engineering Complete=NO; Product Complete=NO; Release Ready=NO;
 Release Complete=NO; HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS.
-All implementation and qualification results remain pending.

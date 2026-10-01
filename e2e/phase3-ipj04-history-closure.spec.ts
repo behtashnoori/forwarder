@@ -88,7 +88,7 @@ async function openCompletedShipment(page: Page) {
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).first().click();
   const all = page.getByRole("button", { name: "نمایش همه وضعیت‌ها", exact: true });
   if (await all.isVisible()) await all.click();
-  await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`)).click();
+  await page.getByRole("link", { name: /^مشاهده محموله عملیاتی / }).and(page.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`)).click();
   await expect(page.locator("#shipment-overview h1")).toBeVisible();
 }
 

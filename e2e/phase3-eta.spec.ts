@@ -25,7 +25,7 @@ async function login(page: Page, persona: string) {
 async function open(page: Page, item: Case, customer = false) {
   await page.getByRole("link", { name: customer ? "حمل‌های من" : "پرونده‌های عملیاتی حمل", exact: true }).first().click();
   const link = page.locator(`a[href="/${customer ? "customer" : "operations"}/shipments/${item.shipment}"]`);
-  await (customer ? link : link.and(page.getByRole("link", { name: "مشاهده خلاصه", exact: true }))).click();
+  await (customer ? link : link.and(page.getByRole("link", { name: /^مشاهده محموله عملیاتی / }))).click();
   const response = page.waitForResponse(r => r.url().includes(`/cargo/${item.cargo}/eta/ensure`) && r.status() === 200);
   if (customer) {
     await page.locator("summary", { hasText: /^زمان تقریبی رسیدن کالا$/ }).click();
@@ -99,7 +99,7 @@ test("structured remaining distance entered in the human workflow drives ETA v2"
   const item = fixture.p311_cases.structured;
   expect(item.progress_unit).toBeTruthy(); expect(item.progress_stage).toBeTruthy();
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
-  await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${item.shipment}"]`)).click();
+  await page.getByRole("link", { name: /^مشاهده محموله عملیاتی / }).and(page.locator(`a[href="/operations/shipments/${item.shipment}"]`)).click();
   await openShipmentSection(page, "tracking", item.shipment);
   const reports = page.getByRole("region", { name: "گزارش‌های موقعیت و تغییرات حمل" });
   await reports.getByRole("button", { name: "گزارش تازه" }).click();
