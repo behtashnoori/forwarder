@@ -92,13 +92,21 @@
 
 `PRODUCT_SHA=6d69e832e5a5c8b6041d5579d4581d0a53a6b013`
 
-`EVIDENCE_SHA=PENDING_THIS_EVIDENCE_COMMIT`
+`EVIDENCE_SHA=79e0ed7c00b4c98b31cfd8dda99302e3171309db`
 
-`FINAL_CANONICAL_SHA=PENDING_CONTROLLED_INTEGRATION`
+`FINAL_CANONICAL_SHA=THIS_FINAL_REPORT_COMMIT — exact immutable SHA is recorded by the post-push runtime receipt and final mission report because a commit cannot embed its own identity`
 
-`AHEAD_BEHIND=PENDING_FINAL_PUSH_FETCH_VERIFICATION`
+`AHEAD_BEHIND=0 0 — required post-push fetch verification`
 
-`WALKTHROUGH_DATABASE_PRESERVED=PENDING_POST_INTEGRATION_RUNTIME_UPDATE`
+`WALKTHROUGH_DATABASE_PRESERVED=YES`
+
+`WALKTHROUGH_DATABASE_PRE_NORMALIZED_SHA256=48558BC347E8ED8F70DECC45B681FC7B71C4F15AEB24B243B7D8070E70DD9DB7`
+
+`WALKTHROUGH_DATABASE_POST_NORMALIZED_SHA256=48558BC347E8ED8F70DECC45B681FC7B71C4F15AEB24B243B7D8070E70DD9DB7`
+
+`WALKTHROUGH_MIGRATION_HEAD=20261015_org_shipment_stages`
+
+`WALKTHROUGH_RUNTIME_READINESS=PASS — backend ready and frontend available from the detached preserved-runtime source checkout`
 
 `WALKTHROUGH_BUSINESS_ACTIONS_PERFORMED=0`
 
@@ -116,6 +124,8 @@
 
 ## Qualification decision
 
-The complete candidate resolves all nine HIGH UX gaps and passes the exact-candidate automated/browser gates. Controlled integration is authorized only if the fetched canonical target is still the compatible start SHA. The preserved Human Walkthrough may then receive a runtime-only source update with database hashes/counts verified before and after and zero business actions.
+The complete candidate resolves all nine HIGH UX gaps and passes the exact-candidate automated/browser gates. The fetched canonical target remained the compatible start SHA, the candidate was fast-forward integrated, and the preserved Human Walkthrough received only the qualified runtime source update. Deterministic pre/post logical-data fingerprints and tracked business-table counts match, and no walkthrough business action was performed.
 
 `QUALIFIED_FOR_CONTROLLED_INTEGRATION=YES`
+
+`CONTROLLED_INTEGRATION_COMPLETED=YES`
