@@ -247,3 +247,19 @@ def test_http_event_idempotency_header_is_respected(operational_app):
     conflict = client.post(url, headers=headers, json={**payload, "note": "different"})
     assert conflict.status_code == 409
     assert conflict.json["error"]["code"] == "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD"
+
+
+def test_legacy_route_occurrence_endpoint_accepts_public_milestone_identity(operational_app):
+    from backend.tests.test_operational_vertical_slice import _auth
+    with operational_app.app_context():
+        shipment, _leg_row, milestones = setup(operational_app)
+        url = (
+            f"/api/operational-shipments/{shipment.public_id}/milestones/"
+            f"{milestones['departure'].public_id}/events"
+        )
+    response = operational_app.test_client().post(
+        url,
+        headers={**_auth(operational_app), "Idempotency-Key": "public-milestone-id"},
+        json={"occurred_at": datetime.now(timezone.utc).isoformat()},
+    )
+    assert response.status_code == 201

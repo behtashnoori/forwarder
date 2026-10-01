@@ -76,7 +76,7 @@ test("Organization Admin configures projectless stages and Expert closes only af
   let closure = expert.getByRole("region", { name: "بررسی بستن پرونده" });
   await expect(closure.locator("li", { hasText: "تحویل نهایی محموله به‌صراحت ثبت شده باشد" })).toBeVisible();
   await expect(closure.locator("li", { hasText: "همه مراحل عملیاتی الزامی محموله کامل شده باشند" })).toBeVisible();
-  await expect(closure.getByRole("button", { name: "بستن پرونده", exact: true })).toBeDisabled();
+  await expect(closure.getByRole("button", { name: "بستن پرونده", exact: true })).toHaveCount(0);
 
   await openShipmentSection(expert, "stages", fixture.organization_stage_shipment);
   const stages = expert.getByRole("region", { name: "مراحل عملیاتی محموله" });
@@ -95,7 +95,7 @@ test("Organization Admin configures projectless stages and Expert closes only af
 
   await openShipmentSection(expert, "closure", fixture.organization_stage_shipment);
   closure = expert.getByRole("region", { name: "بررسی بستن پرونده" });
-  await expect(closure.getByRole("button", { name: "بستن پرونده", exact: true })).toBeDisabled();
+  await expect(closure.getByRole("button", { name: "بستن پرونده", exact: true })).toHaveCount(0);
   await openShipmentSection(expert, "delivery", fixture.organization_stage_shipment);
   const delivery = expert.getByRole("region", { name: "تحویل کالاها" });
   await delivery.getByRole("button", { name: /تحویل تازه برای/ }).click();
@@ -110,9 +110,33 @@ test("Organization Admin configures projectless stages and Expert closes only af
 
   await openShipmentSection(expert, "closure", fixture.organization_stage_shipment);
   closure = expert.getByRole("region", { name: "بررسی بستن پرونده" });
-  await expect(closure.getByRole("button", { name: "بستن پرونده", exact: true })).toBeEnabled();
+  await expect(closure.getByText("معیارها کامل‌اند؛ اجرای حمل باقی مانده است")).toBeVisible();
+  await expect(closure.getByText(/0 مسدودکننده سیاست · 1 پیش‌نیاز چرخه عمر · 3 هشدار/)).toBeVisible();
+  await expect(closure.getByRole("link", { name: "رفتن به اجرای مسیر" })).toBeVisible();
+  await expect(closure.getByRole("button", { name: "بستن پرونده", exact: true })).toHaveCount(0);
   await expect(closure.getByText("کامل نیست", { exact: true })).toHaveCount(0);
   expect(await closure.getByText("نیازمند توجه", { exact: true }).count()).toBeGreaterThan(0);
+
+  await openShipmentSection(expert, "summary", fixture.organization_stage_shipment);
+  const guidance = expert.locator("section[aria-labelledby='guided-operation-heading']");
+  await expect(guidance.getByText("ثبت حرکت", { exact: true })).toBeVisible();
+  const executionTask = guidance.getByRole("listitem").filter({ hasText: "اجرای حمل" }).first();
+  await expect(executionTask).toContainText("نیازمند اقدام");
+  await expect(guidance.getByText("اجرای حمل", { exact: true }).last()).toBeVisible();
+
+  await openShipmentSection(expert, "route", fixture.organization_stage_shipment);
+  const departed = expert.waitForResponse(response => response.request().method() === "POST" && response.url().includes("/milestones/") && response.url().endsWith("/events"));
+  await expert.getByRole("button", { name: "ثبت حرکت", exact: true }).click();
+  expect((await departed).status()).toBe(201);
+  const arrived = expert.waitForResponse(response => response.request().method() === "POST" && response.url().includes("/milestones/") && response.url().endsWith("/events"));
+  await expert.getByRole("button", { name: "ثبت رسیدن", exact: true }).click();
+  expect((await arrived).status()).toBe(201);
+
+  await openShipmentSection(expert, "closure", fixture.organization_stage_shipment);
+  closure = expert.getByRole("region", { name: "بررسی بستن پرونده" });
+  await expect(closure.getByText("آماده بستن عادی")).toBeVisible();
+  await expect(closure.getByText(/0 مسدودکننده سیاست · 0 پیش‌نیاز چرخه عمر · 3 هشدار/)).toBeVisible();
+  await expect(closure.getByRole("button", { name: "بستن پرونده", exact: true })).toBeEnabled();
   await closure.getByRole("button", { name: "بستن پرونده", exact: true }).click();
   const closed = expert.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/close"));
   await closure.getByRole("button", { name: "تأیید نهایی بستن" }).click();
@@ -125,6 +149,7 @@ test("Organization Admin configures projectless stages and Expert closes only af
   await expect(history.getByText("مرحله عملیاتی شروع شد", { exact: true }).first()).toBeVisible();
   await expect(history.getByText("مرحله عملیاتی کامل شد", { exact: true }).first()).toBeVisible();
   await expect(history.getByText("تحویل نهایی محموله ثبت شد", { exact: true })).toBeVisible();
+  await expect(history.locator("ol > li").filter({ hasText: "رخداد مسیر" })).toHaveCount(2);
   await expect(history.getByText("پرونده حمل پس از ارزیابی الزامات بسته شد", { exact: true })).toBeVisible();
   await expert.screenshot({ path: testInfo.outputPath("projectless-stage-history-desktop.png"), fullPage: true });
   await expert.setViewportSize({ width: 390, height: 844 });

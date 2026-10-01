@@ -197,10 +197,11 @@ MATRIX_CASES = [
         stages=_matrix_task("stages", "IN_PROGRESS", section="stages", category="NEEDS_ACTION", precedence="CURRENT_REQUIRED_WORK", blocking=True),
     ), [_stage_attention("STARTED")], "CURRENT_REQUIRED_WORK", "تکمیل مرحله «مرحله 3»", 1, 0),
     ("H", "in_progress", True, _matrix_stage(completed=5), _matrix_tasks(
+        execution=_matrix_task("execution", "NEEDS_ACTION", section="route", category="BLOCKER", precedence="BLOCKING_PRECONDITION", blocking=True, action_label="تکمیل اجرای حمل"),
         cargo=_matrix_task("cargo", "NEEDS_ACTION", section="cargo", category="WARNING", precedence="OPTIONAL_IMPROVEMENT"),
         tracking=_matrix_task("tracking", "NEEDS_ACTION", section="tracking", category="WARNING", precedence="OPTIONAL_IMPROVEMENT"),
         delivery=_matrix_task("delivery", "NEEDS_ACTION", section="delivery", category="BLOCKER", precedence="CLOSURE_BLOCKER", blocking=True),
-    ), [DELIVERY, CARGO_WARNING, ALLOCATION_WARNING, ETA_WARNING], "AWAITING_CLOSURE", "ثبت تحویل نهایی", 1, 3),
+    ), [EXECUTION, DELIVERY, CARGO_WARNING, ALLOCATION_WARNING, ETA_WARNING], "BLOCKED_PRECONDITION", "تکمیل اجرای حمل", 2, 3),
     ("I", "completed", True, _matrix_stage(completed=5), _matrix_tasks(
         cargo=_matrix_task("cargo", "NEEDS_ACTION", section="cargo", category="WARNING", precedence="OPTIONAL_IMPROVEMENT"),
         closure=_matrix_task("closure", "READY", section="closure", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", action_label="بررسی و بستن پرونده"),
@@ -260,15 +261,69 @@ def test_guidance_state_matrix_and_cross_surface_invariants(
             assert all(item["blocking"] == task["blocking"] for item in related), case
 
 
-def test_current_walkthrough_warning_never_outranks_final_delivery_blocker():
+def test_current_walkthrough_warning_never_outranks_lifecycle_predecessor():
     case = next(row for row in MATRIX_CASES if row[0] == "H")
     _, lifecycle, can_manage, stages, tasks, attention, *_ = case
     result = projection._finalize_guidance(
         SimpleNamespace(public_id="shipment", lifecycle_status=lifecycle),
         tasks, attention, can_manage, stages,
     )
-    assert result["recommended_action"]["label"] == "ثبت تحویل نهایی"
+    assert result["recommended_action"]["label"] == "تکمیل اجرای حمل"
     assert result["recommended_action"]["blocking"] is True
     assert {item["key"] for item in attention if item["category"] == "WARNING"} == {
         "cargo", "allocation", "eta",
     }
+
+
+@pytest.mark.parametrize(
+    "leg,expected_label",
+    [
+        ({
+            "status": "planned",
+            "departure_milestone_id": "departure",
+            "arrival_milestone_id": "arrival",
+            "execution_provenance": {
+                "departure": {"actual_at": None},
+                "arrival": {"actual_at": None},
+            },
+        }, "ثبت حرکت"),
+        ({
+            "status": "in_progress",
+            "departure_milestone_id": "departure",
+            "arrival_milestone_id": "arrival",
+            "execution_provenance": {
+                "departure": {"actual_at": "2026-10-01T08:00:00+00:00"},
+                "arrival": {"actual_at": None},
+            },
+        }, "ثبت رسیدن"),
+    ],
+)
+def test_route_occurrence_guidance_names_the_existing_transition(leg, expected_label):
+    label, reason = projection._execution_guidance([leg], can_record=True)
+    assert label == expected_label
+    assert "تکمیل محموله" in reason
+
+
+def test_route_occurrence_guidance_suppresses_inaccessible_action_and_warnings():
+    label, reason = projection._execution_guidance([], can_record=False)
+    assert label is None
+    assert "مجوز صریح" in reason
+    blocker = _matrix_task(
+        "execution", "NEEDS_ACTION", section="route", category="BLOCKER",
+        precedence="BLOCKING_PRECONDITION", blocking=True, action_label=None,
+    )
+    warning = _matrix_task(
+        "cargo", "NEEDS_ACTION", section="cargo", category="WARNING",
+        precedence="OPTIONAL_IMPROVEMENT", action_label="تکمیل واقعیت کالا",
+    )
+    tasks = _matrix_tasks(execution=blocker, cargo=warning)
+    attention = [
+        {**EXECUTION, "action_label": None, "reason": reason},
+        CARGO_WARNING,
+    ]
+    result = projection._finalize_guidance(
+        SimpleNamespace(public_id="shipment", lifecycle_status="in_progress"),
+        tasks, attention, True, _matrix_stage(completed=5),
+    )
+    assert result["recommended_action"] is None
+    assert result["secondary_actions"] == []

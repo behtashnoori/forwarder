@@ -1132,10 +1132,10 @@ def route_exception_resolve(item_id):
 
 
 @operations_bp.post(
-    "/api/operational-shipments/<uuid:shipment_id>/milestones/<int:milestone_id>/events"
+    "/api/operational-shipments/<uuid:shipment_id>/milestones/<milestone_id>/events"
 )
 @require_auth
-def record_event(shipment_id: int, milestone_id: int):
+def record_event(shipment_id, milestone_id: str):
     try:
         event = service.record_event(
             shipment_id,

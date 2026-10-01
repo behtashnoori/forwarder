@@ -19,7 +19,6 @@ from backend.operational_models import (
     OperationalShipment,
     Project,
     RoutePlan,
-    RouteStageExecution,
     utcnow,
 )
 from backend.services import closure_service, eta_service, operational_read_service
@@ -136,6 +135,39 @@ def _status(item: dict | None, *, empty: str = "UNKNOWN") -> str:
     return "DONE" if item["state"] == "PASS" else "UNKNOWN" if item["state"] == "UNKNOWN" else "NEEDS_ACTION"
 
 
+def _execution_guidance(legs: list[dict], *, can_record: bool) -> tuple[str | None, str]:
+    """Describe the next existing route occurrence; never invent a completion command."""
+    if not can_record:
+        return (
+            None,
+            "ثبت رخداد مسیر به مجوز صریح نیاز دارد؛ مجوز فعلی این کاربر این اقدام را فراهم نمی‌کند.",
+        )
+    active = [leg for leg in legs if leg.get("status") != "cancelled"]
+    pending = next((leg for leg in active if leg.get("status") != "completed"), None)
+    if pending is None:
+        return (
+            "تکمیل اجرای حمل",
+            "همه بخش‌های فعال مسیر باید با رخدادهای واقعی تکمیل شوند.",
+        )
+    provenance = pending.get("execution_provenance") or {}
+    departure = (provenance.get("departure") or {}).get("actual_at")
+    arrival = (provenance.get("arrival") or {}).get("actual_at")
+    if not departure and pending.get("departure_milestone_id"):
+        return (
+            "ثبت حرکت",
+            "رخداد حرکت بخش بعدی مسیر باید ثبت شود؛ تکمیل محموله از واقعیت‌های مسیر محاسبه می‌شود.",
+        )
+    if departure and not arrival and pending.get("arrival_milestone_id"):
+        return (
+            "ثبت رسیدن",
+            "رخداد رسیدن بخش جاری مسیر باید ثبت شود؛ تکمیل محموله از واقعیت‌های مسیر محاسبه می‌شود.",
+        )
+    return (
+        "تکمیل اجرای حمل",
+        "همه بخش‌های فعال مسیر باید با رخدادهای واقعی تکمیل شوند.",
+    )
+
+
 def _task(
     key: str,
     label: str,
@@ -165,20 +197,28 @@ def _task(
     }
 
 
-def _tasks(shipment: OperationalShipment, graph: dict, stages: dict, assessment: dict) -> list[dict]:
+def _tasks(
+    shipment: OperationalShipment,
+    graph: dict,
+    stages: dict,
+    assessment: dict,
+    permissions: set[str],
+) -> list[dict]:
     plan = db.session.scalar(select(RoutePlan).where(
         RoutePlan.operational_shipment_id == shipment.id,
         RoutePlan.is_active.is_(True),
     ))
     legs = graph.get("route_legs") or []
-    execution_count = db.session.scalar(select(RouteStageExecution.id).where(
-        RouteStageExecution.operational_shipment_id == shipment.id,
-    ).limit(1))
+    active_legs = [leg for leg in legs if leg.get("status") != "cancelled"]
     route_status = "DONE" if plan else "NEEDS_ACTION"
     execution_status = (
         "NOT_APPLICABLE" if not plan else
-        "DONE" if legs and execution_count else
+        "DONE" if active_legs and all(leg.get("status") == "completed" for leg in active_legs) else
         "NEEDS_ACTION"
+    )
+    execution_action, execution_reason = _execution_guidance(
+        legs,
+        can_record="milestone_event.create" in permissions,
     )
     stage_status = (
         "UNKNOWN" if not stages["configured"] else
@@ -228,8 +268,8 @@ def _tasks(shipment: OperationalShipment, graph: dict, stages: dict, assessment:
         category="BLOCKER" if execution_status == "NEEDS_ACTION" else "INFORMATIONAL",
         precedence="BLOCKING_PRECONDITION" if execution_status == "NEEDS_ACTION" else "INFORMATIONAL",
         blocking=execution_status == "NEEDS_ACTION",
-        action_label="تکمیل اجرای حمل",
-        reason="وسیله یا اجرای حمل برای مسیر فعال کامل نشده است.",
+        action_label=execution_action,
+        reason=execution_reason,
     )
     stage_action = _stage_action(shipment, stages)
     stage_incomplete = stage_status not in {"DONE", "UNKNOWN"}
@@ -431,6 +471,10 @@ def _action(
 ) -> tuple[dict | None, list[dict]]:
     if shipment.lifecycle_status == "closed" or not can_manage:
         return None, []
+    if any(item["blocking"] and not item.get("action_label") for item in attention):
+        # Never let an optional warning outrank a required transition that this
+        # actor cannot perform. The blocker remains visible in Attention.
+        return None, []
     task_by_key = {task["key"]: task for task in tasks}
     candidates = [item for item in attention if item.get("action_label")]
     if task_by_key.get("closure", {}).get("status") == "READY":
@@ -505,7 +549,11 @@ def _process_status(shipment: OperationalShipment, tasks: list[dict], stages: di
         return "CURRENT_REQUIRED_WORK"
     if current.get("status") == "NOT_STARTED":
         return "NEXT_REQUIRED_LIFECYCLE"
-    if stages.get("configured") and stages.get("total") == stages.get("completed"):
+    if (
+        shipment.lifecycle_status == "completed"
+        and stages.get("configured")
+        and stages.get("total") == stages.get("completed")
+    ):
         return "AWAITING_CLOSURE"
     return "UNKNOWN"
 
@@ -561,7 +609,7 @@ def build(shipment: OperationalShipment, user: dict, *, graph: dict | None = Non
     cargo_rows = db.session.scalars(select(ShipmentCargoItem).where(
         ShipmentCargoItem.operational_shipment_id == shipment.id,
     ).order_by(ShipmentCargoItem.line_number)).all()
-    tasks = _tasks(shipment, graph, stages, assessment)
+    tasks = _tasks(shipment, graph, stages, assessment, permissions)
     attention = _attention(
         graph, assessment, permissions, tasks,
         closed=shipment.lifecycle_status == "closed",

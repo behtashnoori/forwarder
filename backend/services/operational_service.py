@@ -1398,7 +1398,7 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
 
 
 def _milestone_target(
-    shipment_id: int, milestone_id: int, user: dict[str, Any], permission: str
+    shipment_id: int, milestone_id: int | str, user: dict[str, Any], permission: str
 ):
     require_permission(user, permission)
     shipment = scoped_shipment(shipment_id, user, for_update=True)
@@ -1409,9 +1409,15 @@ def _milestone_target(
         )
     )
     leg_ids = select(RouteLeg.id).where(RouteLeg.route_plan_id == plan)
+    milestone_key = str(milestone_id)
+    identity_clause = (
+        Milestone.id == int(milestone_key)
+        if milestone_key.isdigit()
+        else Milestone.public_id == milestone_key
+    )
     milestone = db.session.scalar(
         select(Milestone)
-        .where(Milestone.id == milestone_id, Milestone.route_leg_id.in_(leg_ids))
+        .where(identity_clause, Milestone.route_leg_id.in_(leg_ids))
         .with_for_update()
     )
     if milestone is None:
@@ -1421,7 +1427,7 @@ def _milestone_target(
 
 @atomic_command
 def record_event(
-    shipment_id: int, milestone_id: int, payload: dict, user: dict, key: str
+    shipment_id: int, milestone_id: int | str, payload: dict, user: dict, key: str
 ) -> MilestoneEvent:
     _require_idempotency_key(key)
     shipment, milestone = _milestone_target(
