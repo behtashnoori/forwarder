@@ -121,8 +121,8 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   await openCompletedShipment(owner);
   await expect(owner.getByText(fixture.p313_target_label, { exact: true }).first()).toBeVisible();
   await openShipmentSection(owner, "cargo", fixture.p313_shipment);
-  await expect(owner.locator("#shipment-cargo").getByText("قطعات موتور", { exact: true }).first()).toBeVisible();
-  await expect(owner.locator("#shipment-cargo").getByText("کالای مشتری دوم", { exact: true }).first()).toBeVisible();
+  await expect(owner.locator("#shipment-cargo article strong").filter({ hasText: /^قطعات موتور$/ }).first()).toBeVisible();
+  await expect(owner.locator("#shipment-cargo article strong").filter({ hasText: /^کالای مشتری دوم$/ }).first()).toBeVisible();
 
   const routeReferenceTimes = owner.waitForResponse(response =>
     response.url().includes("/route-plans/") && response.url().endsWith("/reference-times"),
