@@ -170,7 +170,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     await page.getByLabel("چه کاری لازم است؟").fill(actionTitle);
     await page.getByLabel("نتیجه مورد انتظار").fill("تأیید کتبی طرف عملیاتی ثبت شود");
     await page.getByLabel("موعد").fill(new Date(Date.now() - 120_000).toISOString().slice(0, 16));
-    await page.getByLabel("زمینه").selectOption("EXCEPTION");
+    await page.getByRole("region", { name: "اقدام‌ها و پیگیری‌ها" }).getByLabel("زمینه").selectOption("EXCEPTION");
     const linkedException = page.getByLabel("استثنای مرتبط");
     const conditionsResponse = await page.request.get(
       `${apiBase}/api/v2/operational-shipments/${fixture.active_shipment_public_id}/execution/exceptions`,
@@ -227,6 +227,7 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
 
     await page.goto(`/operations/shipments/${fixture.active_shipment_public_id}`);
     await openShipmentSection(page, "route", fixture.active_shipment_public_id);
+    await page.locator("summary", { hasText: "جزئیات اجرای مسیر" }).click();
     const refreshedAction = page.getByText(actionTitle, { exact: true }).locator("xpath=ancestor::article");
     await refreshedAction.getByLabel(`نتیجه اقدام ${actionTitle}`).fill("تأیید کتبی دریافت و در پرونده ثبت شد");
     await refreshedAction.getByRole("button", { name: "ثبت نتیجه و بستن", exact: true }).click();
