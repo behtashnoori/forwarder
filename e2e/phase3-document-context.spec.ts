@@ -154,7 +154,7 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
     { name: "good.pdf", mimeType: "application/pdf", buffer: pdf },
     { name: "bad.pdf", mimeType: "application/pdf", buffer: Buffer.from("not a PDF") },
   ]);
-  await page.getByRole("button", { name: "بارگذاری 2 فایل" }).click();
+  await page.getByRole("button", { name: "بارگذاری ۲ فایل" }).click();
   await expect(page.getByText("good.pdf: ثبت شد")).toBeVisible();
   await expect(page.getByText(/bad.pdf: ناموفق/)).toBeVisible();
   await page.getByLabel("انتخاب فایل سند").setInputFiles({ name: "bad.pdf", mimeType: "application/pdf", buffer: pdf });
