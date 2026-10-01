@@ -317,3 +317,26 @@ governed occurrence and remaining components → current P3-10 reference version
 existing SORs; ETA writes only its own derived history. Customer eligibility
 intersects live DN10 and own-Cargo/source scope before this chain. The new
 migration follows P3-13 and introduces no distance, operation, SLA or route SOR.
+
+## Human Walkthrough shared presentation reads — 2026-10-01
+
+Country/Province/City remain the governed geography SOR. Shared authenticated
+selectors read one active Country catalog and explicit supported depth, then
+deterministic governed Admin1/City children. Persian name corrections are keyed
+by stable identity in `geography_presentation`; they do not rewrite the catalog,
+canonical location identities, or historical snapshots. Legacy physical transport
+references remain separately typed and continue through the existing resolver.
+LogisticsPoint remains organization-owned master data: Expert creation is
+immediately usable in PENDING_REVIEW and later Admin review does not rewrite use.
+
+Unified History remains a tenant-scoped derived read over authoritative sources.
+Category selection precedes pagination across the composed feed, including the
+immutable ClosureDecision. UI localization and collapsed metadata preserve raw
+audit facts. Closed document repair follows the existing command matrix and the
+Product Owner's explicit clarification; the default workspace is read-only.
+
+Local datetime controls still represent device-local wall clock values converted
+by the existing helper to UTC Instants. No timezone, enum, temporal storage,
+aggregate ownership, permission, schema, or migration contract changes.
+The sole migration head remains `20261015_org_shipment_stages`; rollback is a
+source rollback with no data reversal. Architecture deviation: NONE.

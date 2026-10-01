@@ -70,8 +70,8 @@ test("Accepted Request Cargo stays continuous through route, execution, allocati
   await page.getByLabel("مقصد روش تعیین مکان").selectOption("facility");
   await page.getByLabel("مبدأ operational facility").selectOption(fixture.hw_chain_origin);
   await page.getByLabel("مقصد operational facility").selectOption(fixture.hw_chain_destination);
-  await page.getByLabel("Catalog item").selectOption(fixture.hw_chain_catalog);
-  await page.getByLabel("Cargo quantity").fill("100");
+  await page.getByLabel("کالای استاندارد", { exact: true }).selectOption(fixture.hw_chain_catalog);
+  await page.getByLabel("مقدار کالا", { exact: true }).fill("100");
   const now = new Date();
   const departure = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
   const arrival = new Date(now.getTime() + 36 * 60 * 60 * 1000).toISOString().slice(0, 16);
@@ -87,7 +87,7 @@ test("Accepted Request Cargo stays continuous through route, execution, allocati
   const created = (await creationResponse.json()) as { data: { public_id: string } };
   const shipment = created.data.public_id;
   await expect(page).toHaveURL(new RegExp(`/operations/shipments/${shipment}$`));
-  await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
+  await expect(page.locator("#shipment-overview h1")).toBeVisible();
   await openShipmentSection(page, "cargo", shipment);
   const cargoDetails = page.locator("details").filter({ has: page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }) }).first();
   const cargoArticle = cargoDetails.getByRole("article").filter({ hasText: fixture.hw_chain_catalog_label }).first();

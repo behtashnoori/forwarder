@@ -449,6 +449,33 @@ const customersResponse = await axios.get('/api/crm/customers');
 
 ## Changelog
 
+### Human Walkthrough read contracts — 2026-10-01
+
+- `GET /api/internal/geography/countries`: authenticated shared active Country
+  catalog. Each item includes `geography_supported`; all 249 canonical Countries
+  are visible, while deeper Admin1/City coverage remains the qualified 14-country
+  GEONAMES_ADMIN1_CITY_V1 scope. This does not change the public Request selector.
+- `GET /api/internal/geography/admin1?country_code=IR&q=...`: active, governed
+  Admin1 children of the active Country; Persian-first presentation and normalized
+  Persian/Arabic search. Stable GeoNames identities and stored source names remain
+  unchanged.
+- `GET /api/internal/geography/cities?admin1_geoname_id=...&q=...&offset=0`:
+  country-consistent, active governed City children; 200 items per page plus
+  `has_more` and `offset`. Search covers names, codes and aliases, ranks exact names
+  first, and normalizes Persian/Arabic letter variants and spacing. Consumers
+  deduplicate by `geoname_id`, retain the selected identity, and page explicitly.
+- `GET /api/v2/operational-shipments/{id}/history?category=CLOSURE&page=1&per_page=50`:
+  the optional category is applied before counting and pagination. Missing/ALL
+  retains the existing feed. Unknown categories return 422
+  `INVALID_HISTORY_CATEGORY`. Closure comes from the existing immutable decision;
+  no synthetic event is written. Existing tenant, owner and permission checks apply.
+- Closed document presentation defaults to read-only with an explicit historical
+  repair entry. Existing authorized document commands retain their permissions,
+  scope, version and audit contracts; prohibited new operational commands remain
+  denied under the approved post-closure command matrix. This adds no endpoint.
+
+Authority and qualification: [Human Walkthrough findings](product/phase3/HUMAN-WALKTHROUGH-OPEN-FINDINGS-20261001.md).
+
 ### Version 1.0.0
 - Initial API release
 - Authentication system
