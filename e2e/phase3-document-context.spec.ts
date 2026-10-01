@@ -31,7 +31,7 @@ async function expert(page: Page, username = "shared_transport_e2e_restricted") 
   }
   await expect(page.locator("#shipment-overview h1")).toBeVisible();
   await openShipmentSection(page, "documents", fixture.p304_shipment);
-  await expect(page.getByRole("heading", { name: "اسناد و مدارک حمل" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "اسناد محموله", exact: true })).toBeVisible();
 }
 
 async function customer(browser: Browser, email: string) {
@@ -64,7 +64,7 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await expert(page);
-  const docs = page.getByRole("heading", { name: "اسناد و مدارک حمل" }).locator("..").locator("..");
+  const docs = page.getByRole("region", { name: "اسناد محموله", exact: true }).first();
   await expect(docs.getByLabel("Document upload context")).toBeVisible();
 
   const internal = await upload(page, "P306 داخلی", "internal.pdf");

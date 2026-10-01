@@ -61,4 +61,20 @@ describe("shipment document readiness", () => {
     expect(await screen.findByText("برای این محموله الزام سندی اعمال نشده است.")).toBeInTheDocument();
     expect(screen.queryByText(/برای همین محموله ثبت شده است/)).toBeNull();
   });
+
+  it("retains required and optional evidence in the closed read-only workspace", async () => {
+    api.requirements.mockResolvedValue({ data: [
+      { ...requirement, readiness_status: "SATISFIED", artifact: { filename: "bol.pdf", version: 2, assessment: "VERIFIED", associated_at: "2026-10-01T09:00:00Z" } },
+      { ...requirement, public_id: "optional", title: "تصویر اطلاع‌رسانی", requirement_level: "OPTIONAL" },
+    ] });
+    render(<DocumentReadinessSection shipmentPublicId="shipment-opaque" shipmentVersion={3} readOnly />);
+    expect(await screen.findByText("تصویر اطلاع‌رسانی")).toBeInTheDocument();
+    expect(screen.getByText(/الزام سند: اختیاری/)).toBeInTheDocument();
+    expect(screen.getByText(/bol.pdf.*نسخه 2/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("فایل موجود در پرونده")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText("وضعیت اسناد برای اقدام بعدی")).toBeNull();
+    expect(api.associate).not.toHaveBeenCalled();
+    expect(api.remove).not.toHaveBeenCalled();
+  });
 });

@@ -17,7 +17,7 @@ async function openShipment(page:Page,id:string){
   // Existing route-based lists omit a Shipment before its first active route.
   // Open its ordinary authenticated detail URL, as the P3-03 authoring journey does.
   await page.goto(`/operations/shipments/${id}`);
-  await expect(page.getByRole("heading",{name:"خلاصه محموله"})).toBeVisible();
+  await expect(page.locator("#shipment-overview h1")).toBeVisible();
   await openShipmentSection(page,"route",id);
 }
 async function draft(page:Page,mode="rail"){
