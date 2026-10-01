@@ -1,0 +1,10 @@
+{
+  "production_accessed": false,
+  "dirty_source": false,
+  "executed_at_utc": "2026-10-01T16:43:06.1341555Z",
+  "schema": "20261015_org_shipment_stages",
+  "journey": "PASS",
+  "postgresql_major": 18,
+  "stopped": false,
+  "product_sha": "c22bbb0aeec434481b3e3fca21b6b75c74502318"
+}
