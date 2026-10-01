@@ -120,6 +120,7 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   await loginExpert(owner, "transfer_target", /\/operations$/);
   await openCompletedShipment(owner);
   await expect(owner.getByText(fixture.p313_target_label, { exact: true }).first()).toBeVisible();
+  await openShipmentSection(owner, "cargo", fixture.p313_shipment);
   await expect(owner.getByText("قطعات موتور", { exact: true }).first()).toBeVisible();
   await expect(owner.getByText("کالای مشتری دوم", { exact: true }).first()).toBeVisible();
 
@@ -128,6 +129,7 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   );
   await openShipmentSection(owner, "route", fixture.p313_shipment);
   await expect(owner.getByRole("heading", { name: "وسیله و شرکت حمل هر بخش مسیر" })).toBeVisible();
+  await owner.locator("summary", { hasText: "زمان مرجع و مبنای برنامه" }).click();
   expect((await routeReferenceTimes).status()).toBe(200);
   await openShipmentSection(owner, "cargo", fixture.p313_shipment);
   await expect(owner.getByRole("heading", { name: "تخصیص و مسیر هر کالا" })).toBeVisible();
