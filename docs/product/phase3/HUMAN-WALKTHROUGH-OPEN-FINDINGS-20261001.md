@@ -82,32 +82,32 @@ The final evidence index below binds each result to its tested candidate.
 
 | ID | Surface | Severity | Observed behavior | Root cause | Implemented correction | Qualification evidence | Status |
 |---|---|---|---|---|---|---|---|
-| HW_GEO_001 | Country selectors | HIGH | Incomplete/inconsistent countries | Authenticated geography read hard-coded 14 countries rather than complete Country SOR | All active countries with explicit supported-depth flag; shared picker | PG geography; HW-GEO across Direct/Route Reference/Delivery/Admin | QUALIFICATION_PENDING |
-| HW_GEO_002 | Canonical city | HIGH | Isfahan unavailable | Existing City 418863 under Admin1 418862 stored as أصفهان; unnormalized search and silent 200-row cutoff | Normalized names/aliases, exact matches first, explicit paging, identity-based Persian display | PG search/pagination/parent test; HW-GEO Isfahan in all selectors | QUALIFICATION_PENDING |
-| HW_GEO_003 | Admin1 | MEDIUM | هرمزجان | Source localized name for GeoNames 131222 | Shared presentation erratum هرمزگان; source identity/row unchanged | PG stored-name preservation; HW-GEO | QUALIFICATION_PENDING |
-| HW_GEO_004 | City labels | POLISH | English/Persian primary labels mixed | Multiple primary option compositions | Persian-first typed labels; alternate names and IDs in details | HW-GEO desktop screenshots; picker tests | QUALIFICATION_PENDING |
-| HW_GEO_005 | Shared selectors | HIGH | Different results across surfaces | Legacy mixed endpoint reads versus bounded canonical read | Shared Country/Admin1/City picker/read contract for affected surfaces | HW-GEO same identities across five surfaces | QUALIFICATION_PENDING |
-| HW_GEO_006 | Endpoint search | HIGH | Two Tehran-looking choices | City id 17504 / GeoNames 112931 and InternationalCity id 57 / IRTHR mixed as primary cities | Primary cities from canonical City; stable-identity deduplication; physical references separately typed | Read-only source SQL; PG hierarchy; HW-GEO unique Tehran | QUALIFICATION_PENDING |
-| HW_GEO_007 | Direct Operation | MEDIUM | Asymmetric endpoints | Domestic/international side-specific branches | Both sides use Organization Location or shared canonical geography | Direct Operation tests; HW-GEO | QUALIFICATION_PENDING |
-| HW_LOCATION_001 | Organization Location | HIGH | Inline creation not discoverable | Direct Operation omitted existing shared picker flow | Inline minimum name and known geography; immediate PENDING_REVIEW selection; existing Admin review | PG create/use/enrich/approve/deactivate and frozen route snapshot; HW-GEO Admin journey | QUALIFICATION_PENDING |
-| HW_DIRECT_OP_GEO_001 | Direct Operation | HIGH | Mixed untyped endpoint choices | Legacy endpoint composition | Symmetric typed shared selectors; physical references in separate detail | Direct Operation frontend tests; HW-GEO; owner/cargo browser journeys | QUALIFICATION_PENDING |
-| HW_DOC_001 | Documents | HIGH/UX | Requirements/files/references/exceptions mixed | Page hierarchy; CSS grid overrode hidden exceptions attribute | Requirements and files primary, references collapsed; exceptions only render under Route | Closed Documents browser assertion and screenshot; document-context journey | QUALIFICATION_PENDING |
-| HW_DOC_002 | Documents | MEDIUM | File/requirement relationship unclear | Upload and readiness panels lacked contextual explanation | Independent upload explains it does not satisfy a requirement automatically; requirement shows exact associated file/version and source link | Readiness frontend tests; document-context upload/version/privacy journey | QUALIFICATION_PENDING |
-| HW_DOC_003 | Documents | MEDIUM | Technical operator wording | Materialization-oriented copy | ثبت مدارک مورد نیاز این محموله and concise relationship explanation | Frontend readiness tests; browser Documents | QUALIFICATION_PENDING |
-| HW_DOC_004 | Closed Documents | HIGH | Mutation controls visible by default | Closed state not supplied to requirements/files/references | Default read-only; explicit historical repair under clarified Product authority; existing backend new-operation denials retained | PG closed-command denial and audited historical repair with frozen ClosureDecision; closed browser toggle and no-upload default | QUALIFICATION_PENDING |
-| HW_HISTORY_002 | History | HIGH | Closure category empty | Client filtered only current unfiltered page; authoritative closure branch already existed | Server category filter/count before pagination across composed feed | PG closure beyond first 50 / category page size 1 / immutable decision identity; closure browser category | QUALIFICATION_PENDING |
-| HW_HISTORY_003 | History | MEDIUM | Reported and other primary English labels | Incomplete presentation mapping | Semantic Persian event titles without enum changes | Unified History frontend; full lifecycle PG/browser; preserved read-only check pending | QUALIFICATION_PENDING |
-| HW_HISTORY_DENSITY | History | UX | Repetitive technical metadata | Expanded recorded/source/provenance/version fields | What/when/who primary; technical audit detail retained in collapsed disclosure | Unified History tests; closure category desktop/mobile | QUALIFICATION_PENDING |
-| CLOSED_SUMMARY_SEMANTICS | Summary | UX | Closed readiness appears unfinished | Shared active/closed guidance labels | کامل بودن اطلاعات and informational warnings; no operational primary CTA; unknown cargo remains unknown | Guidance frontend; closed Summary browser; preserved read-only check pending | QUALIFICATION_PENDING |
-| HW_DATE_TIME_RTL | Affected forms | MEDIUM | US date placeholders, raw road, ambiguous direction and units | Native datetime display and inconsistent presentation helpers | Existing UTC converter with Persian digit entry and dual-calendar hint; localized transport/unit labels; explicit از…به… direction | Date converter/control tests; TypeScript/build; Route Reference/ETA/closure/browser desktop | QUALIFICATION_PENDING |
+| HW_GEO_001 | Country selectors | HIGH | Incomplete/inconsistent countries | Authenticated geography read hard-coded 14 countries rather than complete Country SOR | All active countries with explicit supported-depth flag; shared picker | PG geography; HW-GEO across Direct/Route Reference/Delivery/Admin | RESOLVED |
+| HW_GEO_002 | Canonical city | HIGH | Isfahan unavailable | Existing City 418863 under Admin1 418862 stored as أصفهان; unnormalized search and silent 200-row cutoff | Normalized names/aliases, exact matches first, explicit paging, identity-based Persian display | PG search/pagination/parent test; HW-GEO Isfahan in all selectors | RESOLVED |
+| HW_GEO_003 | Admin1 | MEDIUM | هرمزجان | Source localized name for GeoNames 131222 | Shared presentation erratum هرمزگان; source identity/row unchanged | PG stored-name preservation; HW-GEO | RESOLVED |
+| HW_GEO_004 | City labels | POLISH | English/Persian primary labels mixed | Multiple primary option compositions | Persian-first typed labels; alternate names and IDs in details | HW-GEO desktop screenshots; picker tests | RESOLVED |
+| HW_GEO_005 | Shared selectors | HIGH | Different results across surfaces | Legacy mixed endpoint reads versus bounded canonical read | Shared Country/Admin1/City picker/read contract for affected surfaces | HW-GEO same identities across five surfaces | RESOLVED |
+| HW_GEO_006 | Endpoint search | HIGH | Two Tehran-looking choices | City id 17504 / GeoNames 112931 and InternationalCity id 57 / IRTHR mixed as primary cities | Primary cities from canonical City; stable-identity deduplication; physical references separately typed | Read-only source SQL; PG hierarchy; HW-GEO unique Tehran | RESOLVED |
+| HW_GEO_007 | Direct Operation | MEDIUM | Asymmetric endpoints | Domestic/international side-specific branches | Both sides use Organization Location or shared canonical geography | Direct Operation tests; HW-GEO | RESOLVED |
+| HW_LOCATION_001 | Organization Location | HIGH | Inline creation not discoverable | Direct Operation omitted existing shared picker flow | Inline minimum name and known geography; immediate PENDING_REVIEW selection; existing Admin review | PG create/use/enrich/approve/deactivate and frozen route snapshot; HW-GEO Admin journey | RESOLVED |
+| HW_DIRECT_OP_GEO_001 | Direct Operation | HIGH | Mixed untyped endpoint choices | Legacy endpoint composition | Symmetric typed shared selectors; physical references in separate detail | Direct Operation frontend tests; HW-GEO; owner/cargo browser journeys | RESOLVED |
+| HW_DOC_001 | Documents | HIGH/UX | Requirements/files/references/exceptions mixed | Page hierarchy; CSS grid overrode hidden exceptions attribute | Requirements and files primary, references collapsed; exceptions only render under Route | Closed Documents browser assertion and screenshot; document-context journey | RESOLVED |
+| HW_DOC_002 | Documents | MEDIUM | File/requirement relationship unclear | Upload and readiness panels lacked contextual explanation | Independent upload explains it does not satisfy a requirement automatically; requirement shows exact associated file/version and source link | Readiness frontend tests; document-context upload/version/privacy journey | RESOLVED |
+| HW_DOC_003 | Documents | MEDIUM | Technical operator wording | Materialization-oriented copy | ثبت مدارک مورد نیاز این محموله and concise relationship explanation | Frontend readiness tests; browser Documents | RESOLVED |
+| HW_DOC_004 | Closed Documents | HIGH | Mutation controls visible by default | Closed state not supplied to requirements/files/references | Default read-only; explicit historical repair under clarified Product authority; existing backend new-operation denials retained | PG closed-command denial and audited historical repair with frozen ClosureDecision; closed browser toggle and no-upload default | RESOLVED |
+| HW_HISTORY_002 | History | HIGH | Closure category empty | Client filtered only current unfiltered page; authoritative closure branch already existed | Server category filter/count before pagination across composed feed | PG closure beyond first 50 / category page size 1 / immutable decision identity; closure browser category | RESOLVED |
+| HW_HISTORY_003 | History | MEDIUM | Reported and other primary English labels | Incomplete presentation mapping | Semantic Persian event titles without enum changes | Unified History frontend; full lifecycle PG/browser; preserved read-only check pending | RESOLVED |
+| HW_HISTORY_DENSITY | History | UX | Repetitive technical metadata | Expanded recorded/source/provenance/version fields | What/when/who primary; technical audit detail retained in collapsed disclosure | Unified History tests; closure category desktop/mobile | RESOLVED |
+| CLOSED_SUMMARY_SEMANTICS | Summary | UX | Closed readiness appears unfinished | Shared active/closed guidance labels | کامل بودن اطلاعات and informational warnings; no operational primary CTA; unknown cargo remains unknown | Guidance frontend; closed Summary browser; preserved read-only check pending | RESOLVED |
+| HW_DATE_TIME_RTL | Affected forms | MEDIUM | US date placeholders, raw road, ambiguous direction and units | Native datetime display and inconsistent presentation helpers | Existing UTC converter with Persian digit entry and dual-calendar hint; localized transport/unit labels; explicit از…به… direction | Date converter/control tests; TypeScript/build; Route Reference/ETA/closure/browser desktop | RESOLVED |
 
 ## Group accounting
 
 There are 18 unique findings. Group counts overlap where a single root-cause fix
 serves several surfaces; they must not be summed as unique findings.
 
-| Group | Finding mapping | FINDINGS_START |
-|---|---|---:|
+| Group | Finding mapping | FINDINGS_START | FINDINGS_RESOLVED | FINDINGS_REMAINING |
+|---|---|---:|---:|---:|
 | GEOGRAPHY | HW_GEO_001–007 | 7 |
 | ORGANIZATION_LOCATION | HW_LOCATION_001 | 1 |
 | DIRECT_OPERATION | HW_DIRECT_OP_GEO_001, HW_GEO_007, HW_DATE_TIME_RTL | 3 |
@@ -141,13 +141,61 @@ serves several surfaces; they must not be summed as unique findings.
 
 ## Qualification and integration
 
-Final qualification is in progress. Failed attempts remain in the external
-local evidence directory; a later pass must explicitly supersede them. Test-only
-selector updates preserve normal UI navigation and assertions for the existing
-qualified Persian workspace. They do not grant new Product authority.
+Failed attempts remain in the external local evidence directory. The passing
+entries below supersede their earlier failed attempts, not unrelated checks.
+Test-only selector updates preserve normal UI navigation and assertions for the
+already-qualified Persian workspace. They do not grant new Product authority.
+
+| Proof | Result | Evidence path relative to evidence root | Tested candidate |
+|---|---|---|---|
+| Frontend suite | 103 files / 493 tests PASS | `frontend-final.log` | `ffffd3d8` |
+| Final Shipment detail / Documents panel render | 32 tests PASS | `detail-final.log` | `46a475bf` |
+| Required + optional document read-only behavior | 4 tests PASS, including one additional case | `document-readiness-final.log` | `2f4441ec` |
+| TypeScript, build, changed-source ESLint, structure | PASS | `tsc-final.log`, `build-final.log`, `lint-final.log`, `structure-final.log` | final product source |
+| Existing affected PostgreSQL regressions | 17 PASS; two new fixture failures superseded below | `pg-attempt1/postgresql-phase3.log` | `ee8ca648` |
+| Geography/location and full lifecycle/closure/history PostgreSQL | 2 PASS after fixture-only corrections | `pg-focused3/postgresql-phase3.log` | `ffffd3d8` |
+| PostgreSQL 18 base-to-head migration / public tracking | PASS / 1 PASS | `pg-focused3/result.json`, `pg-focused3/public-tracking-postgresql.log` | `ffffd3d8` |
+| Geography across shared surfaces / Expert → Admin Location | 1 PASS | `browser-hw-attempt1/HW-GEO/browser.log` | `965524a4` |
+| Platform/organization Admin and reference catalog | 3 PASS | `browser-regression4/P301/browser.log` | `f14a20a7` |
+| Cargo continuity and execution | 2 PASS | `browser-regression5/P304/browser.log` | `316c2665` |
+| Reported facts / delivery finality and correction | 1 + 1 PASS | `browser-regression5/P307/browser.log`, `P308/browser.log` | `316c2665` |
+| Document context/version/history and customer entitlement | 2 PASS | `browser-final-doc-integrated/P306/browser.log` | `0f932f88` |
+| Five stages → final delivery → normal closure → closed Documents/History/Summary | 1 PASS | `browser-final-doc-integrated/HW-STAGES/browser.log` | `0f932f88` |
+| Route Reference pinned basis / versions / tenant scope | 1 PASS | `browser-closure3/P310/browser.log` | `f14a20a7` |
+| ETA, progress, customer privacy and pinned version | 4 PASS | `browser-final-closure/P311/browser.log` | `0f932f88` |
+| Fixed owner / Direct Operation / context continuity | 1 PASS | `browser-owner-actions-final/IPJ01/browser.log` | `8a8d7651` |
+| Closure blockers / authorized exception / customer privacy | 1 PASS | `browser-closure-integrated-complete/P312/browser.log` | `2a079753` |
+| Action / follow-up / SLA and monitoring reliability | 3 + 1 PASS | `browser-actions-monitoring-complete/result.json` | `c6b7185b` |
+| Guided Operational Workspace and Phase 1 integrated regression | 12 tests / 14 journeys PASS | `guided-final/result.json` | `146c4124` |
+| FWD-IPJ-04: owner transfer → history → ETA → customer privacy → closure → post-close denial | 2 PASS on one continued Shipment | `browser-ipj04-final/result.json` | `f77bb47e` |
+
+PostgreSQL implementation is byte-equivalent to `ee8ca648` after the new test
+fixture repairs; final Product source is `46a475bf`. All later commits modify
+only tests, fixtures or reference/evidence documents. The only source change
+after the 493-test run was conditional rendering of the Route-only exceptions
+panel; its affected 32-test detail suite and final closed browser proof pass.
+The later required/optional read-only test also passes. No single uninterrupted
+19-test PostgreSQL green run or 494-test frontend run is claimed.
+
+The initial closed Documents browser proof exposed a real CSS interaction:
+`display:grid` overrode the HTML `hidden` attribute. Conditional rendering fixed
+the defect at `46a475bf`; the final Documents screenshot and visibility assertion
+confirm exceptions are absent. Other rejected attempts involved outdated UI
+selectors or disposable-fixture setup, and one excess-concurrency memory failure.
+They are retained locally; selected passing evidence must be used for qualification.
+
+Desktop visual review: Persian canonical selections, inline Location creation,
+Admin review and structured Delivery share identities; closed Documents have no
+default file input, an explicit historical-repair entry and collapsed transport
+references; the Closure category shows one localized event with collapsed audit
+metadata. Mobile checks preserve the previously-qualified layout boundaries.
 
 PRODUCT_SHA=`46a475bf4eeece27a57d3f1a7a0e5eb004aa6482`.
 Subsequent commits contain test/fixture/reference updates only.
+FOCUSED_TESTS=PASS; POSTGRESQL_RESULT=PASS; FRONTEND_RESULT=PASS;
+JOURNEY_RESULT=PASS (36 selected browser tests, including 12 guided tests).
+All 18 unique findings, including all 9 HIGH findings, are RESOLVED.
+The hash-bound proof index is `HUMAN-WALKTHROUGH-OPEN-FINDINGS-20261001-EVIDENCE.json`.
 Controlled integration and preserved-runtime refresh are pending.
-Engineering Complete=NO; Product Complete=NO; Release Ready=NO;
+Engineering Complete=YES; Product Complete=NO; Release Ready=NO;
 Release Complete=NO; HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS.

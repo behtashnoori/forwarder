@@ -1,0 +1,174 @@
+{
+  "evidence_root": "D:\\1-webapp\\forwarder-dev\\human-open-findings-evidence",
+  "product_sha": "46a475bf4eeece27a57d3f1a7a0e5eb004aa6482",
+  "proofs": [
+    {
+      "name": "frontend",
+      "path": "frontend-final.log",
+      "sha256": "67114591f363250095716b69976928f39a614b213df1883bfbcd6047d8cbe18c",
+      "result": "103 files / 493 tests PASS; pre-final panel render change"
+    },
+    {
+      "name": "shipment-detail-final",
+      "path": "detail-final.log",
+      "sha256": "582311473d043fc42e5a9bb98a2884e90bccf929d0a638f722e7af3524d6ca90",
+      "result": "32 tests PASS on final product code"
+    },
+    {
+      "name": "document-readiness-final",
+      "path": "document-readiness-final.log",
+      "sha256": "4ade2cfb83b076212000bc6de907524e2e6c85b63a47a79349adb32a15d6e345",
+      "result": "4 tests PASS including required/optional read-only cases"
+    },
+    {
+      "name": "typescript",
+      "path": "tsc-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "PASS"
+    },
+    {
+      "name": "build",
+      "path": "build-final.log",
+      "sha256": "d38d6daaffc787f9e59dc2721832a76bfd07a12497660676c1fbaa4602563cc1",
+      "result": "PASS"
+    },
+    {
+      "name": "eslint",
+      "path": "lint-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "PASS"
+    },
+    {
+      "name": "structure",
+      "path": "structure-final.log",
+      "sha256": "9ae031b52a4f5c386196c803ae4c316aae74487288f01314da2b294e8faa3c43",
+      "result": "PASS"
+    },
+    {
+      "name": "postgres-regression",
+      "path": "pg-attempt1/postgresql-phase3.log",
+      "sha256": "d6ad407c28f8f971cc3c242fe96405ad958377a6d23054dd9fcded607b7bc04f",
+      "result": "17 existing tests PASS; 2 new fixture failures superseded by postgres-focused"
+    },
+    {
+      "name": "postgres-focused",
+      "path": "pg-focused3/postgresql-phase3.log",
+      "sha256": "849bdfb9d9adb21cac91800da0bc2d9e35366978f077ed68cfb21089843d8b98",
+      "result": "2 corrected fixture tests PASS; backend source identical to final product"
+    },
+    {
+      "name": "postgres-public-tracking",
+      "path": "pg-focused3/public-tracking-postgresql.log",
+      "sha256": "af86900af71cc08ac4f8a1ac45f66b987e8bc06da72b294080d67185ffa43f31",
+      "result": "1 PASS"
+    },
+    {
+      "name": "postgres-migration",
+      "path": "pg-focused3/result.json",
+      "sha256": "302133cbd533a6508f73dd631afaa0c61a7603fb4678b4ad9a6db6bb2b3a3fa0",
+      "result": "PostgreSQL 18 base-to-head migration PASS; owned runtime stopped"
+    },
+    {
+      "name": "geography",
+      "path": "browser-hw-attempt1/HW-GEO/browser.log",
+      "sha256": "61a85986a8ac6ceb2e4bdad860aecfcb5efc6076d3b21c3a2d324ac2011c0a93",
+      "result": "1 PASS; geography source unchanged since tested candidate"
+    },
+    {
+      "name": "catalog-admin",
+      "path": "browser-regression4/P301/browser.log",
+      "sha256": "2d0e3ee2a3964a2c8887aa882df97dac03570ae412251cc522a0e282094ca194",
+      "result": "3 PASS"
+    },
+    {
+      "name": "cargo-execution",
+      "path": "browser-regression5/P304/browser.log",
+      "sha256": "8509a06f26bc0c73eead751777cf129891064090787106da1dc126b5da53d18d",
+      "result": "2 PASS"
+    },
+    {
+      "name": "reports",
+      "path": "browser-regression5/P307/browser.log",
+      "sha256": "fdd6fb08788e64a5bc3b8a5e680b374bb679af2c2d0491ba32fcd16ae9ba588f",
+      "result": "1 PASS"
+    },
+    {
+      "name": "delivery",
+      "path": "browser-regression5/P308/browser.log",
+      "sha256": "2658a46014170465089295bd150392213b3681be4bc0880c60bd5e8d6d92c8c3",
+      "result": "1 PASS"
+    },
+    {
+      "name": "documents",
+      "path": "browser-final-doc-integrated/P306/browser.log",
+      "sha256": "2cf054d2cc623075ee37ba93b1ab4d61ed6863edb6cb59b563d14d11048eba9f",
+      "result": "2 PASS"
+    },
+    {
+      "name": "stages-closure-documents-history",
+      "path": "browser-final-doc-integrated/HW-STAGES/browser.log",
+      "sha256": "bb69745ed1132fcfd45fb7e676adaca972480f78800180727261aa58bd8b376c",
+      "result": "1 PASS; supersedes earlier hidden-exceptions failure"
+    },
+    {
+      "name": "route-reference",
+      "path": "browser-closure3/P310/browser.log",
+      "sha256": "d9d6824d71fe7e850a8c2a4e346d7cbfb2c5f4a6903d5a3081206b6f0e88a3dc",
+      "result": "1 PASS"
+    },
+    {
+      "name": "eta",
+      "path": "browser-final-closure/P311/browser.log",
+      "sha256": "a7b446a7d7766bef48c2ab75b392b0c9a962a8cdd700dd2d67217540a5989f3e",
+      "result": "4 PASS"
+    },
+    {
+      "name": "fixed-owner",
+      "path": "browser-owner-actions-final/IPJ01/browser.log",
+      "sha256": "2ee3c6462f27d8f920d9455187f28df109c4ad2295d4a9ef977a7d594fef96c2",
+      "result": "1 PASS"
+    },
+    {
+      "name": "closure-permissions",
+      "path": "browser-closure-integrated-complete/P312/browser.log",
+      "sha256": "f9499ce53e8ca5d71763e02f6b9c5d9a8b78d059aa95717b9d04d07c50c68e9f",
+      "result": "1 PASS"
+    },
+    {
+      "name": "actions-sla",
+      "path": "browser-actions-monitoring-complete/IPJ02-IPJ03-PHASE2/browser.log",
+      "sha256": "2fa015b08c0ebb3e8bd8c17cc3cf17bcf19b7286cbf002a3a967f6e5dcd28694",
+      "result": "3 PASS"
+    },
+    {
+      "name": "monitoring",
+      "path": "browser-actions-monitoring-complete/IPJ02-IPJ03-MONITORING/browser.log",
+      "sha256": "c6e947a1e0517f0519684d8486b1c1dd93d79845ed33d79f62ee8fb80419ab58",
+      "result": "1 PASS"
+    },
+    {
+      "name": "guided-workspace",
+      "path": "guided-final/result.json",
+      "sha256": "728dfd8da700034ffc837c535de0e05a4de4700595ecb211ce08348763468db7",
+      "result": "12 tests / 14 journeys PASS on final product code; owned runtime cleanup PASS"
+    },
+    {
+      "name": "integrated-owner-transfer",
+      "path": "browser-ipj04-final/IPJ04/browser.log",
+      "sha256": "4375eefc07005e139c93a185b627efc14616467b49e4cd9fbe823dab8719dfd3",
+      "result": "1 PASS"
+    },
+    {
+      "name": "integrated-history-eta-closure",
+      "path": "browser-ipj04-final/IPJ04/browser-follow-up.log",
+      "sha256": "26995956a35b8788468aebc23c8b6c9454221727bb9ef76b03c2ae919a1594b5",
+      "result": "1 PASS"
+    },
+    {
+      "name": "integrated-runtime-cleanup",
+      "path": "browser-ipj04-final/result.json",
+      "sha256": "5d80168b08e5cdc2b916614e77dd8c5f5b12a79cd5efaa80b8eb66ab7cc68169",
+      "result": "PASS; owned runtime stopped"
+    }
+  ]
+}
