@@ -92,7 +92,7 @@ export default function OperationalConditionsSection({ shipmentPublicId }: { shi
       </article>)}
       {canManage && <div className="space-y-2">
         <label className="block">دلیل مصوب {label(kind)}<select className="mt-1 min-h-11 w-full rounded border px-2" value={selected[kind]} onChange={event => { changed(kind); setSelected(previous => ({ ...previous, [kind]: event.target.value })); }}><option value="">انتخاب دلیل</option>{reasons[kind].map(reason => <option key={reason.public_id} value={reason.public_id}>{reason.fa_name}</option>)}</select></label>
-        <label className="block">زمان وقوع<LocalizedDateTimeInput className="mt-1" type="datetime-local" value={times[kind]} onChange={event => { changed(kind); setTimes(previous => ({ ...previous, [kind]: event.target.value })); }} /></label>
+        <label className="block">زمان وقوع<LocalizedDateTimeInput aria-label="زمان وقوع" className="mt-1" type="datetime-local" value={times[kind]} onChange={event => { changed(kind); setTimes(previous => ({ ...previous, [kind]: event.target.value })); }} /></label>
         <label className="block">یادداشت اختیاری<Input className="mt-1" value={notes[kind]} onChange={event => { changed(kind); setNotes(previous => ({ ...previous, [kind]: event.target.value })); }} /></label>
         {kind === "exception" && <>
           <label className="block">اثر بر عملیات<Input className="mt-1" maxLength={2000} value={impacts[kind]} onChange={event => { changed(kind); setImpacts(previous => ({ ...previous, [kind]: event.target.value })); }} /></label>

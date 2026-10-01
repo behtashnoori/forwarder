@@ -23,7 +23,7 @@ from backend.services import transport_execution_service as executions, cargo_al
 from backend.services import route_orchestration_service as routes
 from backend.services import document_context_service as contexts
 from backend.models import CaseDocumentFile
-from backend.operational_models import OperationalAudit, RouteLeg
+from backend.operational_models import OperationalAudit, RouteLeg, RouteCargoDestination
 
 
 URL = os.environ.get("ORG_SHIPMENT_STAGES_POSTGRES_URL", "")
@@ -113,6 +113,7 @@ def test_postgresql18_migration_guards_and_exact_closure_contract():
         )
         db.session.commit()
 
+        db.session.add(RouteCargoDestination(route_plan_id=ctx["plan"],operational_shipment_id=shipment.id,shipment_cargo_item_id=cargo.id,destination_route_leg_id=ctx["leg"],created_by_user_id=ctx["owner"]))
         execution, _ = executions.create(ctx["shipment"],ctx["plan"],ctx["leg"],_create_payload(ctx,"HW-HISTORY"),owner_user,"hw-execution")
         db.session.commit()
         for dimension, quantity in (("PLANNED","100"),("ACTUAL","95")):

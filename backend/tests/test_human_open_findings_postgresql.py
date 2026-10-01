@@ -37,7 +37,7 @@ def test_canonical_search_parentage_pagination_and_location_review_preserve_usag
         member = OperationalMembership.query.filter_by(user_id=ctx["owner"]).one()
         member.permissions = [*member.permissions, "operational_shipment.create_direct"]
         shipment = OperationalShipment.query.filter_by(public_id=ctx["shipment"]).one()
-        admin = ExpertUser(username="hw-admin", password_hash="unused", role="admin", authority="ORGANIZATION_ADMIN", is_active=True)
+        admin = ExpertUser(username="hw-admin", full_name="HW Admin", password_hash="unused", role="admin", authority="ORGANIZATION_ADMIN", is_active=True)
         db.session.add(admin); db.session.flush()
         db.session.add(OperationalMembership(user_id=admin.id, organization_id=shipment.organization_id, permissions=["logistics_point.read", "logistics_point.manage"]))
         db.session.commit()

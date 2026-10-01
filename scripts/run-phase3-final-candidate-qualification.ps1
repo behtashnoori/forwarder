@@ -4,6 +4,7 @@ param(
   [Parameter(Mandatory = $true)][string]$ExpectedProductSha,
   [string]$ExpectedBaseProductSha,
   [switch]$PostgresOnly,
+  [string[]]$PostgresTests,
   [switch]$BrowserOnly,
   [string[]]$BrowserStages,
   [ValidateSet('P301','P302','P303','P304','P305','P306','P307','P308','P309','P310','P311','P312','P313','P314','MT3','IPJ01','IPJ02-IPJ03','P315-CORE','HW-COMMERCIAL','IPJ04')]
@@ -219,7 +220,7 @@ try {
   }
 
   New-Item -ItemType Directory -Path $runtime, $EvidenceDirectory -Force | Out-Null
-  $pgPort = 55432
+  $pgPort = Get-FreePort
   if (Get-NetTCPConnection -LocalPort $pgPort -State Listen -ErrorAction SilentlyContinue) {
     throw "Owned PostgreSQL port $pgPort is already in use"
   }
@@ -290,7 +291,12 @@ try {
       'backend/tests/test_customer_entitlement_postgresql.py',
       'backend/tests/test_control_tower_scalability_postgresql.py'
     )
-    Invoke-Logged 'Phase 3 PostgreSQL 18 migration/concurrency/scale qualification' {
+    if ($PostgresTests) {
+      $unknown = @($PostgresTests | Where-Object { $_ -notin $postgresSpecs })
+      if ($unknown.Count) { throw "Unknown PostgreSQL specification requested" }
+      $postgresSpecs = $PostgresTests
+    }
+    Invoke-Logged 'Phase 3 PostgreSQL 18 migration/concurrency/scale qualification'  {
       python -m pytest @postgresSpecs -q --disable-warnings
     } (Join-Path $EvidenceDirectory 'postgresql-phase3.log')
     $results.Add(@{ name = 'Phase 3 PostgreSQL 18'; status = 'PASS' })
@@ -379,6 +385,7 @@ try {
       results = $results.ToArray()
       browser_only = [bool]$BrowserOnly
       postgres_only = [bool]$PostgresOnly
+      postgres_tests = $postgresSpecs
       executed_at_utc = (Get-Date).ToUniversalTime().ToString('o')
       environment = 'owned disposable local/UAT PostgreSQL 18 and Chrome'
       production_accessed = $false
