@@ -21,6 +21,37 @@ const statusLabel: Record<string, string> = {
   UNKNOWN: "نامشخص",
 };
 
+const attentionPresentation = {
+  BLOCKER: {
+    label: "مانع",
+    card: "border-red-200 bg-red-50",
+    icon: "text-red-700",
+    detail: "text-red-900",
+    badge: "bg-red-100 text-red-800",
+  },
+  NEEDS_ACTION: {
+    label: "نیازمند اقدام",
+    card: "border-blue-200 bg-blue-50",
+    icon: "text-blue-700",
+    detail: "text-blue-900",
+    badge: "bg-blue-100 text-blue-800",
+  },
+  WARNING: {
+    label: "هشدار",
+    card: "border-amber-200 bg-amber-50",
+    icon: "text-amber-700",
+    detail: "text-amber-900",
+    badge: "bg-amber-100 text-amber-800",
+  },
+  INFORMATIONAL: {
+    label: "اطلاعاتی",
+    card: "border-slate-200 bg-slate-50",
+    icon: "text-slate-600",
+    detail: "text-slate-700",
+    badge: "bg-slate-200 text-slate-700",
+  },
+} as const;
+
 const locationLabel = (value: unknown) => {
   if (typeof value === "string") return value;
   if (value && typeof value === "object") {
@@ -54,7 +85,7 @@ export default function OperationalGuidance({
       <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr]">
         <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4 sm:p-5">
           <p className="text-xs font-bold text-blue-700">
-            اکنون کجای کار هستیم؟
+            پیشرفت عملیات
           </p>
           <h2
             id="guided-operation-heading"
@@ -81,8 +112,8 @@ export default function OperationalGuidance({
             />
           </div>
           <p className="mt-2 text-sm text-slate-600">
-            {stage.completed} از {stage.total || "—"} مرحله کامل شده است. مرحله
-            فرایند با آمادگی کارها یکی نیست.
+            {stage.completed} از {stage.total || "—"} مرحله کامل شده است. پیشرفت
+            عملیات با آمادگی پرونده یکی نیست.
           </p>
           {!!stage.items.length && (
             <ol
@@ -195,7 +226,7 @@ export default function OperationalGuidance({
         <article className="rounded-xl border bg-white p-4">
           <div className="flex items-center gap-2 text-sm font-bold">
             <RouteIcon className="h-4 w-4 text-blue-700" />
-            آمادگی کارها
+            آمادگی پرونده
           </div>
           <p className="mt-2 text-2xl font-black">
             {projection.readiness.percent}٪
@@ -213,7 +244,7 @@ export default function OperationalGuidance({
           aria-labelledby="task-readiness-heading"
         >
           <h3 id="task-readiness-heading" className="font-bold">
-            آمادگی کارها
+            آمادگی پرونده
           </h3>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {projection.tasks.map((task) => (
@@ -247,20 +278,26 @@ export default function OperationalGuidance({
           </h3>
           {projection.attention.length ? (
             <ul className="mt-3 space-y-2">
-              {projection.attention.slice(0, 4).map((item) => (
-                <li
-                  key={item.key}
-                  className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"
-                >
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-                  <span>
-                    <strong>{item.label}</strong>
-                    <span className="mt-1 block text-xs text-amber-900">
-                      {item.reason}
+              {projection.attention.map((item) => {
+                const presentation = attentionPresentation[item.category];
+                return (
+                  <li
+                    key={item.key}
+                    className={`flex gap-2 rounded-lg border p-3 text-sm ${presentation.card}`}
+                  >
+                    <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${presentation.icon}`} />
+                    <span>
+                      <span className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${presentation.badge}`}>
+                        {presentation.label}
+                      </span>
+                      <strong className="block">{item.label}</strong>
+                      <span className={`mt-1 block text-xs ${presentation.detail}`}>
+                        {item.reason}
+                      </span>
                     </span>
-                  </span>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">

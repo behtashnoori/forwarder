@@ -153,12 +153,13 @@ try {
     production_accessed = $false
     preserved_walkthrough_accessed = $false
     business_actions_on_preserved_walkthrough = 0
-    browser_test_count = 11
-    journey_count = 13
+    browser_test_count = 12
+    journey_count = 14
     product_journeys = @(
       'expert home priority and exception queue',
       'shipment list priority queue at desktop and mobile widths',
       'five-second shipment summary with stage progress task readiness and one next action',
+      'representative all-stages-complete state with Final Delivery ahead of warning-only enrichment',
       'expert Request and Quote commercial progress and state-derived next action',
       'customer Request and Quote current action with progressive disclosure',
       'route and execution decomposition',

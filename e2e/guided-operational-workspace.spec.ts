@@ -169,7 +169,7 @@ test.describe
       }),
     ).toHaveCount(1, { timeout: 30_000 });
     await expect(
-      page.getByText("مرحله و پیشرفت", { exact: true }),
+      page.getByText("پیشرفت عملیات", { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("مهم‌ترین موضوع", { exact: true }),
@@ -215,8 +215,28 @@ test.describe
     const projectionBody = (await projection.json()).data;
     expect(projectionBody.meta.freshness).toBe("ON_REQUEST");
     expect(projectionBody.meta.rebuild).toContain("no backfill");
+    expect(projectionBody.meta.projection_version).toBe(
+      "guided-operational-workspace-v2",
+    );
+    expect(projectionBody.stage_progress.semantic).toBe(
+      "OPERATIONAL_PROGRESS",
+    );
+    expect(projectionBody.readiness.semantic).toBe("CASE_READINESS");
     expect(projectionBody.recommended_action).toBeTruthy();
     expect(projectionBody.secondary_actions.length).toBeLessThanOrEqual(3);
+    expect(
+      projectionBody.tasks.every(
+        (task: { category?: string; blocking?: boolean }) =>
+          typeof task.category === "string" &&
+          typeof task.blocking === "boolean",
+      ),
+    ).toBe(true);
+    const blocker = projectionBody.attention.find(
+      (item: { blocking: boolean }) => item.blocking,
+    );
+    if (blocker) {
+      expect(projectionBody.recommended_action.category).not.toBe("WARNING");
+    }
 
     await page.goto(
       `/operations/shipments/${fixture.active_shipment_public_id}/summary`,
@@ -231,7 +251,15 @@ test.describe
       page.getByRole("progressbar", { name: "پیشرفت مراحل عملیاتی" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "آمادگی کارها" }),
+      page.getByRole("heading", { name: "آمادگی پرونده" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("پیشرفت عملیات با آمادگی پرونده یکی نیست.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/مانع|نیازمند اقدام|هشدار|اطلاعاتی/, { exact: true }).first(),
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "رفتن به اقدام" })).toHaveCount(
       1,
@@ -239,6 +267,111 @@ test.describe
     await expect(page.getByText("آخرین موقعیت", { exact: true })).toBeVisible();
     await expect(page.getByText("ETA نهایی", { exact: true })).toBeVisible();
     await screenshot(page, "guided-shipment-five-second-summary.png");
+    await expectNoHorizontalOverflow(page);
+    expectClean(evidence);
+  });
+
+  test("representative all-stages-complete state ranks Final Delivery above warnings", async ({
+    page,
+  }) => {
+    const evidence = observe(page);
+    await loginExpert(page, fixture.usernames.owner, /\/operations$/);
+    await page.route("**/operational-projection", async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      const value = body.data;
+      value.process_status = "AWAITING_CLOSURE";
+      value.stage_progress = {
+        ...value.stage_progress,
+        completed: 5,
+        total: 5,
+        current: null,
+        items: ["پذیرش", "برنامه‌ریزی", "بارگیری", "در مسیر", "تحویل"].map(
+          (display_name_fa, index) => ({
+            public_id: `representative-stage-${index + 1}`,
+            code: `REPRESENTATIVE_${index + 1}`,
+            display_name_fa,
+            status: "COMPLETED",
+            required_for_completion: true,
+          }),
+        ),
+        semantic: "OPERATIONAL_PROGRESS",
+      };
+      value.attention = [
+        {
+          key: "closure-final_delivery_exists",
+          source_code: "FINAL_DELIVERY_EXISTS",
+          category: "BLOCKER",
+          severity: "BLOCKER",
+          blocking: true,
+          precedence: "CLOSURE_BLOCKER",
+          label: "تحویل نهایی محموله به‌صراحت ثبت نشده است",
+          action_label: "ثبت تحویل نهایی",
+          reason: "این واقعیت برای آمادگی پرونده هنوز کامل نیست.",
+          section: "delivery",
+        },
+        {
+          key: "closure-actual_cargo_unknown",
+          source_code: "ACTUAL_CARGO_UNKNOWN",
+          category: "WARNING",
+          severity: "WARNING",
+          blocking: false,
+          precedence: "OPTIONAL_IMPROVEMENT",
+          label: "مقدار واقعی یک یا چند کالا هنوز نامشخص است",
+          action_label: "تکمیل واقعیت کالای حمل‌شده",
+          reason: "این هشدار مانع ادامه چرخه نیست.",
+          section: "cargo",
+        },
+      ];
+      value.recommended_action = {
+        rank: 40,
+        precedence: "CLOSURE_BLOCKER",
+        category: "BLOCKER",
+        blocking: true,
+        section: "delivery",
+        label: "ثبت تحویل نهایی",
+        reason: "تحویل نهایی محموله هنوز به‌صراحت ثبت نشده است.",
+        href: `/operations/shipments/${fixture.active_shipment_public_id}/delivery`,
+      };
+      value.secondary_actions = [
+        {
+          rank: 50,
+          precedence: "OPTIONAL_IMPROVEMENT",
+          category: "WARNING",
+          blocking: false,
+          section: "cargo",
+          label: "تکمیل واقعیت کالای حمل‌شده",
+          reason: "این هشدار مانع ادامه چرخه نیست.",
+          href: `/operations/shipments/${fixture.active_shipment_public_id}/cargo`,
+        },
+      ];
+      value.readiness = {
+        ...value.readiness,
+        semantic: "CASE_READINESS",
+        blocker_count: 1,
+        warning_count: 1,
+        closure_ready: false,
+      };
+      await route.fulfill({ response, json: body });
+    });
+
+    await page.goto(
+      `/operations/shipments/${fixture.active_shipment_public_id}/summary`,
+    );
+    await expect(
+      page.getByRole("heading", { name: "ثبت تحویل نهایی" }),
+    ).toBeVisible();
+    await expect(page.getByText("مانع", { exact: true })).toBeVisible();
+    await expect(page.getByText("هشدار", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("مقدار واقعی یک یا چند کالا هنوز نامشخص است", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("progressbar", { name: "پیشرفت مراحل عملیاتی" }),
+    ).toHaveAttribute("aria-valuenow", "5");
+    await screenshot(page, "guided-final-delivery-before-warning.png");
     await expectNoHorizontalOverflow(page);
     expectClean(evidence);
   });

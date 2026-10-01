@@ -6,6 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useCurrentAuthorityRefresh } from "@/hooks/useCurrentAuthorityRefresh";
 import { ApiError, getOperationalWorkspace, type OperationalWorkspaceSnapshot } from "@/lib/api";
 
+const attentionLabels = {
+  BLOCKER: "مانع",
+  NEEDS_ACTION: "نیازمند اقدام",
+  WARNING: "هشدار",
+  INFORMATIONAL: "اطلاعاتی",
+} as const;
+
 export default function OperationalPriorityOverview() {
   const [snapshot, setSnapshot] = useState<OperationalWorkspaceSnapshot>();
   const [error, setError] = useState("");
@@ -37,7 +44,7 @@ export default function OperationalPriorityOverview() {
     {!!data.active_shipments.length && <div className="divide-y overflow-hidden rounded-2xl border bg-white">{data.active_shipments.slice(0,5).map(shipment => {
       const projection = shipment.operational_projection;
       const action = projection?.recommended_action;
-      return <div key={shipment.public_id} className="grid gap-3 p-4 md:grid-cols-[1.3fr_1fr_auto] md:items-center"><div><strong>{projection?.identity.label || "محموله عملیاتی"}</strong><p className="mt-1 text-xs text-slate-500">{typeof shipment.customer === "string" ? shipment.customer : shipment.customer?.display_name || "مشتری ثبت نشده"} · {projection?.stage_progress.current?.display_name_fa || "مرحله نامشخص"}</p></div><div className="text-sm">{projection?.attention[0] ? <p className="text-amber-900"><b>{projection.attention[0].label}</b><span className="mt-1 block text-xs text-slate-500">{projection.attention[0].reason}</span></p> : <p className="text-emerald-800">مانع ثبت‌شده‌ای دیده نشد</p>}</div>{action ? <Button asChild><Link to={action.href}>{action.label}</Link></Button> : <Button asChild variant="outline"><Link to={`/operations/shipments/${shipment.public_id}`}>مشاهده</Link></Button>}</div>;
+      return <div key={shipment.public_id} className="grid gap-3 p-4 md:grid-cols-[1.3fr_1fr_auto] md:items-center"><div><strong>{projection?.identity.label || "محموله عملیاتی"}</strong><p className="mt-1 text-xs text-slate-500">{typeof shipment.customer === "string" ? shipment.customer : shipment.customer?.display_name || "مشتری ثبت نشده"} · {projection?.stage_progress.current?.display_name_fa || "مرحله نامشخص"}</p></div><div className="text-sm">{projection?.attention[0] ? <p className="text-amber-900"><span className="mb-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">{attentionLabels[projection.attention[0].category]}</span><b className="block">{projection.attention[0].label}</b><span className="mt-1 block text-xs text-slate-500">{projection.attention[0].reason}</span></p> : <p className="text-emerald-800">مانع ثبت‌شده‌ای دیده نشد</p>}</div>{action ? <Button asChild><Link to={action.href}>{action.label}</Link></Button> : <Button asChild variant="outline"><Link to={`/operations/shipments/${shipment.public_id}`}>مشاهده</Link></Button>}</div>;
     })}</div>}
   </section>;
 }

@@ -2,6 +2,8 @@
 
 from types import SimpleNamespace
 
+import pytest
+
 from backend.extensions import db
 from backend.services import operational_service as service
 from backend.services import operational_projection_service as projection
@@ -89,112 +91,184 @@ def test_priority_list_projects_direct_shipments_without_changing_population_aut
     assert response.status_code == 200
     row = next(item for item in response.json["data"] if item["public_id"] == shipment_id)
     assert row["source"]["type"] == "direct"
-    assert row["operational_projection"]["tasks"][0] == {
-        "key": "route",
-        "label": "مسیر عملیاتی",
-        "required": True,
-        "section": "route",
-        "status": "DONE",
-    }
+    assert row["operational_projection"]["tasks"][0]["key"] == "route"
+    assert row["operational_projection"]["tasks"][0]["status"] == "DONE"
+    assert row["operational_projection"]["tasks"][0]["blocking"] is False
     assert row["operational_projection"]["meta"]["freshness"] == "ON_REQUEST"
 
 
-def _ranking_tasks(*, stages="DONE", delivery="DONE", closure="BLOCKED"):
-    values = {
-        "route": "DONE",
-        "execution": "DONE",
-        "stages": stages,
-        "cargo": "DONE",
-        "documents": "DONE",
-        "tracking": "DONE",
-        "delivery": delivery,
-        "closure": closure,
-    }
-    return [
-        {"key": key, "status": status, "section": key, "label": key, "required": True}
-        for key, status in values.items()
-    ]
-
-
-def _ranking_stage(sequence, status):
+def _matrix_stage(sequence=None, status=None, *, completed=0, total=5):
     return {
-        "current": {
+        "current": None if sequence is None else {
             "public_id": f"stage-{sequence}",
             "code": f"STAGE_{sequence}",
             "display_name_fa": f"مرحله {sequence}",
             "sequence": sequence,
             "required_for_completion": True,
             "status": status,
-        }
+        },
+        "completed": completed,
+        "total": total,
+        "configured": True,
     }
 
 
-def _final_delivery_attention():
-    return [{
-        "key": "closure-final_delivery_exists",
-        "severity": "BLOCKER",
-        "label": "تحویل نهایی محموله به‌صراحت ثبت شده باشد",
-        "reason": "این واقعیت برای آمادگی پرونده هنوز کامل یا قطعی نیست.",
-        "section": "delivery",
-    }]
-
-
-def test_next_action_ranking_cases_1_to_4_prioritize_authoritative_stage_state():
-    shipment = SimpleNamespace(public_id="shipment", lifecycle_status="in_progress")
-
-    case_1, _ = projection._action(
-        shipment, _ranking_tasks(stages="NEEDS_ACTION"), _final_delivery_attention(), True,
-        _ranking_stage(1, "NOT_STARTED"),
+def _matrix_task(
+    key,
+    status="DONE",
+    *,
+    section=None,
+    category="INFORMATIONAL",
+    precedence="INFORMATIONAL",
+    blocking=False,
+    action_label=None,
+):
+    return projection._task(
+        key, key, status, section or key, required=key not in {"cargo", "tracking"},
+        category=category, precedence=precedence, blocking=blocking,
+        action_label=action_label, reason=f"reason-{key}",
     )
-    assert case_1["label"] == "شروع مرحله «مرحله 1»"
-    assert case_1["href"].endswith("/stages#shipment-operational-stage-stage-1")
 
-    case_2, _ = projection._action(
-        shipment, _ranking_tasks(stages="NEEDS_ACTION"), _final_delivery_attention(), True,
-        _ranking_stage(1, "STARTED"),
+
+def _matrix_tasks(**overrides):
+    values = {
+        "route": _matrix_task("route", section="route", action_label="تعریف مسیر عملیاتی"),
+        "execution": _matrix_task("execution", section="route", action_label="تکمیل اجرای حمل"),
+        "stages": _matrix_task("stages", section="stages", action_label="ثبت پیشرفت مرحله جاری"),
+        "cargo": _matrix_task("cargo", section="cargo", action_label="تکمیل واقعیت کالای حمل‌شده"),
+        "documents": _matrix_task("documents", section="documents", action_label="رفع سند اجباری"),
+        "tracking": _matrix_task("tracking", section="tracking", action_label="ثبت موقعیت یا پیشرفت"),
+        "delivery": _matrix_task("delivery", section="delivery", action_label="ثبت تحویل نهایی"),
+        "closure": _matrix_task("closure", "BLOCKED", section="closure", action_label="بررسی و بستن پرونده"),
+    }
+    values.update(overrides)
+    return list(values.values())
+
+
+def _matrix_attention(key, category, precedence, section, action_label, *, blocking):
+    return {
+        "key": key, "source_code": None, "category": category, "severity": category,
+        "blocking": blocking, "precedence": precedence, "label": key,
+        "action_label": action_label, "reason": f"reason-{key}", "section": section,
+    }
+
+
+def _stage_attention(status="NOT_STARTED"):
+    return _matrix_attention(
+        "stage", "NEEDS_ACTION",
+        "CURRENT_REQUIRED_WORK" if status == "STARTED" else "NEXT_REQUIRED_LIFECYCLE",
+        "stages", "stage-action", blocking=True,
     )
-    assert case_2["label"] == "تکمیل مرحله «مرحله 1»"
 
-    case_3, _ = projection._action(
-        shipment, _ranking_tasks(stages="IN_PROGRESS"), _final_delivery_attention(), True,
-        _ranking_stage(2, "NOT_STARTED"),
+
+ROUTE = _matrix_attention("route", "BLOCKER", "BLOCKING_PRECONDITION", "route", "تعریف مسیر عملیاتی", blocking=True)
+EXECUTION = _matrix_attention("execution", "BLOCKER", "BLOCKING_PRECONDITION", "route", "تکمیل اجرای حمل", blocking=True)
+DELIVERY = _matrix_attention("delivery", "BLOCKER", "CLOSURE_BLOCKER", "delivery", "ثبت تحویل نهایی", blocking=True)
+DOCUMENT = _matrix_attention("documents", "BLOCKER", "CLOSURE_BLOCKER", "documents", "رفع سند اجباری", blocking=True)
+ISSUE = _matrix_attention("issue", "BLOCKER", "CLOSURE_BLOCKER", "route", "رفع مشکل عملیاتی مسدودکننده", blocking=True)
+CARGO_WARNING = _matrix_attention("cargo", "WARNING", "OPTIONAL_IMPROVEMENT", "cargo", "تکمیل واقعیت کالای حمل‌شده", blocking=False)
+ALLOCATION_WARNING = _matrix_attention("allocation", "WARNING", "OPTIONAL_IMPROVEMENT", "cargo", "اصلاح تخصیص واقعی", blocking=False)
+ETA_WARNING = _matrix_attention("eta", "WARNING", "OPTIONAL_IMPROVEMENT", "tracking", "ثبت موقعیت یا پیشرفت", blocking=False)
+
+
+MATRIX_CASES = [
+    ("A", "in_progress", True, _matrix_stage(1, "NOT_STARTED"), _matrix_tasks(
+        route=_matrix_task("route", "NEEDS_ACTION", section="route", category="BLOCKER", precedence="BLOCKING_PRECONDITION", blocking=True, action_label="تعریف مسیر عملیاتی"),
+        execution=_matrix_task("execution", "NOT_APPLICABLE", section="route"),
+        stages=_matrix_task("stages", "NEEDS_ACTION", section="stages", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", blocking=True),
+    ), [ROUTE, _stage_attention()], "BLOCKED_PRECONDITION", "تعریف مسیر عملیاتی", 2, 0),
+    ("B", "in_progress", True, _matrix_stage(1, "NOT_STARTED"), _matrix_tasks(
+        execution=_matrix_task("execution", "NEEDS_ACTION", section="route", category="BLOCKER", precedence="BLOCKING_PRECONDITION", blocking=True, action_label="تکمیل اجرای حمل"),
+        stages=_matrix_task("stages", "NEEDS_ACTION", section="stages", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", blocking=True),
+    ), [EXECUTION, _stage_attention()], "BLOCKED_PRECONDITION", "تکمیل اجرای حمل", 2, 0),
+    ("C", "in_progress", True, _matrix_stage(1, "NOT_STARTED"), _matrix_tasks(
+        stages=_matrix_task("stages", "NEEDS_ACTION", section="stages", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", blocking=True),
+    ), [_stage_attention(), ALLOCATION_WARNING], "NEXT_REQUIRED_LIFECYCLE", "شروع مرحله «مرحله 1»", 1, 1),
+    ("D", "in_progress", True, _matrix_stage(1, "NOT_STARTED"), _matrix_tasks(
+        stages=_matrix_task("stages", "NEEDS_ACTION", section="stages", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", blocking=True),
+    ), [_stage_attention()], "NEXT_REQUIRED_LIFECYCLE", "شروع مرحله «مرحله 1»", 1, 0),
+    ("E", "in_progress", True, _matrix_stage(1, "STARTED"), _matrix_tasks(
+        stages=_matrix_task("stages", "IN_PROGRESS", section="stages", category="NEEDS_ACTION", precedence="CURRENT_REQUIRED_WORK", blocking=True),
+    ), [_stage_attention("STARTED")], "CURRENT_REQUIRED_WORK", "تکمیل مرحله «مرحله 1»", 1, 0),
+    ("F", "in_progress", True, _matrix_stage(2, "NOT_STARTED", completed=1), _matrix_tasks(
+        stages=_matrix_task("stages", "IN_PROGRESS", section="stages", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", blocking=True),
+    ), [_stage_attention()], "NEXT_REQUIRED_LIFECYCLE", "شروع مرحله «مرحله 2»", 1, 0),
+    ("G", "in_progress", True, _matrix_stage(3, "STARTED", completed=2), _matrix_tasks(
+        stages=_matrix_task("stages", "IN_PROGRESS", section="stages", category="NEEDS_ACTION", precedence="CURRENT_REQUIRED_WORK", blocking=True),
+    ), [_stage_attention("STARTED")], "CURRENT_REQUIRED_WORK", "تکمیل مرحله «مرحله 3»", 1, 0),
+    ("H", "in_progress", True, _matrix_stage(completed=5), _matrix_tasks(
+        cargo=_matrix_task("cargo", "NEEDS_ACTION", section="cargo", category="WARNING", precedence="OPTIONAL_IMPROVEMENT"),
+        tracking=_matrix_task("tracking", "NEEDS_ACTION", section="tracking", category="WARNING", precedence="OPTIONAL_IMPROVEMENT"),
+        delivery=_matrix_task("delivery", "NEEDS_ACTION", section="delivery", category="BLOCKER", precedence="CLOSURE_BLOCKER", blocking=True),
+    ), [DELIVERY, CARGO_WARNING, ALLOCATION_WARNING, ETA_WARNING], "AWAITING_CLOSURE", "ثبت تحویل نهایی", 1, 3),
+    ("I", "completed", True, _matrix_stage(completed=5), _matrix_tasks(
+        cargo=_matrix_task("cargo", "NEEDS_ACTION", section="cargo", category="WARNING", precedence="OPTIONAL_IMPROVEMENT"),
+        closure=_matrix_task("closure", "READY", section="closure", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", action_label="بررسی و بستن پرونده"),
+    ), [CARGO_WARNING], "AWAITING_CLOSURE", "بررسی و بستن پرونده", 0, 1),
+    ("J", "completed", True, _matrix_stage(completed=5), _matrix_tasks(
+        closure=_matrix_task("closure", "READY", section="closure", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", action_label="بررسی و بستن پرونده"),
+    ), [ALLOCATION_WARNING], "AWAITING_CLOSURE", "بررسی و بستن پرونده", 0, 1),
+    ("K", "completed", True, _matrix_stage(completed=5), _matrix_tasks(
+        documents=_matrix_task("documents", "NEEDS_ACTION", section="documents", category="BLOCKER", precedence="CLOSURE_BLOCKER", blocking=True),
+    ), [DOCUMENT], "AWAITING_CLOSURE", "رفع سند اجباری", 1, 0),
+    ("L", "completed", True, _matrix_stage(completed=5), _matrix_tasks(), [ISSUE], "AWAITING_CLOSURE", "رفع مشکل عملیاتی مسدودکننده", 1, 0),
+    ("M", "completed", True, _matrix_stage(completed=5), _matrix_tasks(
+        tracking=_matrix_task("tracking", "NEEDS_ACTION", section="tracking", category="WARNING", precedence="OPTIONAL_IMPROVEMENT"),
+        closure=_matrix_task("closure", "READY", section="closure", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", action_label="بررسی و بستن پرونده"),
+    ), [ETA_WARNING], "AWAITING_CLOSURE", "بررسی و بستن پرونده", 0, 1),
+    ("N", "completed", True, _matrix_stage(completed=5), _matrix_tasks(
+        closure=_matrix_task("closure", "READY", section="closure", category="NEEDS_ACTION", precedence="NEXT_REQUIRED_LIFECYCLE", action_label="بررسی و بستن پرونده"),
+    ), [], "AWAITING_CLOSURE", "بررسی و بستن پرونده", 0, 0),
+    ("O", "closed", True, _matrix_stage(completed=5), _matrix_tasks(
+        closure=_matrix_task("closure", "DONE", section="closure"),
+    ), [], "CLOSED", None, 0, 0),
+    ("P", "in_progress", False, _matrix_stage(1, "STARTED"), _matrix_tasks(
+        stages=_matrix_task("stages", "IN_PROGRESS", section="stages", category="NEEDS_ACTION", precedence="CURRENT_REQUIRED_WORK", blocking=True),
+    ), [_stage_attention("STARTED")], "CURRENT_REQUIRED_WORK", None, 1, 0),
+]
+
+
+@pytest.mark.parametrize(
+    "case,lifecycle,can_manage,stages,tasks,attention,process,primary,blockers,warnings",
+    MATRIX_CASES,
+)
+def test_guidance_state_matrix_and_cross_surface_invariants(
+    case, lifecycle, can_manage, stages, tasks, attention, process, primary, blockers, warnings,
+):
+    shipment = SimpleNamespace(public_id="shipment", lifecycle_status=lifecycle)
+    result = projection._finalize_guidance(shipment, tasks, attention, can_manage, stages)
+
+    assert shipment.lifecycle_status == lifecycle, case
+    assert result["process_status"] == process, case
+    assert result["readiness"]["semantic"] == "CASE_READINESS", case
+    assert result["readiness"]["blocker_count"] == blockers, case
+    assert result["readiness"]["warning_count"] == warnings, case
+    assert (result["recommended_action"] or {}).get("label") == primary, case
+    if primary:
+        assert result["recommended_action"]["precedence"] != "INFORMATIONAL", case
+    if blockers and primary:
+        assert not (
+            result["recommended_action"]["category"] == "WARNING"
+            and any(item["blocking"] for item in attention)
+        ), case
+    for task in tasks:
+        aliases = {task["key"], f"task-{task['key']}"}
+        if task["key"] == "stages":
+            aliases.add("stage")
+        related = [item for item in attention if item["key"] in aliases]
+        if related and task["category"] in {"BLOCKER", "WARNING"}:
+            assert all(item["blocking"] == task["blocking"] for item in related), case
+
+
+def test_current_walkthrough_warning_never_outranks_final_delivery_blocker():
+    case = next(row for row in MATRIX_CASES if row[0] == "H")
+    _, lifecycle, can_manage, stages, tasks, attention, *_ = case
+    result = projection._finalize_guidance(
+        SimpleNamespace(public_id="shipment", lifecycle_status=lifecycle),
+        tasks, attention, can_manage, stages,
     )
-    assert case_3["label"] == "شروع مرحله «مرحله 2»"
-
-    case_4, _ = projection._action(
-        shipment, _ranking_tasks(stages="IN_PROGRESS"), _final_delivery_attention(), True,
-        _ranking_stage(3, "STARTED"),
-    )
-    assert case_4["label"] == "تکمیل مرحله «مرحله 3»"
-    assert case_4["section"] == "stages"
-
-
-def test_next_action_ranking_cases_5_to_8_preserve_delivery_closure_and_authorization():
-    shipment = SimpleNamespace(public_id="shipment", lifecycle_status="in_progress")
-
-    case_5, _ = projection._action(
-        shipment, _ranking_tasks(), _final_delivery_attention(), True,
-        {"current": None},
-    )
-    assert case_5["label"] == "تحویل نهایی محموله به‌صراحت ثبت شده باشد"
-    assert case_5["section"] == "delivery"
-
-    case_6, _ = projection._action(
-        shipment, _ranking_tasks(closure="READY"), [], True, {"current": None},
-    )
-    assert case_6["label"] == "بررسی و بستن پرونده"
-    assert case_6["section"] == "closure"
-
-    closed = SimpleNamespace(public_id="shipment", lifecycle_status="closed")
-    case_7, secondary_7 = projection._action(
-        closed, _ranking_tasks(closure="DONE"), [], True, {"current": None},
-    )
-    assert case_7 is None
-    assert secondary_7 == []
-
-    case_8, secondary_8 = projection._action(
-        shipment, _ranking_tasks(stages="NEEDS_ACTION"), _final_delivery_attention(), False,
-        _ranking_stage(1, "STARTED"),
-    )
-    assert case_8 is None
-    assert secondary_8 == []
+    assert result["recommended_action"]["label"] == "ثبت تحویل نهایی"
+    assert result["recommended_action"]["blocking"] is True
+    assert {item["key"] for item in attention if item["category"] == "WARNING"} == {
+        "cargo", "allocation", "eta",
+    }

@@ -1797,9 +1797,18 @@ export interface OperationalProjectionTask {
   status: "DONE" | "NOT_APPLICABLE" | "READY" | "IN_PROGRESS" | "NEEDS_ACTION" | "BLOCKED" | "UNKNOWN";
   section: string;
   required: boolean;
+  category: "BLOCKER" | "NEEDS_ACTION" | "WARNING" | "INFORMATIONAL";
+  precedence: "BLOCKING_PRECONDITION" | "CURRENT_REQUIRED_WORK" | "NEXT_REQUIRED_LIFECYCLE" | "CLOSURE_BLOCKER" | "OPTIONAL_IMPROVEMENT" | "INFORMATIONAL";
+  blocking: boolean;
+  source_code?: string | null;
+  action_label?: string | null;
+  reason?: string | null;
 }
 export interface OperationalProjectionAction {
   rank: number;
+  precedence: OperationalProjectionTask["precedence"];
+  category: OperationalProjectionTask["category"];
+  blocking: boolean;
   section: string;
   label: string;
   reason: string;
@@ -1813,6 +1822,7 @@ export interface OperationalProjection {
     requested_route: { origin?: string | null; destination?: string | null; shipping_type?: string | null } | null;
   };
   overall_state: string;
+  process_status: "CLOSED" | "BLOCKED_PRECONDITION" | "CURRENT_REQUIRED_WORK" | "NEXT_REQUIRED_LIFECYCLE" | "AWAITING_CLOSURE" | "UNKNOWN";
   operational_route: OperationalShipmentSummary["route_summary"];
   stage_progress: {
     completed: number;
@@ -1821,12 +1831,13 @@ export interface OperationalProjection {
     items: Array<{ public_id: string; code: string; display_name_fa: string; status: string; required_for_completion: boolean }>;
     can_record: boolean;
     configured: boolean;
+    semantic: "OPERATIONAL_PROGRESS";
   };
   tasks: OperationalProjectionTask[];
-  attention: Array<{ key: string; severity: "BLOCKER" | "WARNING" | "INFO"; label: string; reason: string; section: string }>;
+  attention: Array<{ key: string; source_code?: string | null; category: "BLOCKER" | "NEEDS_ACTION" | "WARNING" | "INFORMATIONAL"; severity: "BLOCKER" | "NEEDS_ACTION" | "WARNING" | "INFORMATIONAL"; blocking: boolean; precedence: OperationalProjectionTask["precedence"]; label: string; action_label?: string | null; reason: string; section: string }>;
   recommended_action: OperationalProjectionAction | null;
   secondary_actions: OperationalProjectionAction[];
-  readiness: { completed: number; total: number; percent: number; blocker_count: number; warning_count: number; closure_ready: boolean };
+  readiness: { semantic: "CASE_READINESS"; completed: number; total: number; percent: number; blocker_count: number; warning_count: number; closure_ready: boolean };
   current_operation: {
     latest_position: { label: unknown; scope: string; reported_at: string; recorded_at: string; route_progress?: unknown } | null;
     eta: { available: boolean; reason: string | null; message: string | null; earliest: string | null; latest: string | null };
