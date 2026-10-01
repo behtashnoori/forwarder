@@ -74,7 +74,8 @@ test("P3-12 exact V1 blockers → controlled exception → private Customer stat
   await refreshedException.locator("summary",{hasText:"الزامات و کمبودهای هنگام بستن"}).click();await expect(refreshedException.getByText("نامشخص",{exact:true})).toBeVisible();
   await admin.screenshot({path:testInfo.outputPath("exception-retained-missing.png"),fullPage:true});
   const planned=await openShipment(admin,fixture.p312_planned);await expect(planned.getByRole("heading", { name: "پیش‌نیاز چرخه عمر" })).toBeVisible();
-  await expect(planned.getByRole("button", { name: "بستن پرونده", exact: true })).toBeDisabled();
+  await expect(planned.getByRole("button", { name: "بستن پرونده", exact: true })).toHaveCount(0);
+  await expect(planned.getByRole("button", { name: "بستن با استثنای مدیر" })).toHaveCount(0);
   await customer.goto("/customer");await customer.locator("#customer-email").fill(fixture.p309_accounts.a.email);await customer.locator("#customer-password").fill(password!);
   await customer.locator("form button").first().click();await expect(customer).toHaveURL(/\/customer\/requests/);
   await customer.getByRole("link",{name:"حمل‌های من",exact:true}).click();await customer.locator(`a[href="/customer/shipments/${fixture.p312_normal}"]`).click();
