@@ -1550,6 +1550,43 @@ components:
               customer_id: { type: integer, nullable: true }
               customer_label: { type: string, nullable: true }
               cargo_items: { type: array, items: { type: object, additionalProperties: true } }
+    OperationalProjection:
+      type: object
+      additionalProperties: false
+      required: [identity, overall_state, operational_route, stage_progress, tasks, attention, recommended_action, secondary_actions, readiness, current_operation, priority, meta]
+      properties:
+        identity:
+          type: object
+          additionalProperties: false
+          required: [label, source, technical_id, requested_route]
+          properties:
+            label: { type: string }
+            source: { type: string, enum: [PROJECT_CODE, REQUEST_TRACKING_CODE, CUSTOMER_CONTEXT, DIRECT_OPERATION] }
+            technical_id: { type: string, format: uuid }
+            requested_route: { type: object, nullable: true, additionalProperties: true }
+        overall_state: { type: string }
+        operational_route: { type: object, nullable: true, additionalProperties: true }
+        stage_progress: { type: object, additionalProperties: true }
+        tasks: { type: array, items: { type: object, additionalProperties: true } }
+        attention: { type: array, items: { type: object, additionalProperties: true } }
+        recommended_action: { type: object, nullable: true, additionalProperties: true }
+        secondary_actions: { type: array, maxItems: 3, items: { type: object, additionalProperties: true } }
+        readiness: { type: object, additionalProperties: true }
+        current_operation: { type: object, additionalProperties: true }
+        priority: { type: object, additionalProperties: true }
+        meta:
+          type: object
+          additionalProperties: false
+          required: [projection_version, calculated_at, source_updated_at, lag_seconds, freshness, rebuild, sources, limitations]
+          properties:
+            projection_version: { type: string }
+            calculated_at: { type: string, format: date-time }
+            source_updated_at: { type: string, format: date-time }
+            lag_seconds: { type: integer, nullable: true, minimum: 0 }
+            freshness: { type: string, enum: [ON_REQUEST] }
+            rebuild: { type: string }
+            sources: { type: array, items: { type: string } }
+            limitations: { type: array, items: { type: string } }
     OperationalShipmentSummary:
       type: object
       required: [public_id, status, version]
@@ -3144,6 +3181,9 @@ paths:
   /api/operational-shipments/{shipment_id}:
     parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }]
     get: { tags: [Operational Shipments], summary: Get tenant-scoped shipment detail, security: [{ bearerAuth: [] }], responses: { '200': { description: Opaque shipment projection., content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/OperationalShipmentSummary' } } } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /api/operational-shipments/{shipment_id}/operational-projection:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }]
+    get: { tags: [Operational Shipments], summary: Build the authorized guided operational projection, description: Pure on-request read projection over existing domain authorities. It stores no workflow state and its recommendation is navigation guidance only; every command remains independently authorized., security: [{ bearerAuth: [] }], responses: { '200': { description: Current explainable workspace projection., content: { application/json: { schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/OperationalProjection' } } } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
   /api/operational-shipments/{shipment_id}/route-plans:
     parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }]
     get: { tags: [Operational Shipments], summary: List route plans, security: [{ bearerAuth: [] }], responses: { '200': { description: Route plan list without numeric shipment identity. }, '404': { $ref: '#/components/responses/NotFound' } } }

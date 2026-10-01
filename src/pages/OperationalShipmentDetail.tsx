@@ -10,6 +10,7 @@ import {
   ApiError,
   commandRouteCheckpoint,
   correctRouteMilestone,
+  getOperationalProjection,
   getOperationalShipment,
   getRoutePlan,
   getRouteTimeline,
@@ -50,6 +51,7 @@ import DeliverySection from "@/components/DeliverySection";
 import ShipmentOperationalStages from "@/components/ShipmentOperationalStages";
 import { ShipmentEta } from "@/components/CargoEta";
 import CargoAllocationTraceSection from "@/components/CargoAllocationTraceSection";
+import OperationalGuidance from "@/components/OperationalGuidance";
 import {
   formatRouteTransportModes,
   getRequestTransportMethod,
@@ -96,6 +98,7 @@ export default function OperationalShipmentDetail() {
   const activeSection = allowedSections.includes(params.section as typeof allowedSections[number])
     ? params.section!
     : legacyHashSections[window.location.hash] || "route";
+  const legacyOverview = !params.section && !window.location.hash;
   const { t, direction, locale, businessLabel, transportLabel } = useI18n();
   const [data, setData] = useState<OperationalShipmentSummary>();
   const [plans, setPlans] = useState<RoutePlanSummary[]>([]);
@@ -134,7 +137,10 @@ export default function OperationalShipmentDetail() {
     try {
       setRoutePlansLoaded(false);
       setError("");
-      const shipment = await getOperationalShipment(shipmentPublicId);
+      const [shipment, projection] = await Promise.all([
+        getOperationalShipment(shipmentPublicId),
+        getOperationalProjection(shipmentPublicId).catch(() => undefined),
+      ]);
       if (current !== generation.current) return false;
       if (!UUID_PATTERN.test(shipment.data.public_id) || shipment.data.public_id.toLowerCase() !== shipmentPublicId.toLowerCase()) {
         setError(inconsistentIdentityMessage);
@@ -159,7 +165,7 @@ export default function OperationalShipmentDetail() {
         setAuthorityEpoch(value => value + 1); setReasons({}); setNotice("");
       }
       knownOwner.current = {publicId: shipmentPublicId, version: shipment.data.version, label: shipment.data.responsible_expert?.display_name};
-      setData(shipment.data);
+      setData({ ...shipment.data, operational_projection: projection?.data });
       setPlans(revisions.data);
       setTimeline(routeTimeline.data);
       setExceptions(routeExceptions.data);
@@ -232,6 +238,10 @@ export default function OperationalShipmentDetail() {
     transportLabel,
     direction,
   );
+  const actionableLeg = displayedLegs.find((leg) => !["blocked", "cancelled", "completed"].includes(leg.status) && (
+    (!leg.actual_departure && leg.departure_milestone_id) ||
+    (leg.actual_departure && !leg.actual_arrival && leg.arrival_milestone_id)
+  ));
   return (
     <main className="shipment-workspace min-h-screen overflow-x-hidden bg-slate-50 p-3 sm:p-4 md:p-8" dir={direction}>
       <a href="#shipment-overview" className="sr-only z-50 rounded bg-white px-4 py-2 text-blue-800 focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:ring-2 focus:ring-blue-600">
@@ -244,11 +254,11 @@ export default function OperationalShipmentDetail() {
         {data && <Fragment key={`${data.public_id}:${authorityEpoch}`}>
           <header id="shipment-overview" className="scroll-mt-28 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-4 bg-slate-900 px-4 py-5 text-white sm:flex-row sm:items-start sm:justify-between sm:px-6">
-              <div className="min-w-0"><p className="text-sm text-slate-300">فضای کار عملیاتی محموله</p><h1 className="text-2xl font-bold sm:text-3xl">خلاصه محموله</h1><p className="mt-2 break-all text-xs text-slate-300">شناسه محموله: <bdi dir="ltr">{data.public_id}</bdi></p></div>
+              <div className="min-w-0"><p className="text-sm text-slate-300">فضای کار عملیاتی محموله</p><h1 className="text-2xl font-bold sm:text-3xl">{data.operational_projection?.identity.label || "خلاصه محموله"}</h1><p className="mt-2 text-sm text-slate-300">{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "مشتری ثبت نشده"} · {routeSummary}</p><details className="mt-2 text-xs text-slate-400"><summary className="cursor-pointer">شناسه فنی</summary><bdi className="mt-1 block break-all" dir="ltr">{data.public_id}</bdi></details></div>
               <span className="w-fit rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold ring-1 ring-white/20">{businessLabel(data.status)}</span>
             </div>
             <div className="grid gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="bg-white p-4"><p className="text-xs text-slate-500">مشتری و پروژه</p><p className="mt-1 font-semibold">{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</p>{data.project_public_id ? <Link className="mt-1 inline-block text-xs text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>مشاهده پروژه مرتبط</Link> : <p className="mt-1 text-xs text-slate-500">محموله مستقیم؛ بدون پروژه</p>}</div>
+              <div className="bg-white p-4"><p className="text-xs text-slate-500">مشتری و پروژه</p><p className="mt-1 font-semibold">{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</p>{data.project_public_id ? <Link className="mt-1 inline-block text-xs text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>مشاهده پروژه مرتبط</Link> : <p className="mt-1 text-xs text-slate-500">{data.source.type === "direct" ? "محموله مستقیم؛ بدون پروژه" : "پروژه عملیاتی ثبت نشده"}</p>}</div>
               <div className="bg-white p-4"><p className="text-xs text-slate-500">مسئول فعلی پرونده</p><p className="mt-1 font-semibold">{data.responsible_expert?.display_name || "نامعلوم"}</p><p className="mt-1 text-xs text-slate-500">مالکیت از خود محموله خوانده می‌شود.</p></div>
               <div className="bg-white p-4"><p className="text-xs text-slate-500">مسیر فعال</p><p className="mt-1 font-semibold">{routeSummary}</p>{activePlan && <p className="mt-1 text-xs text-slate-500">نسخه {activePlan.revision_number}</p>}</div>
               {requestTransportSummary && <div className="bg-white p-4"><p className="text-xs text-slate-500">{t("transport.requestMethod")}</p><p className="mt-1 font-semibold">{requestTransportSummary}</p></div>}
@@ -269,14 +279,16 @@ export default function OperationalShipmentDetail() {
               ].map(([section, label]) => <Link key={section} to={`/operations/shipments/${shipmentPublicId}/${section}`} aria-current={activeSection===section?"page":undefined} className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${activeSection===section?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-100"}`}>{label}</Link>)}
             </div>
           </nav>
+          {(activeSection === "summary" || legacyOverview) && data.operational_projection && <OperationalGuidance projection={data.operational_projection} locale={locale} />}
           <section hidden={activeSection!=="stages"} className="scroll-mt-28"><ShipmentOperationalStages shipmentId={shipmentPublicId}/></section>
-          <section hidden={!(["summary","route"] as string[]).includes(activeSection)} id="shipment-next-action" aria-labelledby="next-action-heading" className="scroll-mt-28 space-y-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5">
+          <section hidden={activeSection!=="route"} id="shipment-next-action" aria-labelledby="next-action-heading" className="scroll-mt-28 space-y-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5">
             <div><p className="text-xs font-semibold text-blue-700">اقدام جاری</p><h2 id="next-action-heading" className="text-xl font-bold">{data.status === "closed" ? "اصلاح و تکمیل سوابق" : "اقدامات مجاز بعدی"}</h2><p className="mt-1 text-sm text-slate-600">اقدامات این بخش فقط بر پایه وضعیت و مجوزهای ثبت‌شده در سامانه نمایش داده می‌شوند.</p></div>
             {data.status !== "closed" && routePlansLoaded && !activePlan && <RouteAuthoringSection shipmentId={shipmentPublicId} draft={draftPlan} hasDraft={plans.some((item) => item.status === "draft")} reload={load} />}
             {activePlan && <div className="grid gap-3 lg:grid-cols-2">{displayedLegs.map((leg, index) => {
               const actionable = !["blocked", "cancelled", "completed"].includes(leg.status);
-              const action = actionable && !leg.actual_departure && leg.departure_milestone_id ? { label: "ثبت حرکت", id: leg.departure_milestone_id } : actionable && leg.actual_departure && !leg.actual_arrival && leg.arrival_milestone_id ? { label: "ثبت رسیدن", id: leg.arrival_milestone_id } : null;
-              return action ? <OperationalPermission key={leg.id} permission="milestone_event.create"><div className="rounded-xl border border-blue-200 bg-white p-4"><p className="mb-2 text-sm text-slate-600">بخش مسیر {index + 1}: {leg.origin.display_name} {routeConnector} {leg.destination.display_name}</p><OccurrenceTimeAction id={`leg-${leg.id}-time`} action={action.label} pending={!!pending} onSubmit={(occurredAt) => void run(`leg-${leg.id}`, () => recordOperationalEvent(shipmentPublicId, action.id, occurredAt, key()), "رخداد بخش مسیر ثبت شد.")} /></div></OperationalPermission> : null;
+              const action = actionable && !leg.actual_departure && leg.departure_milestone_id ? {label:"ثبت حرکت",id:leg.departure_milestone_id} : actionable && leg.actual_departure && !leg.actual_arrival && leg.arrival_milestone_id ? {label:"ثبت رسیدن",id:leg.arrival_milestone_id} : null;
+              if (!action || (!legacyOverview && actionableLeg && leg.id !== actionableLeg.id)) return null;
+              return <OperationalPermission key={leg.id} permission="milestone_event.create"><div className={`rounded-xl border bg-white p-4 ${leg.id===actionableLeg?.id?"border-blue-300 ring-1 ring-blue-100":"border-slate-200"}`}><p className="mb-2 text-sm text-slate-600">{leg.id===actionableLeg?.id?"اقدام اصلی · ":"اقدام بعدی مسیر · "}بخش {index+1}: {leg.origin.display_name} {routeConnector} {leg.destination.display_name}</p><OccurrenceTimeAction id={`leg-${leg.id}-time`} action={action.label} pending={!!pending} onSubmit={(occurredAt) => void run(`leg-${leg.id}`, () => recordOperationalEvent(shipmentPublicId, action.id, occurredAt, key()), "رخداد بخش مسیر ثبت شد.")} /></div></OperationalPermission>;
             })}</div>}
           </section>
           <section hidden={!(["route","cargo","tracking","delivery"] as string[]).includes(activeSection)} id="shipment-route" aria-labelledby="route-workspace-heading" className="scroll-mt-28 space-y-3">
@@ -307,7 +319,7 @@ export default function OperationalShipmentDetail() {
             <div className="border-t p-3 sm:p-4"><ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} stageScoped={Boolean(activePlan)} closed={data.status === "closed"} /></div>
           </details>
 
-          <details hidden={!(["route","documents"] as string[]).includes(activeSection)} id="shipment-operational-details" className="scroll-mt-28 rounded border bg-white" open>
+          <details hidden={!(["route","documents"] as string[]).includes(activeSection)} id="shipment-operational-details" className="scroll-mt-28 rounded border bg-white" open={activeSection==="documents"||legacyOverview}>
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">{activeSection==="documents"?"اسناد و مراجع حمل":"جزئیات اجرای مسیر"}</summary>
             <div className="space-y-5 border-t p-3 sm:p-4">
               <div hidden={activeSection!=="route"} className="grid gap-4 lg:grid-cols-2">

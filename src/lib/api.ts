@@ -1791,6 +1791,59 @@ export interface IranDestinationOption {
   secondary_label: string;
 }
 export interface SelectorPage<T> { items: T[]; meta: { count: number; limit: number } }
+export interface OperationalProjectionTask {
+  key: string;
+  label: string;
+  status: "DONE" | "NOT_APPLICABLE" | "READY" | "IN_PROGRESS" | "NEEDS_ACTION" | "BLOCKED" | "UNKNOWN";
+  section: string;
+  required: boolean;
+}
+export interface OperationalProjectionAction {
+  rank: number;
+  section: string;
+  label: string;
+  reason: string;
+  href: string;
+}
+export interface OperationalProjection {
+  identity: {
+    label: string;
+    source: string;
+    technical_id: string;
+    requested_route: { origin?: string | null; destination?: string | null; shipping_type?: string | null } | null;
+  };
+  overall_state: string;
+  operational_route: OperationalShipmentSummary["route_summary"];
+  stage_progress: {
+    completed: number;
+    total: number;
+    current: { code: string; display_name_fa: string; status: string; required_for_completion: boolean } | null;
+    items: Array<{ code: string; display_name_fa: string; status: string; required_for_completion: boolean }>;
+    can_record: boolean;
+    configured: boolean;
+  };
+  tasks: OperationalProjectionTask[];
+  attention: Array<{ key: string; severity: "BLOCKER" | "WARNING" | "INFO"; label: string; reason: string; section: string }>;
+  recommended_action: OperationalProjectionAction | null;
+  secondary_actions: OperationalProjectionAction[];
+  readiness: { completed: number; total: number; percent: number; blocker_count: number; warning_count: number; closure_ready: boolean };
+  current_operation: {
+    latest_position: { label: unknown; scope: string; reported_at: string; recorded_at: string; route_progress?: unknown } | null;
+    eta: { available: boolean; reason: string | null; message: string | null; earliest: string | null; latest: string | null };
+    latest_update?: OperationalShipmentSummary["latest_update"];
+  };
+  priority: { band: "BLOCKED" | "WARNING" | "NORMAL"; score: number };
+  meta: {
+    projection_version: string;
+    calculated_at: string;
+    source_updated_at: string;
+    lag_seconds: number | null;
+    freshness: string;
+    rebuild: string;
+    sources: string[];
+    limitations: string[];
+  };
+}
 export interface OperationalShipmentSummary {
   scope?: "current_route";
   recent_events_scope?: "current_route";
@@ -1878,6 +1931,7 @@ export interface OperationalShipmentSummary {
     version: number;
   }>;
   audit_summary: Array<{ id: number; action: string; recorded_at: string }>;
+  operational_projection?: OperationalProjection;
 }
 
 export interface OperationalWorkItem {
@@ -1919,6 +1973,7 @@ export interface OperationalWorkspaceShipment {
     commitments: OperationalSlaCommitment[];
   } | null;
   updated_at?: string;
+  operational_projection?: OperationalProjection;
 }
 
 export interface OperationalWorkspaceSnapshot {
@@ -1960,6 +2015,8 @@ export interface OperationalWorkspaceSnapshot {
   meta: {
     active_shipment_count: number;
     open_follow_up_count: number | null;
+    ready_now_count?: number;
+    needs_attention_count?: number;
     attention_available: boolean;
     attention_projection?: {
       state: string;
@@ -2072,6 +2129,12 @@ export function getOperationalShipment(
   return request(
     `/api/operational-shipments/${encodeURIComponent(publicId)}`,
   );
+}
+
+export function getOperationalProjection(
+  shipmentPublicId: string,
+): Promise<{ data: OperationalProjection }> {
+  return request(`/api/operational-shipments/${shipmentPublicId}/operational-projection`);
 }
 
 export type ExternalReferenceTypeCode = "BILL_OF_LADING_NUMBER" | "AIR_WAYBILL_NUMBER" | "CMR_NUMBER";

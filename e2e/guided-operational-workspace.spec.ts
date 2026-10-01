@@ -1,0 +1,171 @@
+import fs from "node:fs";
+import path from "node:path";
+import { expect, test, type Page } from "@playwright/test";
+
+const databaseUrl = process.env.E2E_DATABASE_URL;
+const expertPassword = process.env.FORWARDER_E2E_PASSWORD;
+const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
+const evidencePath = process.env.OPERATIONAL_WORKSPACE_EVIDENCE_PATH;
+if (!databaseUrl || !expertPassword || !fixturePath || !evidencePath) {
+  throw new Error("Guided Operational Workspace E2E requires owned runtime inputs.");
+}
+if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_workspace_phase1_")) {
+  throw new Error("Guided workspace proof is restricted to its owned loopback database.");
+}
+
+const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8")) as {
+  usernames: { owner: string; admin: string };
+  active_shipment_public_id: string;
+};
+
+type BrowserEvidence = {
+  consoleErrors: string[];
+  pageErrors: string[];
+  failedRequests: string[];
+  unexpectedResponses: string[];
+};
+
+function observe(page: Page): BrowserEvidence {
+  const evidence: BrowserEvidence = { consoleErrors: [], pageErrors: [], failedRequests: [], unexpectedResponses: [] };
+  page.on("console", message => {
+    if (message.type() === "error" && !message.text().includes("favicon")) evidence.consoleErrors.push(message.text());
+  });
+  page.on("pageerror", error => evidence.pageErrors.push(error.message));
+  page.on("requestfailed", request => evidence.failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText || ""}`));
+  page.on("response", response => {
+    if (response.url().includes("/api/") && response.status() >= 400) {
+      evidence.unexpectedResponses.push(`${response.status()} ${response.request().method()} ${response.url()}`);
+    }
+  });
+  return evidence;
+}
+
+function expectClean(evidence: BrowserEvidence) {
+  expect(evidence.consoleErrors, "browser console errors").toEqual([]);
+  expect(evidence.pageErrors, "uncaught browser errors").toEqual([]);
+  expect(evidence.failedRequests, "failed browser requests").toEqual([]);
+  expect(evidence.unexpectedResponses, "unexpected API responses").toEqual([]);
+}
+
+async function loginExpert(page: Page, username: string, expectedLanding: RegExp) {
+  await page.context().clearCookies();
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: /ورود/ }).first().click();
+  await page.getByLabel("نام کاربری").fill(username);
+  await page.getByLabel("رمز عبور").fill(expertPassword!);
+  await page.getByRole("dialog").getByRole("button", { name: "ورود", exact: true }).click();
+  await expect(page).toHaveURL(expectedLanding);
+}
+
+async function screenshot(page: Page, name: string) {
+  await page.screenshot({ path: path.join(evidencePath!, name), fullPage: true });
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const geometry = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+}
+
+test.describe.serial("Guided Operational Workspace read-only browser proof", () => {
+  test("expert home starts with a priority and exception queue", async ({ page }) => {
+    const evidence = observe(page);
+    await loginExpert(page, fixture.usernames.owner, /\/operations$/);
+    await page.goto("/expert");
+    await expect(page.getByRole("heading", { name: "امروز چه چیزی باید جلو برود؟" })).toBeVisible();
+    await expect(page.getByText("صف عملیاتی من", { exact: true })).toBeVisible();
+    await expect(page.getByText("نیازمند توجه", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("OW-OPERATIONAL-001", { exact: true }).first()).toBeVisible();
+    await screenshot(page, "guided-expert-home-priority.png");
+    await expectNoHorizontalOverflow(page);
+    expectClean(evidence);
+  });
+
+  test("shipment list is an actionable priority queue on desktop and mobile", async ({ page }) => {
+    const evidence = observe(page);
+    await loginExpert(page, fixture.usernames.owner, /\/operations$/);
+    const listResponsePromise = page.waitForResponse(response =>
+      response.request().method() === "GET" && response.url().includes("/api/operational-shipments?"),
+    );
+    await page.goto("/operations/shipments");
+    const listResponse = await listResponsePromise;
+    expect(listResponse.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "محموله‌ها بر اساس اولویت اقدام" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "فیلتر صف عملیاتی" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /مشاهده محموله عملیاتی مشتری عملیاتی آزمایشی/ })).toHaveCount(1, { timeout: 30_000 });
+    await expect(page.getByText("مرحله و پیشرفت", { exact: true })).toBeVisible();
+    await expect(page.getByText("مهم‌ترین موضوع", { exact: true })).toBeVisible();
+    await expect(page.getByText("اقدام بعدی", { exact: true })).toBeVisible();
+    await screenshot(page, "guided-shipment-priority-queue-desktop.png");
+    await expectNoHorizontalOverflow(page);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileListResponsePromise = page.waitForResponse(response =>
+      response.request().method() === "GET" && response.url().includes("/api/operational-shipments?"),
+    );
+    await page.reload();
+    expect((await mobileListResponsePromise).status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "محموله‌ها بر اساس اولویت اقدام" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /مشاهده محموله عملیاتی مشتری عملیاتی آزمایشی/ })).toHaveCount(1, { timeout: 30_000 });
+    await expectNoHorizontalOverflow(page);
+    await screenshot(page, "guided-shipment-priority-queue-mobile.png");
+    expectClean(evidence);
+  });
+
+  test("five-second summary separates process progress from task readiness", async ({ page }) => {
+    const evidence = observe(page);
+    await loginExpert(page, fixture.usernames.owner, /\/operations$/);
+    const token = await page.evaluate(() => localStorage.getItem("expert_token"));
+    const projection = await page.request.get(
+      `/api/operational-shipments/${fixture.active_shipment_public_id}/operational-projection`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    expect(projection.status()).toBe(200);
+    const projectionBody = (await projection.json()).data;
+    expect(projectionBody.meta.freshness).toBe("ON_REQUEST");
+    expect(projectionBody.meta.rebuild).toContain("no backfill");
+    expect(projectionBody.recommended_action).toBeTruthy();
+    expect(projectionBody.secondary_actions.length).toBeLessThanOrEqual(3);
+
+    await page.goto(`/operations/shipments/${fixture.active_shipment_public_id}/summary`);
+    await expect(page.getByRole("heading", { name: "OW-OPERATIONAL-001" })).toBeVisible();
+    await expect(page.getByText("بهترین اقدام بعدی", { exact: true })).toBeVisible();
+    await expect(page.getByRole("progressbar", { name: "پیشرفت مراحل عملیاتی" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "آمادگی کارها" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "رفتن به اقدام" })).toHaveCount(1);
+    await expect(page.getByText("آخرین موقعیت", { exact: true })).toBeVisible();
+    await expect(page.getByText("ETA نهایی", { exact: true })).toBeVisible();
+    await screenshot(page, "guided-shipment-five-second-summary.png");
+    await expectNoHorizontalOverflow(page);
+    expectClean(evidence);
+  });
+
+  test("route, closure, and organization admin hierarchy remain distinct and read-only", async ({ page }) => {
+    const evidence = observe(page);
+    await loginExpert(page, fixture.usernames.owner, /\/operations$/);
+    await page.goto(`/operations/shipments/${fixture.active_shipment_public_id}/route`);
+    await expect(page.getByRole("heading", { name: "مسیر و اجرای عملیاتی" })).toBeVisible();
+    await expect(page.getByText("اقدام اصلی", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText("زمان مرجع و مبنای برنامه", { exact: true })).toBeVisible();
+
+    await page.goto(`/operations/shipments/${fixture.active_shipment_public_id}/closure`);
+    await expect(page.getByRole("heading", { name: "بررسی بستن پرونده" })).toBeVisible();
+    await expect(page.getByText(/آماده بستن|هنوز آماده بستن نیست/).first()).toBeVisible();
+    await expect(page.getByRole("progressbar", { name: "پیشرفت آمادگی بستن" })).toBeVisible();
+    await screenshot(page, "guided-closure-readiness.png");
+
+    await loginExpert(page, fixture.usernames.admin, /\/admin$/);
+    await expect(page.getByText("نمای کلی و گزارش", { exact: true })).toBeVisible();
+    await expect(page.getByText("افراد، دسترسی و تخصیص کار", { exact: true })).toBeVisible();
+    await expect(page.getByText("قواعد عملیات سازمان", { exact: true })).toBeVisible();
+    await expect(page.getByText("داده و شبکه سازمان", { exact: true })).toBeVisible();
+    await expect(page.getByText("حاکمیت سراسری پلتفرم", { exact: true })).toHaveCount(0);
+    await screenshot(page, "guided-admin-semantic-ia.png");
+    await expectNoHorizontalOverflow(page);
+    expectClean(evidence);
+  });
+});

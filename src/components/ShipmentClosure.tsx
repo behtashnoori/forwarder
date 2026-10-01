@@ -60,6 +60,11 @@ export default function ShipmentClosure({shipment, reload}: {shipment:string; re
     catch(caught){setError(caught instanceof ApiError&&caught.status===409?"اطلاعات تغییر کرده است؛ بررسی تازه را بخوانید و دوباره تصمیم بگیرید.":"ثبت بستن ممکن نشد؛ مجوز و اطلاعات پرونده را بررسی کنید.");await load();}
     finally{setBusy(false);}
   };
+  const currentItems=view ? [...view.assessment.items,...view.assessment.missing.filter(item=>!view.assessment.items.some(existing=>existing.code===item.code))] : [];
+  const blockers=currentItems.filter(item=>item.mandatory&&item.state!=="PASS");
+  const warnings=currentItems.filter(item=>!item.mandatory&&item.state!=="PASS");
+  const completed=currentItems.filter(item=>item.state==="PASS");
+  const completionPercent=currentItems.length?Math.round(completed.length*100/currentItems.length):0;
   return <section aria-label="بررسی بستن پرونده" className="space-y-4 rounded-2xl border bg-white p-4 sm:p-5">
     <div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">بررسی بستن پرونده</h2><Button variant="outline" disabled={busy} onClick={()=>{setError("");void load();}}>بررسی دوباره</Button></div>
     {error&&<p role="alert" className="text-red-700">{error}</p>}
@@ -70,12 +75,21 @@ export default function ShipmentClosure({shipment, reload}: {shipment:string; re
       <p className="text-sm text-slate-600">اصلاح سابقه، ثبت دیرهنگام واقعیت‌های قبلی و تکمیل اسناد مجاز است. عملیات تازه مجاز نیست. سابقهٔ تصمیم بستن ثابت می‌ماند.</p>
       <details><summary className="cursor-pointer font-semibold">الزامات و کمبودهای هنگام بستن</summary><div className="mt-3 space-y-3"><ClosureItems items={[...view.decision.assessment.items,...view.decision.missing_items.filter(item=>!view.decision?.assessment.items.some(existing=>existing.code===item.code))]}/></div></details>
     </div>:view&&<>
+      <div className={`rounded-2xl border p-4 sm:p-5 ${view.assessment.normal_ready?"border-emerald-300 bg-emerald-50":"border-amber-300 bg-amber-50"}`}>
+        <p className="text-xs font-bold">نتیجه بررسی جاری</p>
+        <h3 className={`mt-1 text-2xl font-black ${view.assessment.normal_ready?"text-emerald-900":"text-amber-950"}`}>{view.assessment.normal_ready?"آماده بستن عادی":"هنوز آماده بستن نیست"}</h3>
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/70" role="progressbar" aria-label="پیشرفت آمادگی بستن" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPercent}><div className={`h-full rounded-full ${view.assessment.normal_ready?"bg-emerald-700":"bg-amber-700"}`} style={{width:`${completionPercent}%`}}/></div>
+        <p className="mt-2 text-sm">{completed.length} از {currentItems.length} معیار کامل · {blockers.length} مسدودکننده · {warnings.length} هشدار</p>
+        {view.assessment.lifecycle_status!=="completed"&&<p className="mt-2 text-sm font-semibold">بستن فقط پس از تکمیل پرونده ممکن است.</p>}
+      </div>
       {view.assessment.message&&<p className="rounded-xl bg-amber-50 p-3">{view.assessment.message}؛ مدیر سازمان باید قواعد را تعریف کند.</p>}
       {view.assessment.policy&&<p className="text-sm text-slate-600">نسخه قواعد: {view.assessment.policy.version} · بررسی در {when(view.assessment.assessed_at)}</p>}
-      <ClosureItems items={[...view.assessment.items,...view.assessment.missing.filter(item=>!view.assessment.items.some(existing=>existing.code===item.code))]}/>
-      {view.assessment.lifecycle_status!=="completed"?<p>بستن فقط پس از تکمیل پرونده ممکن است.</p>:view.assessment.policy&&<div className="flex flex-wrap gap-3">
-        {view.can_close&&<Button disabled={busy||!view.assessment.normal_ready} onClick={()=>setConfirm("NORMAL")}>بستن پرونده</Button>}
-        {view.can_close_exceptionally&&<Button variant="outline" disabled={busy} onClick={()=>setConfirm("EXCEPTIONAL")}>بستن با استثنای مدیر</Button>}
+      {!!blockers.length&&<section aria-labelledby="closure-blockers-heading" className="space-y-2"><h3 id="closure-blockers-heading" className="font-bold text-amber-950">پیش از بستن باید حل شود</h3><ClosureItems items={blockers}/></section>}
+      {!!warnings.length&&<section aria-labelledby="closure-warnings-heading" className="space-y-2"><h3 id="closure-warnings-heading" className="font-bold">هشدارهای غیرمسدودکننده</h3><ClosureItems items={warnings}/></section>}
+      {!!completed.length&&<details className="rounded-xl border bg-slate-50 p-3"><summary className="cursor-pointer font-semibold">موارد کامل‌شده ({completed.length})</summary><div className="mt-3"><ClosureItems items={completed}/></div></details>}
+      {view.assessment.lifecycle_status==="completed"&&view.assessment.policy&&<div className="space-y-3">
+        {view.can_close&&<Button className="min-h-12 w-full sm:w-auto" disabled={busy||!view.assessment.normal_ready} onClick={()=>setConfirm("NORMAL")}>بستن پرونده</Button>}
+        {view.can_close_exceptionally&&<details open className="rounded-xl border border-amber-200 bg-amber-50 p-3"><summary className="cursor-pointer text-sm font-semibold text-amber-950">اختیار استثنایی مدیر</summary><p className="mt-2 text-sm text-amber-900">این مسیر کمبودها را نادیده نمی‌گیرد؛ آن‌ها در تصمیم ثابت بستن حفظ می‌شوند.</p><Button className="mt-3" variant="outline" disabled={busy} onClick={()=>setConfirm("EXCEPTIONAL")}>بستن با استثنای مدیر</Button></details>}
       </div>}
       {confirm&&<div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4" role="group" aria-label="تأیید بستن">
         <p>پس از بستن، بازگشایی و عملیات تازه ممکن نیست. کمبودهای فعلی در سابقهٔ تصمیم حفظ می‌شوند.</p>

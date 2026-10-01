@@ -47,6 +47,7 @@ import { useI18n } from "@/i18n";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
 import { getRequestTransportMethod } from "@/lib/transportPresentation";
+import OperationalPriorityOverview from "@/components/OperationalPriorityOverview";
 
 type ShipmentRequest = ExpertRequest;
 type KPI = KPIs;
@@ -384,6 +385,8 @@ const ExpertConsole = () => {
             </div>
           </div>
         </section>
+
+        <OperationalPriorityOverview />
 
         {kpis && (
           <section>

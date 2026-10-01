@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timezone
-from sqlalchemy import exists, or_, select
+from sqlalchemy import case, exists, or_, select
 
 from backend.auth import get_current_user
 from backend.extensions import db
@@ -22,6 +22,7 @@ from backend.services import operational_service as service
 from backend.services import operational_action_service as actions
 from backend.services import organization_sla_service as organization_sla
 from backend.services import operational_workspace_service as workspace
+from backend.services import operational_projection_service as guided_projection
 from backend.services import route_orchestration_service as routes
 from backend.services import transport_execution_service as transport_executions
 from backend.services import external_reference_service as external_references
@@ -241,6 +242,15 @@ def operational_workspace():
         return _error(exc)
 
 
+@operations_bp.get("/api/operational-shipments/<uuid:shipment_id>/operational-projection")
+@require_auth
+def operational_projection(shipment_id):
+    try:
+        return jsonify({"data": guided_projection.read(str(shipment_id), _user())})
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
 @operations_bp.get("/api/organization-sla-rules")
 @require_auth
 def organization_sla_rules():
@@ -441,6 +451,7 @@ def list_shipments():
     try:
         user = _user()
         service.require_permission(user, "operational_shipment.read")
+        permissions = set(service.operational_context(user)["permissions"])
         org = service.organization_for_user(user["id"])
         page = max(1, request.args.get("page", 1, type=int))
         per_page = min(100, max(1, request.args.get("per_page", 20, type=int)))
@@ -499,38 +510,65 @@ def list_shipments():
                 OperationalShipment.accepted_quote_id
                 == request.args.get("accepted_quote_id", type=int)
             )
-        query = query.join(
-            RoutePlan,
-            (RoutePlan.operational_shipment_id == OperationalShipment.id)
-            & RoutePlan.is_active.is_(True),
-        ).join(RouteLeg, RouteLeg.route_plan_id == RoutePlan.id)
+        active_legs = (
+            select(RouteLeg.id)
+            .join(RoutePlan, RoutePlan.id == RouteLeg.route_plan_id)
+            .where(
+                RoutePlan.operational_shipment_id == OperationalShipment.id,
+                RoutePlan.is_active.is_(True),
+            )
+            .correlate(OperationalShipment)
+        )
         if request.args.get("origin"):
             query = query.where(
-                RouteLeg.origin_snapshot["display_name"].as_string().ilike(
-                    f"%{request.args['origin'].strip()}%"
-                )
+                exists(active_legs.where(
+                    RouteLeg.origin_snapshot["display_name"].as_string().ilike(
+                        f"%{request.args['origin'].strip()}%"
+                    )
+                ))
             )
         if request.args.get("destination"):
             query = query.where(
-                RouteLeg.destination_snapshot["display_name"].as_string().ilike(
-                    f"%{request.args['destination'].strip()}%"
-                )
+                exists(active_legs.where(
+                    RouteLeg.destination_snapshot["display_name"].as_string().ilike(
+                        f"%{request.args['destination'].strip()}%"
+                    )
+                ))
             )
         if request.args.get("overdue") in {"true", "false"}:
             overdue = exists(
-                select(Milestone.id).where(
-                    Milestone.route_leg_id == RouteLeg.id,
+                select(Milestone.id)
+                .join(RouteLeg, RouteLeg.id == Milestone.route_leg_id)
+                .join(RoutePlan, RoutePlan.id == RouteLeg.route_plan_id)
+                .where(
+                    RoutePlan.operational_shipment_id == OperationalShipment.id,
+                    RoutePlan.is_active.is_(True),
                     Milestone.verification_state != "verified",
                     Milestone.planned_at < datetime.now(timezone.utc),
                 )
+                .correlate(OperationalShipment)
             )
             query = query.where(
                 overdue if request.args["overdue"] == "true" else ~overdue
             )
-        query = query.distinct()
+        critical_work = exists(select(OperationalWorkItem.id).where(
+            OperationalWorkItem.operational_shipment_id == OperationalShipment.id,
+            OperationalWorkItem.status == "open",
+            OperationalWorkItem.severity == "critical",
+        ))
+        any_work = exists(select(OperationalWorkItem.id).where(
+            OperationalWorkItem.operational_shipment_id == OperationalShipment.id,
+            OperationalWorkItem.status == "open",
+        ))
+        priority_order = (
+            case((critical_work, 0), (any_work, 1), else_=2)
+            if "work_item.read" in permissions
+            else OperationalShipment.updated_at.asc()
+        )
         rows = db.session.scalars(
             query.order_by(
-                OperationalShipment.created_at.desc(),
+                priority_order,
+                OperationalShipment.updated_at.asc(),
                 OperationalShipment.public_id.asc(),
             )
             .offset((page - 1) * per_page)
@@ -539,7 +577,15 @@ def list_shipments():
         has_more = len(rows) > per_page
         return jsonify(
             {
-                "data": [service.shipment_graph(row) for row in rows[:per_page]],
+                "data": [
+                    {
+                        **(graph := service.shipment_graph(row)),
+                        "operational_projection": guided_projection.build(
+                            row, user, graph=graph, include_current_operation=False
+                        ),
+                    }
+                    for row in rows[:per_page]
+                ],
                 "meta": {"page": page, "per_page": per_page, "has_more": has_more},
             }
         )
@@ -551,13 +597,10 @@ def list_shipments():
 @require_auth
 def shipment_detail(shipment_id: int):
     try:
-        return jsonify(
-            {
-                "data": service.shipment_graph(
-                    service.scoped_shipment(shipment_id, _user())
-                )
-            }
-        )
+        shipment = service.scoped_shipment(shipment_id, _user())
+        # Keep the governed legacy detail envelope exact. Guided workspace data
+        # is an additive read surface exposed by /operational-projection.
+        return jsonify({"data": service.shipment_graph(shipment)})
     except service.OperationalError as exc:
         return _error(exc)
 

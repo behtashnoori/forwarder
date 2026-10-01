@@ -103,6 +103,7 @@ def _permissions() -> list[str]:
         "checkpoint.verify",
         "route_exception.read",
         "route_exception.manage",
+        "execution_unit.read",
         "document_readiness.read",
         "oip.read",
         "personal_dashboard.read",

@@ -32,12 +32,15 @@ export async function openShipmentSection(
   section: ShipmentWorkspaceSection,
   expectedShipmentId?: string,
 ) {
-  await expect(page.getByRole("heading", { name: "خلاصه محموله", exact: true })).toBeVisible();
+  const semanticHeading = page.locator("#shipment-overview h1");
+  await expect(semanticHeading).toBeVisible();
+  await expect(semanticHeading).not.toHaveText("");
   const current = new URL(page.url());
   const match = current.pathname.match(/^\/operations\/shipments\/([^/]+)(?:\/[^/]+)?$/);
   expect(match, "qualified Shipment workspace URL").not.toBeNull();
   const shipmentId = decodeURIComponent(match![1]);
   if (expectedShipmentId) expect(shipmentId).toBe(expectedShipmentId);
+  if (expectedShipmentId) await expect(semanticHeading).not.toHaveText(expectedShipmentId);
 
   const navigation = page.getByRole("navigation", { name: "بخش‌های پرونده حمل" });
   const link = navigation.getByRole("link", { name: labels[section], exact: true });
@@ -45,5 +48,5 @@ export async function openShipmentSection(
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/operations/shipments/${escapeRegExp(shipmentId)}/${section}(?:[?#]|$)`));
   await expect(link).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("heading", { name: "خلاصه محموله", exact: true })).toBeVisible();
+  await expect(semanticHeading).toBeVisible();
 }

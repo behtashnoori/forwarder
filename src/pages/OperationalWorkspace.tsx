@@ -112,7 +112,7 @@ export default function OperationalWorkspace() {
 
         {!loading && data && meta && (
           <>
-            <section aria-label="تصویر امروز" className="grid gap-3 sm:grid-cols-3">
+            <section aria-label="تصویر امروز" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardContent className="flex items-center gap-3 p-5">
                   <PackageSearch className="h-8 w-8 text-blue-700" />
@@ -128,7 +128,13 @@ export default function OperationalWorkspace() {
               <Card>
                 <CardContent className="flex items-center gap-3 p-5">
                   <Clock3 className="h-8 w-8 text-emerald-700" />
-                  <div><p className="text-sm text-slate-500">به‌روزرسانی‌های اخیر قابل مشاهده</p><strong className="text-2xl">{data.recent_updates.length}</strong></div>
+                  <div><p className="text-sm text-slate-500">اقدام روشن و مجاز</p><strong className="text-2xl">{meta.ready_now_count ?? "—"}</strong></div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex items-center gap-3 p-5">
+                  <AlertTriangle className="h-8 w-8 text-rose-700" />
+                  <div><p className="text-sm text-slate-500">محموله نیازمند توجه</p><strong className="text-2xl">{meta.needs_attention_count ?? "—"}</strong></div>
                 </CardContent>
               </Card>
             </section>
@@ -181,11 +187,14 @@ export default function OperationalWorkspace() {
                     <Link key={shipment.public_id} to={`/operations/shipments/${shipment.public_id}`} aria-label={`مشاهده محموله ${customerName(shipment)}`}>
                       <Card className="h-full transition-colors hover:border-blue-300">
                         <CardContent className="space-y-3 p-5">
-                          <div className="flex items-start justify-between gap-3"><strong>{customerName(shipment)}</strong><span className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-800">{businessLabel(shipment.status)}</span></div>
-                          <p className="break-all text-xs text-slate-500">شناسه: <bdi dir="ltr">{shipment.public_id}</bdi></p>
+                          <div className="flex items-start justify-between gap-3"><strong>{shipment.operational_projection?.identity.label || customerName(shipment)}</strong><span className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-800">{businessLabel(shipment.status)}</span></div>
+                          <p className="text-xs text-slate-500">{customerName(shipment)}</p>
+                          <details className="text-xs text-slate-400"><summary>شناسه فنی</summary><bdi className="break-all" dir="ltr">{shipment.public_id}</bdi></details>
                           <p className="flex items-center gap-2 text-sm"><RouteIcon className="h-4 w-4 shrink-0" />{routeLabel(shipment, direction)}</p>
                           <p className="text-sm text-slate-600">کارشناس مسئول ثابت: {shipment.responsible_expert?.display_name || "نامعلوم"}</p>
                           <p className="text-sm text-slate-600">زمینه جاری: {shipment.current_milestone ? businessLabel(shipment.current_milestone) : "ثبت نشده"}</p>
+                          {shipment.operational_projection?.attention[0] && <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900"><b>{shipment.operational_projection.attention[0].label}</b><span className="mt-1 block text-xs">{shipment.operational_projection.attention[0].reason}</span></p>}
+                          {shipment.operational_projection?.recommended_action && <p className="text-sm font-bold text-blue-800">اقدام بعدی: {shipment.operational_projection.recommended_action.label}</p>}
                           <p className="text-sm text-slate-600">آخرین به‌روزرسانی: {shipment.latest_update ? `${shipment.latest_update.label} · ${formatDualCalendarInstant(shipment.latest_update.recorded_at, locale, { fallback: "نامعلوم" })}` : "رویدادی ثبت نشده است"}</p>
                           {shipment.sla && <p className={`w-fit rounded-full px-2 py-1 text-xs ${slaTone[shipment.sla.status] || "bg-slate-100 text-slate-700"}`}>{shipment.sla.status_label}</p>}
                         </CardContent>

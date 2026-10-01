@@ -299,69 +299,12 @@ const AdminPanel = () => {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-1 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-4 [&>button]:min-h-12 [&>button]:whitespace-normal">
-            <TabsTrigger
-              value="dashboard"
-              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
-            >
-              <BarChart3 className="h-4 w-4" />
-              {t("admin.dashboard")}
-            </TabsTrigger>
-            {isOrganizationAdmin && <TabsTrigger value="unassigned" className="gap-2 rounded-2xl py-3">
-              <AlertCircle className="h-4 w-4" />درخواست‌های تخصیص‌نیافته
-            </TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger
-              value="reports"
-              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              {t("admin.reports")}
-            </TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger
-              value="users"
-              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
-            >
-              <Users className="h-4 w-4" />
-              {t("admin.userManagement")}
-            </TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger
-              value="referral-rules"
-              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
-            >
-              <Scale className="h-4 w-4" />
-              {t("admin.referralRules")}
-            </TabsTrigger>}
-            {isPlatformAdmin && <TabsTrigger
-              value="site-settings"
-              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
-            >
-              <Settings className="h-4 w-4" />
-              {t("admin.siteSettings")}
-            </TabsTrigger>}
-            {isPlatformAdmin && <TabsTrigger
-              value="locations"
-              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
-            >
-              <MapPin className="h-4 w-4" />
-              مبدا و مقصد
-            </TabsTrigger>}
-            {isPlatformAdmin && <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>}
-            {isPlatformAdmin && <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>کاتالوگ اسناد</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="organization-documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>الزامات مستندات سازمان</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="organization-sla" className="gap-2 rounded-2xl py-3"><Clock className="h-4 w-4"/>SLA سازمان</TabsTrigger>}
-            {canManageCustomers && <Button type="button" variant="ghost" className="gap-2 rounded-2xl py-3" onClick={() => navigate("/customers")}><Users className="h-4 w-4"/>مشتریان</Button>}
-            {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف استاندارد سیستم</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="customer-access" className="gap-2 rounded-2xl py-3"><Users className="h-4 w-4"/>دسترسی حساب مشتری</TabsTrigger>}
-            {isOrganizationAdmin && <Button type="button" variant="ghost" className="gap-2 rounded-2xl py-3" onClick={() => navigate("/admin/customer-portal-accounts")}><KeyRound className="h-4 w-4"/>پشتیبانی حساب‌های پرتال</Button>}
-            {isOrganizationAdmin && <TabsTrigger value="organization-reference-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف قابل استفاده سازمان</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="closure-policy" className="rounded-2xl py-3">قواعد بستن پرونده</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="shipment-stages" className="rounded-2xl py-3">مراحل محموله</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="organization-route-times" className="gap-2 rounded-2xl py-3"><Clock className="h-4 w-4"/>زمان مرجع مسیر</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی سازمان</TabsTrigger>}
-            {isPlatformAdmin && <TabsTrigger value="global-logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه مرجع لجستیکی</TabsTrigger>}
-            {isPlatformAdmin && <TabsTrigger value="logistics-point-types" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>انواع مکان لجستیکی</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="operational-reasons" className="gap-2 rounded-2xl py-3">دلایل عملیاتی</TabsTrigger>}
+          <TabsList aria-label="حوزه‌های مدیریت" className="grid h-auto gap-3 rounded-[1.75rem] border border-slate-200 bg-white p-3 shadow-sm lg:grid-cols-2">
+            <section className="rounded-2xl bg-slate-50 p-3"><h2 className="px-2 pb-2 text-sm font-bold text-slate-900">نمای کلی و گزارش</h2><div className="grid w-full grid-cols-1 gap-1 sm:grid-cols-2 [&>button]:min-h-11 [&>button]:whitespace-normal"><TabsTrigger value="dashboard" className="gap-2 rounded-xl"><BarChart3 className="h-4 w-4"/>{t("admin.dashboard")}</TabsTrigger>{isOrganizationAdmin&&<TabsTrigger value="reports" className="gap-2 rounded-xl"><FileSpreadsheet className="h-4 w-4"/>{t("admin.reports")}</TabsTrigger>}</div></section>
+            {isOrganizationAdmin&&<section className="rounded-2xl bg-slate-50 p-3"><h2 className="px-2 pb-2 text-sm font-bold text-slate-900">افراد، دسترسی و تخصیص کار</h2><div className="grid w-full grid-cols-1 gap-1 sm:grid-cols-2 [&>button]:min-h-11 [&>button]:whitespace-normal"><TabsTrigger value="unassigned" className="gap-2 rounded-xl"><AlertCircle className="h-4 w-4"/>درخواست‌های تخصیص‌نیافته</TabsTrigger><TabsTrigger value="users" className="gap-2 rounded-xl"><Users className="h-4 w-4"/>{t("admin.userManagement")}</TabsTrigger><TabsTrigger value="referral-rules" className="gap-2 rounded-xl"><Scale className="h-4 w-4"/>{t("admin.referralRules")}</TabsTrigger><TabsTrigger value="customer-access" className="gap-2 rounded-xl"><Users className="h-4 w-4"/>دسترسی حساب مشتری</TabsTrigger>{canManageCustomers&&<Button type="button" variant="ghost" className="min-h-11 gap-2 rounded-xl" onClick={()=>navigate("/customers")}><Users className="h-4 w-4"/>مشتریان</Button>}<Button type="button" variant="ghost" className="min-h-11 gap-2 rounded-xl" onClick={()=>navigate("/admin/customer-portal-accounts")}><KeyRound className="h-4 w-4"/>پشتیبانی حساب‌های پرتال</Button></div></section>}
+            {isOrganizationAdmin&&<section className="rounded-2xl bg-blue-50/70 p-3"><h2 className="px-2 pb-2 text-sm font-bold text-blue-950">قواعد عملیات سازمان</h2><div className="grid w-full grid-cols-1 gap-1 sm:grid-cols-2 [&>button]:min-h-11 [&>button]:whitespace-normal">{isOrganizationAdmin && <TabsTrigger value="organization-documents" className="gap-2 rounded-xl"><Files className="h-4 w-4"/>الزامات مستندات</TabsTrigger>}<TabsTrigger value="organization-sla" className="gap-2 rounded-xl"><Clock className="h-4 w-4"/>SLA سازمان</TabsTrigger><TabsTrigger value="closure-policy" className="rounded-xl">قواعد بستن پرونده</TabsTrigger><TabsTrigger value="shipment-stages" className="rounded-xl">مراحل محموله</TabsTrigger><TabsTrigger value="organization-route-times" className="gap-2 rounded-xl"><Clock className="h-4 w-4"/>زمان مرجع مسیر</TabsTrigger><TabsTrigger value="operational-reasons" className="rounded-xl">دلایل عملیاتی</TabsTrigger></div></section>}
+            {isOrganizationAdmin&&<section className="rounded-2xl bg-slate-50 p-3"><h2 className="px-2 pb-2 text-sm font-bold text-slate-900">داده و شبکه سازمان</h2><div className="grid w-full grid-cols-1 gap-1 sm:grid-cols-2 [&>button]:min-h-11 [&>button]:whitespace-normal"><TabsTrigger value="organization-reference-catalog" className="gap-2 rounded-xl"><Package className="h-4 w-4"/>تعاریف قابل استفاده سازمان</TabsTrigger><TabsTrigger value="cargo-catalog" className="gap-2 rounded-xl"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger><TabsTrigger value="logistics-network" className="gap-2 rounded-xl"><MapPin className="h-4 w-4"/>شبکه لجستیکی سازمان</TabsTrigger></div></section>}
+            {isPlatformAdmin&&<section className="rounded-2xl border border-violet-200 bg-violet-50 p-3 lg:col-span-2"><h2 className="px-2 pb-1 text-sm font-bold text-violet-950">حاکمیت سراسری پلتفرم</h2><p className="px-2 pb-2 text-xs text-violet-800">این تنظیمات بر داده مرجع و رفتار مشترک سیستم اثر می‌گذارند، نه فقط سازمان جاری.</p><div className="grid w-full grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-4 [&>button]:min-h-11 [&>button]:whitespace-normal"><TabsTrigger value="site-settings" className="gap-2 rounded-xl"><Settings className="h-4 w-4"/>{t("admin.siteSettings")}</TabsTrigger><TabsTrigger value="locations" className="gap-2 rounded-xl"><MapPin className="h-4 w-4"/>مبدأ و مقصد مرجع</TabsTrigger><TabsTrigger value="tracking-locations" className="rounded-xl">نقاط ردیابی مرجع</TabsTrigger>{isPlatformAdmin && <TabsTrigger value="documents" className="gap-2 rounded-xl"><Files className="h-4 w-4"/>کاتالوگ اسناد سراسری</TabsTrigger>}<TabsTrigger value="master-data" className="gap-2 rounded-xl"><Package className="h-4 w-4"/>تعاریف استاندارد سیستم</TabsTrigger>{isPlatformAdmin && <TabsTrigger value="global-logistics-network" className="gap-2 rounded-xl"><MapPin className="h-4 w-4"/>شبکه مرجع لجستیکی</TabsTrigger>}<TabsTrigger value="logistics-point-types" className="gap-2 rounded-xl"><MapPin className="h-4 w-4"/>انواع مکان لجستیکی</TabsTrigger></div></section>}
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">

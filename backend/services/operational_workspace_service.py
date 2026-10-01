@@ -369,6 +369,7 @@ def snapshot(user: dict, limit=8) -> dict:
 
     graph_cache: dict[int, dict] = {}
     sla_cache: dict[int, dict] = {}
+    card_cache: dict[int, dict] = {}
     allowed_sla_sources = set()
     if "operational_execution.read" in permissions:
         allowed_sla_sources.add("OperationalException")
@@ -381,17 +382,30 @@ def snapshot(user: dict, limit=8) -> dict:
         return graph_cache[shipment.id]
 
     def card(shipment: OperationalShipment) -> dict:
+        if shipment.id in card_cache:
+            return card_cache[shipment.id]
         if shipment.id not in sla_cache:
             sla_cache[shipment.id] = shipment_status(
                 shipment, allowed_source_types=allowed_sla_sources
             )
-        return _shipment_card(
+        value = _shipment_card(
             graph(shipment),
             include_follow_up_count="work_item.read" in permissions,
             sla=sla_cache[shipment.id],
         )
+        from backend.services import operational_projection_service as guided_projection
+        value["operational_projection"] = guided_projection.build(
+            shipment, user, graph=graph(shipment), include_current_operation=False
+        )
+        card_cache[shipment.id] = value
+        return value
 
     shipments = [card(row) for row in active_rows]
+    shipments.sort(key=lambda row: (
+        -row["operational_projection"]["priority"]["score"],
+        row.get("updated_at") or "",
+        row["public_id"],
+    ))
     attention = []
     included_work_item_ids = set()
     if attention_available:
@@ -491,6 +505,14 @@ def snapshot(user: dict, limit=8) -> dict:
         "meta": {
             "active_shipment_count": active_count,
             "open_follow_up_count": attention_count,
+            "ready_now_count": sum(
+                1 for row in shipments
+                if row["operational_projection"]["recommended_action"] is not None
+            ),
+            "needs_attention_count": sum(
+                1 for row in shipments
+                if row["operational_projection"]["readiness"]["blocker_count"] > 0
+            ),
             "attention_available": attention_available,
             "attention_projection": _projection_health(context["organization_id"]),
             "calculated_at": operational_read_service.iso(utcnow()),
