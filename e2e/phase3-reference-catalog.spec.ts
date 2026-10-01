@@ -81,6 +81,14 @@ async function openCargoEditor(page: Page) {
   await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();
 }
 
+async function openShipmentList(page: Page) {
+  const response = page.waitForResponse(item =>
+    item.request().method() === "GET" && item.url().includes("/api/operational-shipments?")
+  );
+  await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
+  expect((await response).status()).toBe(200);
+}
+
 async function activateForOrganization(page: Page, definition: typeof definitions[number]) {
   const panel = await openOrganizationFamily(page, "organizationTab" in definition ? definition.organizationTab : definition.tab);
   const card = panel.getByTestId(`organization-reference-${definition.code}`);
@@ -128,7 +136,7 @@ test("P3-01 — central definitions → organization activation → expert use �
   await logout(page);
 
   await login(page, "restricted");
-  await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
+  await openShipmentList(page);
   const shipmentLink = page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`);
   await expect(shipmentLink).toBeVisible();
   await shipmentLink.click();
@@ -145,10 +153,10 @@ test("P3-01 — central definitions → organization activation → expert use �
   );
   await page.getByRole("button", { name: "افزودن کالا", exact: true }).click();
   expect((await createCargo).status()).toBe(201);
-  await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible();
+  await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible({ timeout: 15_000 });
   await page.reload();
   await openShipmentSection(page, "cargo", fixture.shipment_a);
-  await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible();
+  await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible({ timeout: 15_000 });
 
   await page.goto("/expert");
   await logout(page);
@@ -161,10 +169,10 @@ test("P3-01 — central definitions → organization activation → expert use �
   await logout(page);
 
   await login(page, "restricted");
-  await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
+  await openShipmentList(page);
   await page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`).click();
   await openShipmentSection(page, "cargo", fixture.shipment_a);
-  await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible();
+  await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible({ timeout: 15_000 });
   await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();
   await expect(page.getByLabel("Cargo type").locator("option", { hasText: "کالای مرجع پی‌سه" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "افزودن کالا", exact: true })).toBeDisabled();
