@@ -17,8 +17,8 @@ def classification(event):
 
 
 def business_label(event):
-    return {"VERIFICATION_DECISION": "Verified", "CORRECTION": "Corrected", "PHYSICAL_OCCURRENCE": "Reported"}.get(
-        classification(event), "Route prepared" if event.event_type == "INITIALIZED" else "Lifecycle changed")
+    return {"VERIFICATION_DECISION": "وقوع تأیید شد", "CORRECTION": "گزارش اصلاح شد", "PHYSICAL_OCCURRENCE": "وقوع گزارش شد"}.get(
+        classification(event), "مسیر آماده شد" if event.event_type == "INITIALIZED" else "وضعیت مرحله تغییر کرد")
 
 
 def iso(value):
@@ -154,9 +154,9 @@ def event_view(event, shipment):
         "diagnostics": {"raw_event_type": event.event_type}, **scope(plan)}
 
 
-def history(shipment, page=1, per_page=50, user=None):
+def history(shipment, page=1, per_page=50, user=None, category=None):
     from backend.services.unified_shipment_history import history as unified_history
-    return unified_history(shipment, page, per_page, user)
+    return unified_history(shipment, page, per_page, user, category=category)
 
 
 def plan_has_execution(plan):

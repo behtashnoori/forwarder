@@ -18,7 +18,12 @@ from backend.operational_models import OperationalMembership, OperationalShipmen
 from backend.services import closure_service, delivery_service, shipment_stage_service, unified_shipment_history
 from backend.services.operational_service import OperationalError
 from backend.shipment_stage_models import CANONICAL_STAGE_CODES, ShipmentOperationalStageEvent
-from backend.tests.test_phase3_transport_execution_postgresql import _seed_runtime
+from backend.tests.test_phase3_transport_execution_postgresql import _seed_runtime, _create_payload
+from backend.services import transport_execution_service as executions, cargo_allocation_service as allocations, reported_fact_service as reports
+from backend.services import route_orchestration_service as routes
+from backend.services import document_context_service as contexts
+from backend.models import CaseDocumentFile
+from backend.operational_models import OperationalAudit, RouteLeg
 
 
 URL = os.environ.get("ORG_SHIPMENT_STAGES_POSTGRES_URL", "")
@@ -41,7 +46,7 @@ def test_postgresql18_migration_guards_and_exact_closure_contract():
     with app.app_context():
         ctx = _seed_runtime(app)
         owner_membership = OperationalMembership.query.filter_by(user_id=ctx["owner"]).one()
-        owner_membership.permissions = [*owner_membership.permissions, "operational_shipment.create"]
+        owner_membership.permissions = [*owner_membership.permissions, "operational_shipment.create", "route_plan.create", "route_leg.manage", "operational_action.create"]
         shipment = OperationalShipment.query.filter_by(public_id=ctx["shipment"]).one()
         admin = ExpertUser(
             username="org-stage-pg-admin", password_hash="unused", full_name="Stage Admin",
@@ -108,6 +113,14 @@ def test_postgresql18_migration_guards_and_exact_closure_contract():
         )
         db.session.commit()
 
+        execution, _ = executions.create(ctx["shipment"],ctx["plan"],ctx["leg"],_create_payload(ctx,"HW-HISTORY"),owner_user,"hw-execution")
+        db.session.commit()
+        for dimension, quantity in (("PLANNED","100"),("ACTUAL","95")):
+            allocations.set_allocation(ctx["shipment"],ctx["cargo"],execution.public_id,{"dimension":dimension,"quantity":quantity,"expected_version":0},owner_user,f"hw-{dimension}")
+            db.session.commit()
+        reports.create(ctx["shipment"],owner_user,{"scope":"EXECUTION_UNIT","target_public_id":execution.execution_unit.public_id,"kind":"LOCATION","source":"DRIVER_REPORT","occurred_at":utcnow().isoformat(),"location":{"location_text":"نزدیک مرز"},"impacted_cargo_public_ids":[ctx["cargo"]]},"hw-position")
+        db.session.commit()
+
         delivery, created = delivery_service.create(
             ctx["shipment"], owner_user,
             {
@@ -155,6 +168,9 @@ def test_postgresql18_migration_guards_and_exact_closure_contract():
             db.session.commit()
         db.session.rollback()
 
+        # Synthetic route-completion precondition; stage/delivery/allocation/report/closure use real commands.
+        db.session.get(RouteLeg,ctx["leg"]).status = "completed"
+        execution.execution_unit.lifecycle_status = "completed"
         shipment.lifecycle_status = "completed"
         db.session.commit()
         assessment = closure_service.assess(shipment)
@@ -177,6 +193,38 @@ def test_postgresql18_migration_guards_and_exact_closure_contract():
         history = unified_shipment_history.history(shipment, per_page=100, user=owner_user)
         assert len([item for item in history["items"] if item["category"] == "OPERATIONAL_STAGE"]) == 10
         assert any(item["category"] == "CLOSURE" for item in history["items"])
+        assert {"SHIPMENT","ROUTE","EXECUTION","CARGO","TRACKING","OPERATIONAL_STAGE","DELIVERY","CLOSURE"} <= {item["category"] for item in history["items"]}
+        assert next(item for item in history["items"] if item["category"]=="CLOSURE")["source_entity_id"] == decision.public_id
+        # Closure can be outside the first unfiltered page: filter/count before pagination.
+        for index in range(105):
+            db.session.add(OperationalAudit(organization_id=shipment.organization_id,actor_user_id=ctx["owner"],action="historical.note",entity_type="OperationalShipment",entity_id=shipment.id,recorded_at=utcnow()+timedelta(seconds=index+1)))
+        db.session.commit()
+        assert not any(item["category"]=="CLOSURE" for item in unified_shipment_history.history(shipment,per_page=50,user=owner_user)["items"])
+        closure_page=unified_shipment_history.history(shipment,per_page=1,user=owner_user,category="CLOSURE")
+        assert closure_page["total"]==1 and not closure_page["has_more"]
+        assert closure_page["items"][0]["business_label"]=="پرونده بسته شد"
+        for category in {item["category"] for item in history["items"]}:
+            page=unified_shipment_history.history(shipment,per_page=100,user=owner_user,category=category)
+            assert all(item["category"]==category for item in page["items"])
+        frozen=decision.assessment
+        for command_call in (
+            lambda: routes.create_plan(ctx["shipment"],{},owner_user),
+            lambda: routes.add_leg(ctx["shipment"],ctx["plan"],{},owner_user),
+            lambda: executions.create(ctx["shipment"],ctx["plan"],ctx["leg"],{},owner_user,"deny-new-execution"),
+            lambda: reports.create(ctx["shipment"],owner_user,{"scope":"SHIPMENT","target_public_id":None,"kind":"LOCATION","source":"DRIVER_REPORT","occurred_at":(utcnow()+timedelta(days=1)).isoformat(),"location":{"location_text":"new after closure"}},"deny-new-report"),
+        ):
+            with pytest.raises(OperationalError) as denied: command_call()
+            assert denied.value.code in {"SHIPMENT_CLOSED","POST_CLOSURE_PRIOR_FACT_REQUIRED"}, denied.value.code
+            db.session.rollback()
+        # Explicitly authorized historical document repair survives closure and retains frozen decision.
+        document=CaseDocumentFile(owner_type="SHIPMENT",operational_shipment_id=shipment.id,operational_organization_id=shipment.organization_id,is_miscellaneous=True,custom_title="Historical document",original_filename="history.pdf",safe_download_filename="history.pdf",storage_key="owned/hw/history.pdf",canonical_extension="pdf",detected_mime_type="application/pdf",file_size_bytes=20,sha256_hash="0"*64,version_number=1,uploaded_by=ctx["owner"])
+        db.session.add(document);db.session.flush()
+        context=contexts.attach(shipment,document,ctx["owner"],contexts.prepare(shipment,"SHIPMENT",shipment.public_id,"INTERNAL",[]))
+        db.session.commit()
+        contexts.revise(shipment,document,ctx["owner"],context_type="CARGO",target_public_id=ctx["cargo"],expected_version=context.version,reason="اصلاح سند تاریخی")
+        db.session.commit()
+        assert len(contexts.history(shipment,document))==2
+        assert decision.assessment==frozen and shipment.lifecycle_status=="closed"
         with pytest.raises(OperationalError):
             shipment_stage_service.read(ctx["shipment"], {"id": ctx["outsider"], "role": "expert"})
 

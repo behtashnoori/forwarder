@@ -43,4 +43,13 @@ describe("OperationalGuidance", () => {
     expect(screen.getByText("اقدام مجازی پیشنهاد نمی‌شود")).toBeInTheDocument();
     expect(screen.queryByRole("link", {name:"رفتن به اقدام"})).not.toBeInTheDocument();
   });
+  it("shows closed information completeness without an operational primary action",()=>{
+    render(<MemoryRouter><OperationalGuidance projection={projection} closed/></MemoryRouter>);
+    expect(screen.getAllByText("کامل بودن اطلاعات").length).toBeGreaterThan(0);
+    expect(screen.getByText("هشدارهای اطلاعاتی باقی‌مانده")).toBeInTheDocument();
+    expect(screen.queryByRole("link",{name:"رفتن به اقدام"})).not.toBeInTheDocument();
+    expect(screen.queryByText("آمادگی پرونده",{exact:true})).not.toBeInTheDocument();
+    expect(screen.getByText("اطلاعات باقی‌مانده")).toBeInTheDocument();
+  });
+
 });

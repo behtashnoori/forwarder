@@ -1,7 +1,8 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import OperationsNav from "@/components/OperationsNav";
-import { InternationalLocationSelector } from "@/components/InternationalLocationSelector";
+import CanonicalLocationPicker, { type CanonicalEndpointRef } from "@/components/CanonicalLocationPicker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,39 +11,30 @@ import {
   ApiError,
   createDirectOperationalShipment,
   createQuoteOperationalShipment,
-  fetchCountries,
-  fetchProvinces,
   getOperationalContext,
   getShipmentCargoOptions,
   listLogisticsPoints,
   listProjectLogisticsPoints,
   searchAcceptedOperationalQuotes,
-  searchIranDestinations,
   searchOperationalCustomers,
   searchOperationalProjects,
-  type Country,
-  type InternationalCity,
-  type IranDestinationOption,
   type OperationalCustomerSelector,
   type OperationalLocationRef,
   type OperationalProjectSelector,
   type OperationalQuoteSelector,
-  type Province,
   type ShipmentCargoOptions,
   type LogisticsPointView,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import { localDateTimeInputToUtc } from "@/lib/localDateTime";
 import { formatUnitSymbol } from "@/lib/formatQuantity";
 
 type Source = "direct" | "accepted_quote";
 type Side = {
-  kind: "domestic" | "international";
   locationMode: "facility" | "geography";
-  countryId: string;
-  provinceId: string;
-  cityId: string;
-  iranId: string;
   logisticsPointId: string;
+  canonical: CanonicalEndpointRef | null;
+  adding: boolean;
 };
 type FieldError =
   | "customer"
@@ -56,15 +48,7 @@ type FieldError =
   | "cargoSource"
   | "cargoQuantity"
   | "cargoUom";
-const initialSide: Side = {
-  kind: "domestic",
-  locationMode: "facility",
-  countryId: "",
-  provinceId: "",
-  cityId: "",
-  iranId: "",
-  logisticsPointId: "",
-};
+const initialSide: Side = {locationMode:"facility",logisticsPointId:"",canonical:null,adding:false};
 const backendMessages: Record<string, string> = {
   VALIDATION_FAILED: "فیلدهای الزامی را بررسی کنید.",
   INVALID_OPERATION_SOURCE: "منبع انتخاب‌شده برای ایجاد عملیات معتبر نیست.",
@@ -207,7 +191,7 @@ function SearchSelect<T>({
 }
 
 export default function NewOperation() {
-  const { t, direction, businessLabel } = useI18n();
+  const { t, direction, businessLabel, transportLabel } = useI18n();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const requestedSource = params.get("source");
@@ -223,17 +207,6 @@ export default function NewOperation() {
   const [customerId, setCustomerId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [quoteId, setQuoteId] = useState(params.get("accepted_quote_id") || "");
-  const [provinces, setProvinces] = useState<Province[]>([]);
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [countryQuery, setCountryQuery] = useState({
-    origin: "",
-    destination: "",
-  });
-  const [originCities, setOriginCities] = useState<InternationalCity[]>([]);
-  const [destinationCities, setDestinationCities] = useState<
-    InternationalCity[]
-  >([]);
-  const [iran, setIran] = useState<IranDestinationOption[]>([]);
   const [logisticsPoints, setLogisticsPoints] = useState<LogisticsPointView[]>(
     [],
   );
@@ -273,17 +246,6 @@ export default function NewOperation() {
       permission === "operational_shipment.create_from_quote" ||
       permission === "operational_shipment.create",
   );
-  const iranCountry = useMemo(
-    () => countries.find((country) => country.code === "IR"),
-    [countries],
-  );
-  const isIran = (side: Side) =>
-    side.kind === "international" &&
-    side.countryId === String(iranCountry?.id || "");
-  const selectedIranDestination = iran.find(
-    (option) =>
-      `${option.identity.type}:${option.identity.id}` === destination.iranId,
-  );
   const selectedCargo = cargoOptions.catalog.find(
     (option) => option.public_id === cargoCatalogId,
   );
@@ -303,15 +265,6 @@ export default function NewOperation() {
     getOperationalContext()
       .then((response) => setPermissions(response.data.permissions))
       .catch((caught) => setError(errorText(caught)));
-    Promise.all([fetchProvinces(), fetchCountries()])
-      .then(([provinceRows, countryRows]) => {
-        setProvinces(provinceRows);
-        setCountries(countryRows);
-      })
-      .catch((caught) => setError(errorText(caught)));
-    searchIranDestinations()
-      .then((response) => setIran(response.data))
-      .catch((caught) => setSelectorError(errorText(caught)));
     listLogisticsPoints({ active: "true", per_page: 100 })
       .then((response) =>
         setLogisticsPoints(response.items.filter((point) => point.is_active)),
@@ -334,13 +287,13 @@ export default function NewOperation() {
           ? items[0].public_id
           : "",
     );
-  }, [source, selectedQuote?.id]);
+  }, [source, selectedQuote?.id, selectedQuote?.cargo_items]);
   useEffect(() => {
     if (source !== "accepted_quote") return;
     setCargoQuantity(selectedRequestCargo?.quantity || "");
     setCargoUomId(selectedRequestCargo?.uom_public_id || "");
     setCargoCatalogId("");
-  }, [source, selectedRequestCargo?.public_id]);
+  }, [source, selectedRequestCargo?.public_id, selectedRequestCargo?.quantity, selectedRequestCargo?.uom_public_id]);
   const loadCustomers = async (query = "") => {
     setLoading("customer");
     setSelectorError("");
@@ -386,17 +339,6 @@ export default function NewOperation() {
       setLoading("");
     }
   };
-  const loadIran = async (query = "") => {
-    setLoading("iran");
-    setSelectorError("");
-    try {
-      setIran((await searchIranDestinations(query)).data);
-    } catch (caught) {
-      setSelectorError(errorText(caught));
-    } finally {
-      setLoading("");
-    }
-  };
   useEffect(() => {
     if (canDirect) void loadCustomers();
     if (canQuote) void loadQuotes(params.get("request_ref") || "");
@@ -430,49 +372,9 @@ export default function NewOperation() {
     [logisticsPoints, preferredPointIds],
   );
 
-  const countryChange = (sideName: "origin" | "destination", id: string) => {
-    const setter = sideName === "origin" ? setOrigin : setDestination;
-    setter((side) => ({
-      ...side,
-      countryId: id,
-      provinceId: "",
-      cityId: "",
-      iranId: "",
-    }));
-    if (sideName === "origin") setOriginCities([]);
-    else setDestinationCities([]);
-    if (id === String(iranCountry?.id) && sideName === "destination")
-      void loadIran();
-  };
-  const location = (side: Side): OperationalLocationRef | null => {
-    if (side.locationMode === "facility" && side.logisticsPointId)
-      return {
-        source_type: "logistics_point",
-        source_id: side.logisticsPointId,
-      };
-    const selected = iran.find(
-      (option) =>
-        `${option.identity.type}:${option.identity.id}` === side.iranId,
-    );
-    if (selected)
-      return {
-        source_type:
-          selected.identity.type === "port"
-            ? "iran_port"
-            : selected.identity.type === "customs"
-              ? "customs_office"
-              : selected.identity.type,
-        source_id: selected.identity.id,
-      };
-    if (side.kind === "domestic" || (isIran(side) && side.provinceId))
-      return side.provinceId
-        ? { source_type: "province", source_id: Number(side.provinceId) }
-        : null;
-    if (isIran(side)) return null;
-    return side.cityId
-      ? { source_type: "international_city", source_id: Number(side.cityId) }
-      : null;
-  };
+  const location = (side: Side): OperationalLocationRef | null =>
+    (side.canonical ? {source_type:side.canonical.source_type,source_id:side.canonical.source_id} : null) || (side.locationMode === "facility" && side.logisticsPointId
+      ? {source_type:"logistics_point",source_id:side.logisticsPointId} : null);
   const validate = () => {
     const next: Partial<Record<FieldError, string>> = {};
     if (source === "direct" && !customerId)
@@ -490,23 +392,20 @@ export default function NewOperation() {
       next.cargoSource =
         "این قلم درخواست هنوز مقدار، واحد و نوع کالای کامل برای برنامه‌ریزی عملیاتی ندارد.";
     if (!location(origin))
-      next.origin =
-        isIran(origin) && !origin.provinceId
-          ? t("operations.validation.iranProvince")
-          : t("operations.validation.origin");
+      next.origin = t("operations.validation.origin");
     if (!location(destination))
       next.destination = t("operations.validation.destination");
-    if (!departure) next.departure = t("operations.validation.departure");
-    if (!arrival) next.arrival = t("operations.validation.arrival");
+    if (!localDateTimeInputToUtc(departure)) next.departure = t("operations.validation.departure");
+    if (!localDateTimeInputToUtc(arrival)) next.arrival = t("operations.validation.arrival");
     if (departure && arrival && new Date(arrival) <= new Date(departure))
       next.timeline = t("operations.validation.timeline");
     if (
       (selectedCargo || selectedRequestCargo) &&
       (!cargoQuantity || Number(cargoQuantity) <= 0)
     )
-      next.cargoQuantity = "Enter a positive cargo quantity.";
+      next.cargoQuantity = "مقدار مثبت کالا را وارد کنید.";
     if ((selectedCargo || selectedRequestCargo) && !cargoUomId)
-      next.cargoUom = "Select a unit of measure.";
+      next.cargoUom = "واحد اندازه‌گیری را انتخاب کنید.";
     setFieldErrors(next);
     return next;
   };
@@ -604,295 +503,29 @@ export default function NewOperation() {
     }
   };
 
-  const sideFields = (
-    sideName: "origin" | "destination",
-    side: Side,
-    setter: (side: Side) => void,
-    cities: InternationalCity[],
-  ) => {
-    const label =
-      sideName === "origin"
-        ? t("operations.origin")
-        : t("operations.destination");
-    const sideError = fieldErrors[sideName];
-    return (
-      <fieldset className="min-w-0 space-y-3 rounded border p-3">
-        <legend className="font-semibold">
-          <RequiredLabel required>{label}</RequiredLabel>
-        </legend>
-        <Label htmlFor={`${sideName}-route-type`} className="sr-only">
-          {label} {t("operations.routeType")}
-        </Label>
-        <select
-          id={`${sideName}-route-type`}
-          aria-label={`${label} ${t("operations.routeType")}`}
-          className="min-h-11 w-full rounded border px-3"
-          value={side.kind}
-          onChange={(event) =>
-            setter({ ...initialSide, kind: event.target.value as Side["kind"] })
-          }
-        >
-          <option value="domestic">{t("operations.domesticIran")}</option>
-          <option value="international">{t("operations.international")}</option>
-        </select>
-        <Label htmlFor={`${sideName}-location-mode`}>روش تعیین مکان</Label>
-        <select
-          id={`${sideName}-location-mode`}
-          aria-label={`${label} روش تعیین مکان`}
-          className="min-h-11 w-full rounded border px-3"
-          value={side.locationMode}
-          onChange={(event) =>
-            setter({
-              ...initialSide,
-              kind: side.kind,
-              locationMode: event.target.value as Side["locationMode"],
-            })
-          }
-        >
-          <option value="facility">نقطه عملیاتی</option>
-          <option value="geography">فقط موقعیت جغرافیایی</option>
-        </select>
-        {side.locationMode === "facility" ? (
-          <>
-            <Label htmlFor={`${sideName}-logistics-point`}>نقطه عملیاتی</Label>
-            {facilityLoading ? (
-              <p role="status">در حال دریافت نقاط عملیاتی…</p>
-            ) : null}
-            {facilityError ? <p role="alert">{facilityError}</p> : null}
-            <select
-              id={`${sideName}-logistics-point`}
-              aria-label={`${label} operational facility`}
-              className="min-h-11 w-full rounded border px-3"
-              value={side.logisticsPointId}
-              disabled={facilityLoading || Boolean(facilityError)}
-              onChange={(event) =>
-                setter({ ...side, logisticsPointId: event.target.value })
-              }
-            >
-              <option value="">
-                {facilityLoading
-                  ? "در حال دریافت نقاط عملیاتی…"
-                  : facilityError
-                    ? "دریافت نقاط عملیاتی ناموفق بود."
-                    : rankedLogisticsPoints.length
-                      ? t("operations.select")
-                      : "نقطه عملیاتی فعالی برای این سازمان ثبت نشده است."}
-              </option>
-              {rankedLogisticsPoints.map((point) => (
-                <option key={point.public_id} value={point.public_id}>
-                  {preferredPointIds.has(point.public_id) ? "★ " : ""}
-                  {point.fa_name} — {point.point_type.fa_name}
-                </option>
-              ))}
-            </select>
-            {side.logisticsPointId ? (
-              <p role="status">
-                موقعیت جغرافیایی نقطه عملیاتی از داده مرجع سازمان تعیین می‌شود.
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <>
-            {side.kind === "domestic" && sideName === "destination" ? (
-              <SearchSelect
-                id="destination"
-                label={t("operations.iranDestination")}
-                value={side.iranId}
-                onChange={(value) => setter({ ...side, iranId: value })}
-                items={iran}
-                loading={loading === "iran"}
-                error={selectorError}
-                onSearch={loadIran}
-                getId={(option) =>
-                  `${option.identity.type}:${option.identity.id}`
-                }
-                render={(option) => option.label}
-                required
-                fieldError={sideError}
-              />
-            ) : side.kind === "domestic" ? (
-              <>
-                <Label htmlFor={`${sideName}-province`}>
-                  <RequiredLabel required>
-                    {t("operations.province")}
-                  </RequiredLabel>
-                </Label>
-                <select
-                  id={`${sideName}-province`}
-                  aria-label={`${label} ${t("operations.province")}`}
-                  data-field={sideName}
-                  required
-                  aria-required="true"
-                  aria-invalid={!!sideError}
-                  aria-describedby={sideError ? `${sideName}-error` : undefined}
-                  className="min-h-11 w-full rounded border px-3"
-                  value={side.provinceId}
-                  onChange={(event) =>
-                    setter({ ...side, provinceId: event.target.value })
-                  }
-                >
-                  <option value="">{t("operations.select")}</option>
-                  {provinces.map((province) => (
-                    <option key={province.id} value={province.id}>
-                      {province.name}
-                    </option>
-                  ))}
-                </select>
-                <FieldMessage id={`${sideName}-error`} message={sideError} />
-              </>
-            ) : (
-              <>
-                <Label htmlFor={`${sideName}-country`}>
-                  <RequiredLabel required>
-                    {t("operations.country")}
-                  </RequiredLabel>
-                </Label>
-                <Input
-                  aria-label={`${label} country search`}
-                  value={countryQuery[sideName]}
-                  placeholder={
-                    direction === "rtl" ? "جست‌وجوی کشور" : "Search country"
-                  }
-                  onChange={(event) =>
-                    setCountryQuery((value) => ({
-                      ...value,
-                      [sideName]: event.target.value,
-                    }))
-                  }
-                />
-                <select
-                  id={`${sideName}-country`}
-                  aria-label={`${label} ${t("operations.country")}`}
-                  required
-                  aria-required="true"
-                  className="min-h-11 w-full rounded border px-3"
-                  value={side.countryId}
-                  onChange={(event) =>
-                    countryChange(sideName, event.target.value)
-                  }
-                >
-                  <option value="">{t("operations.select")}</option>
-                  {countries
-                    .filter((country) => {
-                      const query = countryQuery[sideName]
-                        .trim()
-                        .toLocaleLowerCase();
-                      return (
-                        !query ||
-                        String(country.id) === side.countryId ||
-                        [country.name, country.name_en, country.code].some(
-                          (value) => value.toLocaleLowerCase().includes(query),
-                        )
-                      );
-                    })
-                    .map((country) => (
-                      <option key={country.id} value={country.id}>
-                        {country.name_en || country.name}
-                      </option>
-                    ))}
-                </select>
-                {isIran(side) ? (
-                  sideName === "origin" ? (
-                    <>
-                      <Label htmlFor="iranProvince">
-                        <RequiredLabel required>
-                          {t("operations.iranOriginProvince")}
-                        </RequiredLabel>
-                      </Label>
-                      <select
-                        id="iranProvince"
-                        aria-label={t("operations.iranOriginProvince")}
-                        data-field="origin"
-                        required
-                        aria-required="true"
-                        aria-invalid={!!sideError}
-                        aria-describedby={
-                          sideError ? "origin-error" : undefined
-                        }
-                        className="min-h-11 w-full rounded border px-3"
-                        value={side.provinceId}
-                        onChange={(event) =>
-                          setter({ ...side, provinceId: event.target.value })
-                        }
-                      >
-                        <option value="">{t("operations.select")}</option>
-                        {provinces.map((province) => (
-                          <option key={province.id} value={province.id}>
-                            {province.name}
-                          </option>
-                        ))}
-                      </select>
-                      <FieldMessage id="origin-error" message={sideError} />
-                      {side.provinceId && (
-                        <p role="status">
-                          {t("operations.derivedProvince")}:{" "}
-                          {
-                            provinces.find(
-                              (province) =>
-                                String(province.id) === side.provinceId,
-                            )?.name
-                          }
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <SearchSelect
-                      id="destination"
-                      label={t("operations.iranDestination")}
-                      value={side.iranId}
-                      onChange={(value) => setter({ ...side, iranId: value })}
-                      items={iran}
-                      loading={loading === "iran"}
-                      error={selectorError}
-                      onSearch={loadIran}
-                      getId={(option) =>
-                        `${option.identity.type}:${option.identity.id}`
-                      }
-                      render={(option) => option.label}
-                      required
-                      fieldError={sideError}
-                    />
-                  )
-                ) : (
-                  <>
-                    <Label htmlFor={`${sideName}-city`}>
-                      <RequiredLabel required>
-                        {t("operations.internationalCity")}
-                      </RequiredLabel>
-                    </Label>
-                    <InternationalLocationSelector
-                      key={`${sideName}-${side.countryId}`}
-                      countryId={side.countryId}
-                      locale={direction === "rtl" ? "fa" : "en"}
-                      side={sideName}
-                      selected={
-                        cities.find(
-                          (city) => String(city.id) === side.cityId,
-                        ) ?? null
-                      }
-                      fieldError={sideError}
-                      onChange={(city) => {
-                        if (sideName === "origin")
-                          setOriginCities(city ? [city] : []);
-                        else setDestinationCities(city ? [city] : []);
-                        setter({
-                          ...side,
-                          cityId: city ? String(city.id) : "",
-                        });
-                      }}
-                    />
-                    <FieldMessage
-                      id={`${sideName}-error`}
-                      message={sideError}
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </fieldset>
-    );
+  const sideFields = (sideName:"origin"|"destination",side:Side,setter:(side:Side)=>void) => {
+    const label=t(`operations.${sideName}`);
+    return <fieldset className="min-w-0 space-y-3 rounded border p-3">
+      <legend className="font-semibold"><RequiredLabel required>{label}</RequiredLabel></legend>
+      <label>روش تعیین مکان<select aria-label={`${label} روش تعیین مکان`} className="min-h-11 w-full rounded border px-3" value={side.locationMode}
+        onChange={e=>setter({...initialSide,locationMode:e.target.value as Side["locationMode"]})}>
+        <option value="facility">مکان سازمان</option><option value="geography">نقطه جغرافیایی معتبر</option>
+      </select></label>
+      {side.locationMode==="facility"&&<>
+        {facilityLoading&&<p role="status">در حال دریافت مکان‌های سازمان…</p>}{facilityError&&<p role="alert">{facilityError}</p>}
+        <label>مکان سازمان<select aria-label={`${label} operational facility`} className="min-h-11 w-full rounded border px-3" value={side.logisticsPointId} disabled={facilityLoading||!!facilityError}
+          onChange={e=>setter({...side,logisticsPointId:e.target.value,canonical:null})}>
+          <option value="">{facilityLoading?t("operations.loading"):facilityError?"دریافت نقاط عملیاتی ناموفق بود.":rankedLogisticsPoints.length?t("operations.select"):"مکان سازمانی ثبت نشده است"}</option>
+          {rankedLogisticsPoints.map(point=><option key={point.public_id} value={point.public_id}>{preferredPointIds.has(point.public_id)?"★ ":""}{point.point_type?.fa_name||"مکان سازمان"} — {point.fa_name}{point.governance_state==="PENDING_REVIEW"?" · در انتظار بررسی":""}</option>)}
+        </select></label>
+        {side.logisticsPointId&&<p role="status">موقعیت جغرافیایی نقطه عملیاتی از داده مرجع سازمان تعیین می‌شود.</p>}
+        <Button type="button" variant="outline" onClick={()=>setter({...side,adding:!side.adding})}>{side.adding?"بستن فرم مکان":"افزودن مکان جدید"}</Button>
+      </>}
+      {(side.locationMode==="geography"||side.adding)&&<CanonicalLocationPicker key={`${sideName}-${side.locationMode}`} label={label} value={side.canonical} allowAdmin1={side.locationMode==="geography"} allowPhysicalPoints={side.locationMode==="geography"}
+        onChange={ref=>setter({...side,canonical:side.locationMode==="facility"&&ref?.source_type!=="logistics_point"?null:ref,logisticsPointId:ref?.source_type==="logistics_point"?String(ref.source_id):""})}
+        onCreated={point=>setLogisticsPoints(rows=>[point,...rows.filter(row=>row.public_id!==point.public_id)])}/>}
+      <FieldMessage id={`${sideName}-error`} message={fieldErrors[sideName]}/>
+    </fieldset>;
   };
 
   if (
@@ -1033,12 +666,11 @@ export default function NewOperation() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
-              {sideFields("origin", origin, setOrigin, originCities)}
+              {sideFields("origin", origin, setOrigin)}
               {sideFields(
                 "destination",
                 destination,
                 setDestination,
-                destinationCities,
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -1065,7 +697,7 @@ export default function NewOperation() {
                     "multimodal_transfer",
                     "customs_handling",
                   ].map((value) => (
-                    <option key={value}>{value}</option>
+                    <option key={value} value={value}>{transportLabel(value)}</option>
                   ))}
                 </select>
               </div>
@@ -1075,7 +707,7 @@ export default function NewOperation() {
                     {t("operations.plannedDeparture")}
                   </RequiredLabel>
                 </Label>
-                <Input
+                <LocalizedDateTimeInput
                   id="departure"
                   aria-label={t("operations.plannedDeparture")}
                   data-field="departure"
@@ -1106,7 +738,7 @@ export default function NewOperation() {
                     {t("operations.plannedArrival")}
                   </RequiredLabel>
                 </Label>
-                <Input
+                <LocalizedDateTimeInput
                   id="arrival"
                   aria-label={t("operations.plannedArrival")}
                   data-field="arrival"
@@ -1363,21 +995,6 @@ export default function NewOperation() {
                 {customers.find(
                   (customer) => String(customer.id) === customerId,
                 )?.label || "—"}
-              </p>
-            )}
-            <p>
-              {t("operations.iranOriginProvince")}:{" "}
-              {isIran(origin)
-                ? provinces.find(
-                    (province) => String(province.id) === origin.provinceId,
-                  )?.name || t("operations.required")
-                : t("operations.notApplicable")}
-            </p>
-            {selectedIranDestination && (
-              <p role="status">
-                {t("operations.derivedProvince")}:{" "}
-                {selectedIranDestination.province?.name ||
-                  selectedIranDestination.secondary_label}
               </p>
             )}
             {selectedCargo && (

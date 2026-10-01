@@ -267,7 +267,11 @@ try {
     $env:CARGO_CONTINUITY_REPAIR_POSTGRES_URL = New-OwnedDatabase "forwarder_cargo_continuity_repair_$($runId.Substring(0, 8))"
     $env:DN10_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_dn10_$($runId.Substring(0, 8))"
     $env:CONTROL_TOWER_DISPOSABLE_POSTGRES_URL = New-OwnedDatabase 'forwarder_control_tower_build'
+    $env:HUMAN_OPEN_FINDINGS_POSTGRES_URL = New-OwnedDatabase "forwarder_human_open_findings_$($runId.Substring(0, 8))"
+    $env:ORG_SHIPMENT_STAGES_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_org_stages_$($runId.Substring(0, 8))"
     $postgresSpecs = @(
+      'backend/tests/test_human_open_findings_postgresql.py',
+      'backend/tests/test_organization_shipment_stages_postgresql.py',
       'backend/tests/test_phase3_reference_catalog_postgresql.py',
       'backend/tests/test_phase3_cargo_lineage_postgresql.py',
       'backend/tests/test_phase3_branched_route_postgresql.py',
@@ -324,7 +328,9 @@ try {
       Invoke-BrowserJourney -Name $journey.Name -DatabaseName $databaseName -Seed $journey.Seed -Specs @($journey.Spec) -RestrictedOwnerRuntime:([bool]$journey.Restricted)
     }
 
-    Invoke-BrowserJourney -Name 'MT3' -DatabaseName "forwarder_mt3_browser_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_mt3_public_tracking_e2e.py' -Specs @('e2e/mt3-public-tracking-security.spec.ts')
+    Invoke-BrowserJourney -Name 'HW-GEO' -DatabaseName "forwarder_integrated_cert_p3_06_documents_hwgeo_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_cargo_delivery_e2e.py' -Specs @('e2e/human-open-findings-geography.spec.ts')
+    Invoke-BrowserJourney -Name 'HW-STAGES' -DatabaseName "forwarder_integrated_cert_p3_06_documents_hwstages_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_organization_shipment_stages_e2e.py' -Specs @('e2e/organization-shipment-stages.spec.ts')
+    Invoke-BrowserJourney -Name 'MT3'  -DatabaseName "forwarder_mt3_browser_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_mt3_public_tracking_e2e.py' -Specs @('e2e/mt3-public-tracking-security.spec.ts')
     Invoke-BrowserJourney -Name 'IPJ01' -DatabaseName 'forwarder_integrated_cert_fixed_shipment_owner_e2e' -Seed 'scripts/uat/seed_fixed_shipment_owner_e2e.py' -Specs @('e2e/fixed-shipment-owner.spec.ts')
     # These suites deliberately mutate Actions and SLA rule versions. Keep each
     # proof on a fresh owned database so one journey cannot precondition another.

@@ -1,3 +1,4 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -533,7 +534,7 @@ export default function CargoAllocationTraceSection({
                     {closed && (
                       <label>
                         زمان واقعیت پیشین
-                        <Input
+                        <LocalizedDateTimeInput
                           aria-label="زمان واقعیت پیشین تخصیص"
                           type="datetime-local"
                           value={occurredAt}

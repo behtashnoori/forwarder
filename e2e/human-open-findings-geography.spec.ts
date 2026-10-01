@@ -1,0 +1,61 @@
+import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
+const password=process.env.FORWARDER_E2E_PASSWORD!;
+const fixture=JSON.parse(readFileSync(process.env.FORWARDER_E2E_FIXTURE_PATH!,"utf8"));
+test.setTimeout(180_000);
+async function login(page:Page,persona:string){
+  await page.goto("/");await page.getByRole("button",{name:"ورود به سامانه"}).first().click();
+  await page.getByLabel("نام کاربری").fill(`shared_transport_e2e_${persona}`);await page.getByLabel("رمز عبور").fill(password);
+  await page.getByRole("dialog").getByRole("button",{name:"ورود",exact:true}).click();await expect(page).not.toHaveURL(/\/$/);
+}
+async function choose(page:Page,label:string,region:string,city:string,name:string){
+  const country=page.getByLabel(`${label} کشور`,{exact:true});
+  await expect(country.locator("option")).toHaveCount(250);
+  await country.selectOption({label:"ایران"});
+  const admin=page.getByLabel(`${label} استان`,{exact:true});
+  await expect(admin.locator(`option[value="${region}"]`)).toBeAttached();await admin.selectOption(region);
+  const cities=page.getByLabel(`${label} شهر`,{exact:true});
+  await expect(cities.locator(`option[value="${city}"]`)).toHaveText(`شهر — ${name}`);
+  await expect(cities.locator(`option[value="${city}"]`)).toHaveCount(1);await cities.selectOption(city);
+}
+test("shared canonical geography and inline Expert location → Admin review at desktop width",async({browser},info)=>{
+  const expert=await browser.newPage({locale:"fa-IR",viewport:{width:1440,height:1000}});
+  const admin=await browser.newPage({locale:"fa-IR",viewport:{width:1440,height:1000}});
+  const errors:string[]=[];
+  for(const page of [expert,admin])page.on("pageerror",error=>errors.push(error.message));
+  await login(expert,"restricted");await expert.goto("/operations/shipments/new?source=direct");
+  await expert.getByLabel("مبدأ روش تعیین مکان").selectOption("geography");
+  await choose(expert,"مبدأ","418862","418863","اصفهان");
+  await expert.getByLabel("مقصد روش تعیین مکان").selectOption("geography");
+  await choose(expert,"مقصد","131222","141681","بندرعباس");
+  await expect(expert.getByLabel("مقصد استان",{exact:true}).locator("option:checked")).toHaveText("استان — هرمزگان");
+  await expect(expert.getByLabel("روش حمل",{exact:true}).locator("option:checked")).not.toHaveText("road");
+  await expect(expert.getByLabel("زمان برنامه‌ریزی‌شده حرکت")).toHaveAttribute("placeholder","سال-ماه-روز ساعت:دقیقه (میلادی)");
+  const picker=expert.getByRole("group",{name:"مبدأ",exact:true});
+  await picker.getByRole("button",{name:"افزودن مکان جدید",exact:true}).click();
+  await picker.getByLabel("نام مکان",{exact:true}).fill("انبار اصفهان آزمون یکپارچه");
+  const created=expert.waitForResponse(response=>response.url().endsWith("/api/internal/logistics-points")&&response.request().method()==="POST");
+  await picker.getByRole("button",{name:"ایجاد و استفاده فوری"}).click();const response=await created;expect(response.status()).toBe(201);
+  const point=(await response.json()).item;
+  expect(point.governance_state).toBe("PENDING_REVIEW");expect(point.city.geoname_id).toBe(418863);
+  await expect(expert.getByLabel("مبدأ مکان سازمان",{exact:true})).toHaveValue(point.public_id);
+  await expert.screenshot({path:info.outputPath("direct-operation-inline-location-desktop.png"),fullPage:true});
+  await login(admin,"admin");await admin.getByRole("tab",{name:"شبکه لجستیکی سازمان",exact:true}).click();
+  const card=admin.locator(`#logistics-point-${point.public_id}`);await expect(card).toContainText("اصفهان");await expect(card).toContainText("در انتظار بررسی");
+  const approved=admin.waitForResponse(response=>response.request().method()==="POST"&&response.url().endsWith("/approve"));
+  await card.getByRole("button",{name:"تأیید",exact:true}).click();expect((await approved).status()).toBe(200);
+  await expect(card).toContainText("تأییدشده");await admin.screenshot({path:info.outputPath("admin-location-review-desktop.png"),fullPage:true});
+  await admin.getByRole("tab",{name:"زمان مرجع مسیر",exact:true}).click();await admin.getByRole("button",{name:"تعریف زمان مرجع تازه"}).click();
+  await choose(admin,"مبدأ مرجع","418862","418863","اصفهان");
+  await expect(admin.getByLabel("مبدأ مرجع مکان سازمان",{exact:true}).locator(`option[value="${point.public_id}"]`)).toContainText(point.fa_name);
+  await choose(admin,"مقصد مرجع","110791","112931","تهران");
+  await admin.screenshot({path:info.outputPath("route-reference-canonical-geography-desktop.png"),fullPage:true});
+  await expert.goto(`/operations/shipments/${fixture.p304_shipment}`);await openShipmentSection(expert,"delivery",fixture.p304_shipment);
+  await expert.getByRole("button",{name:/تحویل تازه برای/}).first().click();
+  await choose(expert,"مقصد تحویل","418862","418863","اصفهان");
+  await expert.getByLabel("مقصد تحویل مکان سازمان",{exact:true}).selectOption(point.public_id);
+  await expert.screenshot({path:info.outputPath("delivery-same-canonical-location-desktop.png"),fullPage:true});
+  expect(errors).toEqual([]);
+  await expert.context().close();await admin.context().close();
+});

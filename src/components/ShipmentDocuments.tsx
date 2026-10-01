@@ -61,11 +61,13 @@ function ContextEditor({
   shipmentPublicId,
   options,
   onSaved,
+  readOnly = false,
 }: {
   row: ShipmentDocument;
   shipmentPublicId: string;
   options: DocumentContextOptions;
   onSaved: () => Promise<void>;
+  readOnly?: boolean;
 }) {
   const current = row.context!;
   const [type, setType] = useState<ShipmentDocumentContext["type"]>(
@@ -108,9 +110,9 @@ function ContextEditor({
   return (
     <details className="mt-3 rounded border p-3 text-sm">
       <summary className="cursor-pointer">
-        اصلاح زمینه یا دسترسی · تاریخچه
+        {readOnly ? "تاریخچه زمینه و دسترسی" : "اصلاح زمینه یا دسترسی · تاریخچه"}
       </summary>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {!readOnly&&<div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label>
           این سند مربوط به چیست؟
           <select
@@ -213,7 +215,7 @@ function ContextEditor({
         >
           ثبت اصلاح با تاریخچه
         </Button>
-      </div>
+      </div>}
       {error && (
         <p role="alert" className="mt-2 text-red-700">
           {error}
@@ -253,8 +255,10 @@ function ContextEditor({
 
 export default function ShipmentDocuments({
   shipmentPublicId,
+  readOnly = false,
 }: {
   shipmentPublicId: string;
+  readOnly?: boolean;
 }) {
   const [rows, setRows] = useState<ShipmentDocument[]>([]);
   const [canManage, setCanManage] = useState(false);
@@ -296,7 +300,7 @@ export default function ShipmentDocuments({
   }, [load]);
 
   const upload = async () => {
-    if (!files.length || !title.trim()) return;
+    if (readOnly || !files.length || !title.trim()) return;
     try {
       setBusy(true);
       setError("");
@@ -374,7 +378,7 @@ export default function ShipmentDocuments({
   return (
     <Card dir="rtl">
       <CardHeader>
-        <CardTitle>اسناد و مدارک حمل</CardTitle>
+        <CardTitle>فایل‌های اسناد</CardTitle>
         <p className="text-sm text-muted-foreground">
           همه اسناد مجاز محموله—چه متعلق به درخواست و چه خود محموله—در این بخش
           یکپارچه نمایش داده می‌شوند. اتصال به شماره مرجع اختیاری است.
@@ -394,8 +398,9 @@ export default function ShipmentDocuments({
             ))}
           </div>
         )}
-        {canManage ? (
+        {!readOnly && canManage ? (
           <div className="grid gap-2 rounded border p-3 sm:grid-cols-2">
+            <p className="sm:col-span-2 rounded bg-blue-50 p-3 text-sm">این بارگذاری، سند مستقل محموله است و به‌تنهایی الزام سندی را تکمیل نمی‌کند. برای تأمین یک الزام مشخص، از همان ردیف در «مدارک مورد نیاز» فایل پرونده درخواست را انتخاب کنید. فایل اطلاع‌رسانی نیز تا زمان ارتباط و بررسی، مدرک تأییدشده محسوب نمی‌شود.</p>
             {!options && (
               <p className="sm:col-span-2 text-sm text-slate-600">
                 گزینه‌های زمینه و دسترسی هنوز آماده نیستند.
@@ -629,7 +634,7 @@ export default function ShipmentDocuments({
                     <Download className="ms-2 h-4 w-4" />
                     دریافت
                   </Button>
-                  {canManage &&
+                  {!readOnly && canManage &&
                     row.owner === "SHIPMENT" &&
                     row.lifecycle_state === "active" && (
                       <>
@@ -666,6 +671,7 @@ export default function ShipmentDocuments({
                   row.lifecycle_state === "active" &&
                   row.context && (
                     <ContextEditor
+                      readOnly={readOnly}
                       key={`${row.public_id}-${row.context.version}`}
                       row={row}
                       shipmentPublicId={shipmentPublicId}

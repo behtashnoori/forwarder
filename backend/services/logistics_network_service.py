@@ -19,7 +19,8 @@ from backend.logistics_network_models import (
     PROJECT_LOGISTICS_ROLES,
 )
 from backend.models import City, Country, Province
-from backend.geonames_geography_catalog import DATASET_ID as GEONAMES_DATASET_ID
+from backend.geonames_geography_catalog import DATASET_ID as GEONAMES_DATASET_ID, COUNTRY_SCOPE
+from backend.services import geography_presentation as geo
 from backend.operational_models import OperationalAudit, Project, utcnow
 from backend.services.operational_service import (
     OperationalError,
@@ -127,10 +128,10 @@ def point_projection(row):
             "fa_name": row.country.name_fa,
             "en_name": row.country.name_en,
         },
-        "province": {"code": row.province.code, "name_fa": row.province.name_fa, "name_en": row.province.name_en, "geoname_id": row.province.geoname_id}
+        "province": {"code": row.province.code, "name_fa": geo.name_fa(row.province), "name_en": row.province.name_en, "geoname_id": row.province.geoname_id}
         if row.province
         else None,
-        "city": {"code": row.city.code, "name_fa": row.city.name_fa, "name_en": row.city.name_en, "geoname_id": row.city.geoname_id}
+        "city": {"code": row.city.code, "name_fa": geo.name_fa(row.city), "name_en": row.city.name_en, "geoname_id": row.city.geoname_id}
         if row.city
         else None,
         "latitude": str(row.latitude) if row.latitude is not None else None,
@@ -588,11 +589,13 @@ def tracking_selector(args, user):
 
 def canonical_countries(args):
     term = str(args.get("q", "")).strip()[:160]
-    q = select(Country).where(Country.code.in_(sorted({"IR", "CN", "KZ", "TM", "UZ", "KG", "TJ", "AF", "PK", "AZ", "AM", "GE", "TR", "RU"})), Country.is_active.is_(True))
+    q = select(Country).where(Country.is_active.is_(True))
     if term:
-        q = q.where(or_(Country.name_fa.ilike(f"%{term}%"), Country.name_en.ilike(f"%{term}%"), Country.code.ilike(f"%{term}%")))
+        q = q.where(or_(*(geo.searchable(field).like(geo.pattern(term), escape="!")
+                         for field in (Country.name_fa, Country.name_en, Country.code))))
     rows = db.session.scalars(q.order_by(Country.name_fa, Country.code)).all()
-    return {"items": [{"id": row.id, "code": row.code, "name_fa": row.name_fa, "name_en": row.name_en} for row in rows]}
+    return {"items": [{"id": row.id, "code": row.code, "name_fa": row.name_fa,
+                       "name_en": row.name_en, "geography_supported": row.code in COUNTRY_SCOPE} for row in rows]}
 
 
 def canonical_admin1(args):
@@ -601,27 +604,40 @@ def canonical_admin1(args):
         raise OperationalError("VALIDATION_FAILED", "country_code is required.")
     term = str(args.get("q", "")).strip()[:160]
     q = select(Province).join(Country).where(
-        Country.code == code, Province.dataset_id == GEONAMES_DATASET_ID, Province.is_active.is_(True)
-    )
+        Country.code == code, Country.is_active.is_(True),
+        Province.dataset_id == GEONAMES_DATASET_ID, Province.is_active.is_(True))
+    rows = db.session.scalars(q.order_by(Province.geoname_id)).all()
+    items = [{"source_id": row.id, "geoname_id": row.geoname_id, "code": row.code,
+              "name_fa": geo.name_fa(row), "name_en": row.name_en} for row in rows]
     if term:
-        q = q.where(or_(Province.name_fa.ilike(f"%{term}%"), Province.name_en.ilike(f"%{term}%"), Province.code.ilike(f"%{term}%")))
-    rows = db.session.scalars(q.order_by(Province.name_fa, Province.geoname_id).limit(200)).all()
-    return {"items": [{"source_id": row.id, "geoname_id": row.geoname_id, "code": row.code, "name_fa": row.name_fa, "name_en": row.name_en} for row in rows]}
+        items = [row for row in items if any(geo.normalize(term) in geo.normalize(row[key] or "")
+                                             for key in ("name_fa", "name_en", "code"))]
+    return {"items": sorted(items, key=lambda row: (row["name_fa"], row["geoname_id"]))}
 
 
 def canonical_cities(args):
     try:
         admin_identity = int(args.get("admin1_geoname_id"))
+        offset = int(args.get("offset", 0))
+        if not 0 <= offset <= 1000000:
+            raise ValueError()
     except (TypeError, ValueError) as exc:
-        raise OperationalError("VALIDATION_FAILED", "admin1_geoname_id is required.") from exc
+        raise OperationalError("VALIDATION_FAILED", "Valid admin1_geoname_id and offset are required.") from exc
     term = str(args.get("q", "")).strip()[:160]
-    q = select(City).join(Province, City.province_id == Province.id).where(
-        Province.geoname_id == admin_identity, City.dataset_id == GEONAMES_DATASET_ID, City.is_active.is_(True)
-    )
+    q = select(City).join(Province, City.province_id == Province.id).join(Country, City.country_id == Country.id).where(
+        Province.geoname_id == admin_identity, Province.dataset_id == GEONAMES_DATASET_ID,
+        Province.is_active.is_(True), Country.is_active.is_(True), City.country_id == Province.country_id,
+        City.dataset_id == GEONAMES_DATASET_ID, City.is_active.is_(True))
     if term:
-        q = q.where(or_(City.name_fa.ilike(f"%{term}%"), City.name_en.ilike(f"%{term}%"), City.code.ilike(f"%{term}%"), cast(City.aliases, Text).ilike(f"%{term}%")))
-    rows = db.session.scalars(q.order_by(City.name_fa, City.geoname_id).limit(200)).all()
-    return {"items": [{"source_id": row.id, "geoname_id": row.geoname_id, "name_fa": row.name_fa, "name_en": row.name_en, "latitude": str(row.latitude), "longitude": str(row.longitude)} for row in rows]}
+        q = q.where(or_(*(geo.searchable(field).like(geo.pattern(term), escape="!")
+                         for field in (City.name_fa, City.name_en, City.code, cast(City.aliases, Text)))))
+        q = q.order_by((geo.searchable(City.name_fa) == geo.normalize(term)).desc(),
+                       (geo.searchable(City.name_en) == geo.normalize(term)).desc())
+    rows = db.session.scalars(q.order_by(City.name_fa, City.geoname_id).offset(offset).limit(201)).all()
+    return {"items": [{"source_id": row.id, "geoname_id": row.geoname_id,
+                        "name_fa": geo.name_fa(row), "name_en": row.name_en,
+                        "latitude": str(row.latitude), "longitude": str(row.longitude)} for row in rows[:200]],
+            "has_more": len(rows) > 200, "offset": offset}
 
 
 def update_point(row, payload, user):

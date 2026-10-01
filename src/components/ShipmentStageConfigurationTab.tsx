@@ -1,3 +1,4 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,7 +60,7 @@ export default function ShipmentStageConfigurationTab() {
       {!data.versions.length && <p className="rounded bg-amber-50 p-3">هنوز نسخه فعالی برای مراحل محموله تعریف نشده است.</p>}
       {!editing && <Button onClick={begin}>تعریف نسخه تازه مراحل</Button>}
       {editing && <div className="space-y-3 rounded-xl border p-4">
-        <label className="block">شروع اعتبار (زمان محلی)<Input type="datetime-local" value={effective} onChange={event => setEffective(event.target.value)} /></label>
+        <label className="block">شروع اعتبار (زمان محلی)<LocalizedDateTimeInput type="datetime-local" value={effective} onChange={event => setEffective(event.target.value)} /></label>
         {draft.map((stage, index) => <article key={stage.code} className="grid gap-3 rounded-xl bg-slate-50 p-3 md:grid-cols-[1fr_auto_auto]">
           <label>نام فارسی<Input value={stage.display_name_fa} maxLength={160} onChange={event => setDraft(old => old.map((row, position) => position === index ? {...row, display_name_fa: event.target.value} : row))}/><small dir="ltr">{stage.code}</small></label>
           <div className="space-y-2"><label className="flex gap-2"><input type="checkbox" checked={stage.active} onChange={event => setDraft(old => old.map((row, position) => position === index ? {...row, active: event.target.checked, required_for_completion: event.target.checked ? row.required_for_completion : false} : row))}/>فعال</label><label className="flex gap-2"><input type="checkbox" disabled={!stage.active} checked={stage.required_for_completion} onChange={event => setDraft(old => old.map((row, position) => position === index ? {...row, required_for_completion: event.target.checked} : row))}/>الزامی برای تکمیل</label></div>

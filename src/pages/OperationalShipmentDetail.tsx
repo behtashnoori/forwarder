@@ -106,6 +106,8 @@ export default function OperationalShipmentDetail() {
   const [draftPlan, setDraftPlan] = useState<RoutePlanDetail>();
   const [routePlansLoaded, setRoutePlansLoaded] = useState(false);
   const [cargoTraceOpen, setCargoTraceOpen] = useState(false);
+  const [documentRepair,setDocumentRepair]=useState(false);
+  useEffect(()=>setDocumentRepair(false),[routeShipmentPublicId]);
   const [referenceTimesOpen, setReferenceTimesOpen] = useState(false);
   const [etaOpen, setEtaOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
@@ -222,6 +224,7 @@ export default function OperationalShipmentDetail() {
   };
 
   if (!data && !error) return <p className="p-8" role="status">{t("operations.loading")}</p>;
+  const documentReadOnly = data?.status === "closed" && !documentRepair;
   const openExceptions = exceptions.filter((item) => item.status === "open");
   const routeSummary = displayedLegs.length
     ? `${displayedLegs[0].origin.display_name || "مبدأ ثبت‌نشده"} ← ${displayedLegs.at(-1)?.destination.display_name || "مقصد ثبت‌نشده"}`
@@ -238,7 +241,7 @@ export default function OperationalShipmentDetail() {
     transportLabel,
     direction,
   );
-  const actionableLeg = displayedLegs.find((leg) => !["blocked", "cancelled", "completed"].includes(leg.status) && (
+  const actionableLeg = displayedLegs.find((leg) => "status" in leg && !["blocked", "cancelled", "completed"].includes(leg.status) && (
     (!leg.actual_departure && leg.departure_milestone_id) ||
     (leg.actual_departure && !leg.actual_arrival && leg.arrival_milestone_id)
   ));
@@ -279,7 +282,7 @@ export default function OperationalShipmentDetail() {
               ].map(([section, label]) => <Link key={section} to={`/operations/shipments/${shipmentPublicId}/${section}`} aria-current={activeSection===section?"page":undefined} className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${activeSection===section?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-100"}`}>{label}</Link>)}
             </div>
           </nav>
-          {(activeSection === "summary" || legacyOverview) && data.operational_projection && <OperationalGuidance projection={data.operational_projection} locale={locale} />}
+          {(activeSection === "summary" || legacyOverview) && data.operational_projection && <OperationalGuidance projection={data.operational_projection} locale={locale} closed={data.status === "closed"} />}
           <section hidden={activeSection!=="stages"} className="scroll-mt-28"><ShipmentOperationalStages shipmentId={shipmentPublicId}/></section>
           <section hidden={activeSection!=="route"} id="shipment-next-action" aria-labelledby="next-action-heading" className="scroll-mt-28 space-y-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5">
             <div><p className="text-xs font-semibold text-blue-700">اقدام جاری</p><h2 id="next-action-heading" className="text-xl font-bold">{data.status === "closed" ? "اصلاح و تکمیل سوابق" : "اقدامات مجاز بعدی"}</h2><p className="mt-1 text-sm text-slate-600">اقدامات این بخش فقط بر پایه وضعیت و مجوزهای ثبت‌شده در سامانه نمایش داده می‌شوند.</p></div>
@@ -337,9 +340,10 @@ export default function OperationalShipmentDetail() {
           {activeSection==="route" && data.source.type !== "direct" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <section aria-labelledby="project-execution-heading" className="space-y-3"><h2 id="project-execution-heading" className="text-xl font-bold">اجرای پروژه</h2><OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} closed={data.status === "closed"} /></section>}
 
           <section hidden={activeSection!=="documents"} aria-labelledby="documents-heading" className="space-y-3">
-            <div><p className="text-xs font-semibold text-slate-500">اسناد و شواهد</p><h2 id="documents-heading" className="text-xl font-bold">مدارک و مراجع حمل</h2><p className="mt-1 text-sm text-slate-600">فایل‌ها، شماره‌های مرجع و آمادگی اسناد مستقل از یکدیگر و در یک فضای عملیاتی قابل دسترس‌اند.</p></div>
-            {data.source.type !== "direct" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
-            <div className="grid items-start gap-4 xl:grid-cols-2"><ShipmentDocuments shipmentPublicId={data.public_id}/><ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id}/></div>
+            <div><p className="text-xs font-semibold text-slate-500">اسناد و شواهد</p><h2 id="documents-heading" className="text-xl font-bold">اسناد محموله</h2><p className="mt-1 text-sm text-slate-600">ابتدا مدارک مورد نیاز و کسری‌ها، سپس فایل‌های موجود را بررسی کنید. شماره‌های حمل در بخش جداگانه پایین قرار دارند.</p></div>
+            {data.status === "closed"&&<div className="rounded border bg-slate-50 p-3"><p>پرونده بسته شده است؛ نمایش اسناد فقط خواندنی است. اصلاح سوابق، تصمیم بستن یا عملیات انجام‌شده را تغییر نمی‌دهد.</p><Button variant="outline" className="mt-2" onClick={()=>setDocumentRepair(value=>!value)}>{documentRepair?"بازگشت به نمایش فقط خواندنی":"اصلاح سوابق اسناد"}</Button>{documentRepair&&<p className="mt-2 text-sm text-amber-800">فقط تکمیل یا اصلاح اسناد تاریخی با مجوز فعلی؛ عملیات تازه مجاز نیست.</p>}</div>}
+            {data.source.type !== "direct" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection readOnly={documentReadOnly} shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
+            <ShipmentDocuments shipmentPublicId={data.public_id} readOnly={documentReadOnly}/><details className="rounded border bg-white"><summary className="cursor-pointer p-4 font-semibold">شماره‌ها و مراجع حمل</summary><ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id} readOnly={documentReadOnly}/></details>
           </section>
 
           <details hidden={activeSection!=="route"} className="rounded-xl border bg-white"><summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات مالی محموله</summary><div className="border-t p-3 sm:p-4">{/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}</div></details>

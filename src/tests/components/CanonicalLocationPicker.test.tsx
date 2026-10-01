@@ -30,11 +30,11 @@ beforeEach(() => {
 
 async function chooseCity(onChange: (value: CanonicalEndpointRef) => void) {
   render(<CanonicalLocationPicker label="مبدأ" value={null} onChange={onChange} />);
-  await screen.findByRole("option", { name: "ایران · IR" });
+  await screen.findByRole("option", { name: "ایران" });
   fireEvent.change(screen.getByLabelText("مبدأ کشور"), { target: { value: "1" } });
-  await screen.findByRole("option", { name: "اصفهان" });
+  await screen.findByRole("option", { name: "استان — اصفهان" });
   fireEvent.change(screen.getByLabelText("مبدأ استان"), { target: { value: "418862" } });
-  await screen.findByRole("option", { name: "اصفهان / Isfahan" });
+  await screen.findByRole("option", { name: "شهر — اصفهان" });
   fireEvent.change(screen.getByLabelText("مبدأ شهر"), { target: { value: "418863" } });
 }
 
@@ -43,7 +43,7 @@ describe("canonical location picker", () => {
     const onChange = vi.fn();
     await chooseCity(onChange);
     await waitFor(() => expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "city", source_id: 20 }));
-    await screen.findByRole("option", { name: "انبار مشتری · در انتظار بررسی" });
+    await screen.findByRole("option", { name: "مکان سازمان — انبار مشتری · در انتظار بررسی" });
     fireEvent.change(screen.getByLabelText("مبدأ مکان سازمان"), { target: { value: "point-1" } });
     expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "logistics_point", source_id: "point-1" });
   });
@@ -51,7 +51,7 @@ describe("canonical location picker", () => {
   it("creates a minimally named expert location and makes it immediately usable", async () => {
     const onChange = vi.fn();
     await chooseCity(onChange);
-    fireEvent.click(await screen.findByRole("button", { name: "افزودن مکان تازه" }));
+    fireEvent.click(await screen.findByRole("button", { name: "افزودن مکان جدید" }));
     fireEvent.change(screen.getByLabelText("نام مکان"), { target: { value: "انبار مشتری" } });
     fireEvent.click(screen.getByRole("button", { name: "ایجاد و استفاده فوری" }));
     await waitFor(() => expect(createExpertLocation).toHaveBeenCalledWith({
@@ -60,4 +60,14 @@ describe("canonical location picker", () => {
     }));
     expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "logistics_point", source_id: "point-1" });
   });
+  it("offers remaining cities and de-duplicates stable identities across pages",async()=>{
+    const first={source_id:20,geoname_id:418863,name_fa:"اصفهان",name_en:"Isfahan",latitude:"32",longitude:"51"};
+    vi.mocked(fetchCanonicalCities).mockResolvedValueOnce({items:[first],has_more:true}).mockResolvedValueOnce({items:[first,{...first,source_id:21,geoname_id:99,name_fa:"شهر دیگر"}],has_more:false});
+    await chooseCity(vi.fn());
+    fireEvent.click(screen.getByRole("button",{name:"نمایش شهرهای بیشتر"}));
+    await screen.findByRole("option",{name:"شهر — شهر دیگر"});
+    expect(screen.getAllByRole("option",{name:"شهر — اصفهان"})).toHaveLength(1);
+    expect(fetchCanonicalCities).toHaveBeenLastCalledWith(418862,"",1);
+  });
+
 });

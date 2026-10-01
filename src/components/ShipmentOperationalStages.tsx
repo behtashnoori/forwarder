@@ -1,3 +1,4 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,7 @@ export default function ShipmentOperationalStages({shipmentId}: {shipmentId: str
     {view && !view.configuration && <p className="rounded bg-amber-50 p-3">مدیر سازمان هنوز پیکربندی فعال مراحل را منتشر نکرده است.</p>}
     {view?.configuration && <>
       <p className="text-sm text-slate-600">نسخه مراحل {view.configuration.version} · {view.pinned ? "برای این محموله تثبیت شده" : "با اولین رخداد برای محموله تثبیت می‌شود"}</p>
-      {view.can_record && <label className="block max-w-sm">زمان رخداد (زمان محلی)<Input aria-label="زمان رخداد مرحله" type="datetime-local" value={occurred} onChange={event => setOccurred(event.target.value)}/></label>}
+      {view.can_record && <label className="block max-w-sm">زمان رخداد (زمان محلی)<LocalizedDateTimeInput aria-label="زمان رخداد مرحله" type="datetime-local" value={occurred} onChange={event => setOccurred(event.target.value)}/></label>}
       <ol className="space-y-3">{view.stages.map((stage, index) => <li id={`shipment-operational-stage-${stage.public_id}`} key={stage.public_id} className="scroll-mt-28 rounded-xl border p-3">
         <div className="flex flex-wrap items-center justify-between gap-2"><strong>{stage.sequence}. {stage.display_name_fa}</strong><span>{stage.status === "COMPLETED" ? "کامل‌شده" : stage.status === "STARTED" ? "شروع‌شده" : "شروع‌نشده"} · {stage.required_for_completion ? "الزامی" : "اختیاری"}</span></div>
         {stage.started_at && <p className="text-sm">شروع: {formatDualCalendarInstant(stage.started_at, "fa-IR")}</p>}

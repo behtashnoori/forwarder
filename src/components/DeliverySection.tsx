@@ -1,3 +1,4 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +53,7 @@ function DeliveryForm({ cargo, initial, pending, onSubmit, onCancel }: {
       <div className="sm:col-span-2"><CanonicalLocationPicker label="مقصد تحویل" value={destination} onChange={setDestination}/></div>
       <label className="sm:col-span-2">یادداشت مقصد (اختیاری)<Input aria-label="یادداشت مقصد تحویل" maxLength={255} value={destinationNote} onChange={e => setDestinationNote(e.target.value)} /></label>
       {initial && !initialDestination && !destinationChanged && <p className="text-xs text-slate-600 sm:col-span-2">مقصد تاریخی بدون تغییر حفظ می‌شود. فقط برای جایگزینی مقصد، مقصد ساخت‌یافته را انتخاب کنید.</p>}
-      <label>زمان وقوع تحویل<Input aria-label="زمان وقوع تحویل" required type="datetime-local" step="0.001" dir="ltr" value={occurred} onChange={e => setOccurred(e.target.value)} /><span className="text-xs text-slate-600">زمان محلی شما؛ ثبت دیرهنگام مجاز است.</span></label>
+      <label>زمان وقوع تحویل<LocalizedDateTimeInput aria-label="زمان وقوع تحویل" required type="datetime-local" step="0.001" dir="ltr" value={occurred} onChange={e => setOccurred(e.target.value)} /><span className="text-xs text-slate-600">زمان محلی شما؛ ثبت دیرهنگام مجاز است.</span></label>
       {initial && <label>دلیل اصلاح (اختیاری)<Input aria-label="دلیل اصلاح تحویل" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>}
       <label className="flex items-center gap-2 sm:col-span-2"><input aria-label="تحویل نهایی محموله" type="checkbox" checked={isFinal} onChange={e => setIsFinal(e.target.checked)} />این Delivery، تحویل نهایی صریح محموله است</label>
       <p className="text-xs text-slate-600 sm:col-span-2">تحویل نهایی یک واقعیت مستقل است؛ سامانه آن را از برابری مقدارها نتیجه‌گیری نمی‌کند.</p>

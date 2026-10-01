@@ -77,7 +77,7 @@ const time = (value?: string) =>
   formatDualCalendarInstant(value, "fa-IR", { fallback: "ثبت نشده" });
 const quantityText = (value: string | null) =>
   value === null ? "نامشخص" : formatQuantity(value);
-const unit = (value: string | null | undefined) =>
+const unitLabel = (value: string | null | undefined) =>
   formatUnitSymbol(value, "fa-IR");
 const incompleteLabel: Record<string, string> = {
   HS_CODE: "HS",
@@ -634,7 +634,7 @@ export default function ShipmentCargoItems({
                     <option key={cargo.public_id} value={cargo.public_id}>
                       {cargo.description || "قلم درخواست"}
                       {cargo.quantity
-                        ? ` — ${formatQuantity(cargo.quantity)} ${cargo.uom_name || unit(cargo.uom_symbol)}`
+                        ? ` — ${formatQuantity(cargo.quantity)} ${cargo.uom_name || unitLabel(cargo.uom_symbol)}`
                         : ""}
                     </option>
                   ))}
@@ -866,7 +866,7 @@ export default function ShipmentCargoItems({
                       <strong>
                         {quantityText(item.quantities.requested)}{" "}
                         {item.quantities.requested
-                          ? item.uom_display || unit(item.uom_symbol_snapshot)
+                          ? item.uom_display || unitLabel(item.uom_symbol_snapshot)
                           : ""}
                       </strong>
                     </p>
@@ -876,7 +876,7 @@ export default function ShipmentCargoItems({
                       <strong>
                         {quantityText(item.quantities.planned)}{" "}
                         {item.quantities.planned
-                          ? item.uom_display || unit(item.uom_symbol_snapshot)
+                          ? item.uom_display || unitLabel(item.uom_symbol_snapshot)
                           : ""}
                       </strong>
                     </p>
@@ -885,7 +885,7 @@ export default function ShipmentCargoItems({
                       <br />
                       <strong>
                         {item.quantities.actual
-                          ? `${quantityText(item.quantities.actual)} ${item.uom_display || unit(item.uom_symbol_snapshot)}`
+                          ? `${quantityText(item.quantities.actual)} ${item.uom_display || unitLabel(item.uom_symbol_snapshot)}`
                           : "هنوز ثبت نشده"}
                       </strong>
                     </p>
@@ -903,11 +903,11 @@ export default function ShipmentCargoItems({
                   <p>
                     وزن ناخالص:{" "}
                     {item.gross_weight
-                      ? `${formatQuantity(item.gross_weight.value)} ${unit(item.gross_weight.uom_symbol)}`
+                      ? `${formatQuantity(item.gross_weight.value)} ${unitLabel(item.gross_weight.uom_symbol)}`
                       : "نامشخص"}{" "}
                     · حجم:{" "}
                     {item.volume
-                      ? `${formatQuantity(item.volume.value)} ${unit(item.volume.uom_symbol)}`
+                      ? `${formatQuantity(item.volume.value)} ${unitLabel(item.volume.uom_symbol)}`
                       : "نامشخص"}
                   </p>
                   {item.destination_description && (
@@ -917,10 +917,10 @@ export default function ShipmentCargoItems({
                     <p>
                       تخصیص قدیمی بدون بخش مسیر:{" "}
                       {formatQuantity(item.allocated_quantity)}{" "}
-                      {unit(item.uom_symbol_snapshot)} · مانده نسبت به مقدار
+                      {unitLabel(item.uom_symbol_snapshot)} · مانده نسبت به مقدار
                       کالا:{" "}
                       {formatQuantity(item.remaining_quantity ?? item.quantity)}{" "}
-                      {unit(item.uom_symbol_snapshot)}
+                      {unitLabel(item.uom_symbol_snapshot)}
                     </p>
                   )}
                   {item.description_snapshot && (
@@ -1297,7 +1297,7 @@ export default function ShipmentCargoItems({
                 {allocations.map((item) => (
                   <li key={item.public_id}>
                     {item.cargo_name}: {formatQuantity(item.allocated_quantity)}{" "}
-                    {unit(item.uom_symbol)}
+                    {unitLabel(item.uom_symbol)}
                   </li>
                 ))}
               </ul>
@@ -1368,7 +1368,7 @@ export default function ShipmentCargoItems({
                           <p key={allocation.public_id}>
                             {allocation.cargo_name}:{" "}
                             {formatQuantity(allocation.allocated_quantity)}{" "}
-                            {unit(allocation.uom_symbol)}
+                            {unitLabel(allocation.uom_symbol)}
                           </p>
                         )) || "—"}
                     </div>
@@ -1412,7 +1412,7 @@ export default function ShipmentCargoItems({
                     <option key={item.public_id} value={item.public_id}>
                       {item.display_name_snapshot} · باقی‌مانده{" "}
                       {formatQuantity(remainingFor(item.public_id))}{" "}
-                      {unit(item.uom_symbol_snapshot)}
+                      {unitLabel(item.uom_symbol_snapshot)}
                     </option>
                   ))}
                 </select>
@@ -1453,7 +1453,7 @@ export default function ShipmentCargoItems({
                   <strong>{item.display_name_snapshot}</strong>
                   <p>
                     کل: {formatQuantity(item.quantity)}{" "}
-                    {unit(item.uom_symbol_snapshot)} · تخصیص‌یافته:{" "}
+                    {unitLabel(item.uom_symbol_snapshot)} · تخصیص‌یافته:{" "}
                     {formatQuantity(item.allocated_quantity)} · اختلاف با کل:{" "}
                     {formatQuantity(item.remaining_quantity ?? item.quantity)}
                   </p>
@@ -1604,7 +1604,7 @@ export default function ShipmentCargoItems({
                         >
                           {cargo.cargo_name}:{" "}
                           {formatQuantity(cargo.allocated_quantity)}{" "}
-                          {unit(cargo.uom_symbol)}
+                          {unitLabel(cargo.uom_symbol)}
                           {cargo.cargo_owner
                             ? ` · مالک کالا: ${cargo.cargo_owner}`
                             : ""}

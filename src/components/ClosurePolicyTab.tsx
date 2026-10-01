@@ -1,3 +1,4 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,7 +64,7 @@ export default function ClosurePolicyTab() {
       {!data.versions.length&&<p className="rounded-xl bg-amber-50 p-3">قواعد هنوز تعریف نشده است؛ بستن پرونده تا زمان تعریف قواعد در دسترس نیست.</p>}
       {!editing&&<Button onClick={()=>{setCriteria(V1_CRITERIA.map(row=>({...row})));setEffective(localInput(new Date(Date.now()+(data.versions.length?5*60*1000:0))));setError("");setEditing(true);}}>تعریف نسخه V1 قواعد</Button>}
       {editing&&<div className="space-y-4 rounded-xl border p-4">
-        <label className="block">شروع اعتبار (زمان محلی)<Input type="datetime-local" value={effective} onChange={e=>setEffective(e.target.value)}/></label>
+        <label className="block">شروع اعتبار (زمان محلی)<LocalizedDateTimeInput type="datetime-local" value={effective} onChange={e=>setEffective(e.target.value)}/></label>
         <p className="text-sm text-slate-600">نسخه‌های بعدی باید در آینده و پس از نسخهٔ قبلی معتبر شوند.</p>
         <div className="grid gap-3 md:grid-cols-2">{criteria.map(item=><div key={item.code} className={`rounded-xl p-3 ${item.mandatory?"bg-red-50":"bg-amber-50"}`}><strong>{data.criteria[item.code]}</strong><p className="text-sm">{item.mandatory?"مسدودکننده بستن عادی":"هشدار غیرمسدودکننده"}</p></div>)}</div>
         <p className="text-sm text-slate-600">طبقه‌بندی مسدودکننده/هشدار ثابت است و مدیر نمی‌تواند هشدار را به مانع بستن تبدیل کند.</p>

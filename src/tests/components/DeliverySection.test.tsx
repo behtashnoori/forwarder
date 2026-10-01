@@ -61,7 +61,7 @@ describe("partial cargo deliveries", () => {
   });
 
   it("accepts excess reality and preserves command key through an uncertain retry", async () => {
-    vi.mocked(recordDelivery).mockRejectedValueOnce(new Error("خطای شبکه")).mockResolvedValueOnce({ public_id: "delivery", revision: 1, created: true });
+    vi.mocked(recordDelivery).mockRejectedValueOnce(new Error("خطای شبکه")).mockResolvedValueOnce({ public_id: "delivery", revision: 1, is_final: false, created: true });
     render(<DeliverySection shipmentId="shipment" />);
     fireEvent.click(await screen.findByRole("button", { name: "تحویل تازه برای کالای اول" }));
     fireEvent.change(screen.getByLabelText("مقدار تحویل"), { target: { value: "102" } });
@@ -92,7 +92,7 @@ describe("partial cargo deliveries", () => {
   it("corrects the selected version and uploads evidence to that exact delivery", async () => {
     const data = { ...fixture(), items: [fact], total: 1 };
     vi.mocked(listDeliveries).mockResolvedValue({ data });
-    vi.mocked(recordDelivery).mockResolvedValue({ public_id: "correction", revision: 2, created: true });
+    vi.mocked(recordDelivery).mockResolvedValue({ public_id: "correction", revision: 2, is_final: false, created: true });
     vi.mocked(uploadShipmentDocument).mockResolvedValue({ data: {} } as Awaited<ReturnType<typeof uploadShipmentDocument>>);
     render(<DeliverySection shipmentId="shipment" />);
     fireEvent.click(await screen.findByRole("button", { name: "اصلاح تحویل" }));

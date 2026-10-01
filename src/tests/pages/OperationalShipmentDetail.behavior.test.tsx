@@ -164,7 +164,7 @@ describe("Phase 1B shipment detail behavior", () => {
     fireEvent.change(input, { target: { value: "2026-01-03T12:34:56" } });
     fireEvent.click(screen.getAllByRole("button", { name: "ثبت حرکت" })[0]);
     expect(await screen.findByRole("alert")).toHaveTextContent("پنج دقیقه");
-    expect(input.value).toBe("2026-01-03T12:34:56.000");
+    expect(input.value).toBe("2026-01-03T12:34:56");
     expect(screen.queryByText("internal detail")).not.toBeInTheDocument();
   });
 

@@ -33,7 +33,7 @@ describe("unified shipment history", () => {
     await user.selectOptions(screen.getByLabelText("دسته‌بندی"), "DELAY");
     expect(screen.queryByText(/این رخداد جایگزین/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "صفحه بعد" }));
-    await waitFor(() => expect(api.history).toHaveBeenCalledWith(shipment, 2));
+    await waitFor(() => expect(api.history).toHaveBeenCalledWith(shipment, 2, 50, "DELAY"));
   });
   it("shows distinct empty, denied, and error states", async () => {
     api.history.mockResolvedValueOnce({ data: { ...page, items: [], total: 0, has_more: false } });

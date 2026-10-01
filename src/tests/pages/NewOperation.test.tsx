@@ -57,6 +57,7 @@ const labels: Record<string, string> = {
 vi.mock("@/i18n", () => ({
   useI18n: () => ({
     direction: "ltr",
+    transportLabel: (value:string) => value === "road" ? "جاده‌ای" : value,
     t: (key: string) => labels[key] || key,
     businessLabel: (value: string) =>
       value === "in_progress" ? "In progress" : "Recorded value",
@@ -68,6 +69,8 @@ vi.mock("@/lib/api", async () => {
   return {
     ...actual,
     getOperationalContext: vi.fn(),
+    fetchCanonicalCountries: vi.fn(), fetchCanonicalAdmin1: vi.fn(), fetchCanonicalCities: vi.fn(),
+    listLogisticsPointTypes: vi.fn(), createExpertLocation: vi.fn(),
     fetchProvinces: vi.fn(),
     fetchCountries: vi.fn(),
     fetchInternationalCityPage: vi.fn(),
@@ -117,6 +120,10 @@ const organizationPoint = logisticsPoint(
 );
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(api.fetchCanonicalCountries).mockResolvedValue({items:[{id:10,code:"IR",name_fa:"ایران",name_en:"Iran"}]});
+  vi.mocked(api.listLogisticsPointTypes).mockResolvedValue({items:[]});
+  vi.mocked(api.fetchCanonicalAdmin1).mockResolvedValue({items:[{source_id:1,geoname_id:110791,code:"THR",name_fa:"تهران",name_en:"Tehran"}]});
+  vi.mocked(api.fetchCanonicalCities).mockResolvedValue({items:[{source_id:20,geoname_id:112931,name_fa:"تهران",name_en:"Tehran",latitude:"35",longitude:"51"},{source_id:66,geoname_id:141681,name_fa:"بندرعباس",name_en:"Bandar Abbas",latitude:"27",longitude:"56"}]});
   vi.mocked(api.fetchProvinces).mockResolvedValue([province]);
   vi.mocked(api.fetchCountries).mockResolvedValue(countries);
   vi.mocked(api.fetchInternationalCityPage).mockResolvedValue({
@@ -273,59 +280,32 @@ const renderPage = (url = "/operations/shipments/new") =>
       </Routes>
     </MemoryRouter>,
   );
+async function selectCanonical(side:string,city="112931") {
+  const user=userEvent.setup();
+  await user.selectOptions(await screen.findByLabelText(`${side} روش تعیین مکان`),"geography");
+  await waitFor(()=>expect(screen.getByLabelText(`${side} کشور`)).toHaveTextContent("ایران"));
+  await user.selectOptions(screen.getByLabelText(`${side} کشور`),"10");
+  await waitFor(()=>expect(screen.getByLabelText(`${side} استان`)).toHaveTextContent("استان — تهران"));
+  await user.selectOptions(screen.getByLabelText(`${side} استان`),"110791");
+  await waitFor(()=>expect(screen.getByLabelText(`${side} شهر`)).toHaveTextContent("شهر — تهران"));
+  await user.selectOptions(screen.getByLabelText(`${side} شهر`),city);
+}
 describe("Slice 5 governed creation", () => {
-  it.each(["domestic", "international"] as const)(
-    "defaults %s routes to a facility and clears hidden location state when switching modes",
-    async (kind) => {
-      const user = userEvent.setup();
-      vi.mocked(api.getOperationalContext).mockResolvedValue({
-        data: {
-          organization_id: 1,
-          permissions: ["operational_shipment.create_direct"],
-        },
-      });
-      renderPage("/operations/shipments/new?source=direct");
-      await screen.findByRole(
-        "option",
-        { name: "Canonical Co" },
-        { timeout: 5000 },
-      );
-      if (kind === "international") {
-        await user.selectOptions(
-          screen.getByLabelText("Origin route type"),
-          "international",
-        );
-      }
-      const mode = screen.getByLabelText("Origin روش تعیین مکان");
-      expect(mode).toHaveValue("facility");
-      expect(
-        screen.getAllByRole("option", { name: "فقط موقعیت جغرافیایی" }),
-      ).toHaveLength(2);
-      const facility = await screen.findByLabelText(
-        "Origin operational facility",
-      );
-      await waitFor(() => expect(facility).not.toBeDisabled());
-      await user.selectOptions(facility, "preferred-point");
-      expect(facility).toHaveValue("preferred-point");
-      await user.selectOptions(mode, "geography");
-      expect(
-        screen.queryByLabelText("Origin operational facility"),
-      ).not.toBeInTheDocument();
-      const geographic =
-        kind === "domestic" ? "Origin province" : "Origin country";
-      await user.selectOptions(
-        screen.getByLabelText(geographic),
-        kind === "domestic" ? "1" : "20",
-      );
-      await user.selectOptions(mode, "facility");
-      expect(screen.queryByLabelText(geographic)).not.toBeInTheDocument();
-      expect(screen.getByLabelText("Origin operational facility")).toHaveValue(
-        "",
-      );
-      await user.selectOptions(mode, "geography");
-      expect(screen.getByLabelText(geographic)).toHaveValue("");
-    },
-  );
+  it.each(["Origin", "Destination"])("uses the same location model for %s and clears hidden identities",async(side)=>{
+    const user=userEvent.setup();
+    vi.mocked(api.getOperationalContext).mockResolvedValue({data:{organization_id:1,permissions:["operational_shipment.create_direct"]}});
+    renderPage("/operations/shipments/new?source=direct");
+    const mode=await screen.findByLabelText(`${side} روش تعیین مکان`);
+    expect(mode).toHaveValue("facility");
+    const facility=screen.getByLabelText(`${side} operational facility`);
+    await waitFor(()=>expect(facility).not.toBeDisabled());
+    await user.selectOptions(facility,"preferred-point");
+    await selectCanonical(side);
+    await user.selectOptions(mode,"facility");
+    expect(screen.getByLabelText(`${side} operational facility`)).toHaveValue("");
+    await user.selectOptions(mode,"geography");
+    expect(screen.getByLabelText(`${side} کشور`)).toHaveValue("");
+  });
 
   it("explains the empty facility list while retaining the geography fallback", async () => {
     vi.mocked(api.getOperationalContext).mockResolvedValue({
@@ -343,7 +323,7 @@ describe("Slice 5 governed creation", () => {
     renderPage("/operations/shipments/new?source=direct");
     expect(
       await screen.findAllByRole("option", {
-        name: "نقطه عملیاتی فعالی برای این سازمان ثبت نشده است.",
+        name: "مکان سازمانی ثبت نشده است",
       }),
     ).toHaveLength(2);
     expect(screen.getByLabelText("Origin روش تعیین مکان")).toHaveValue(
@@ -490,21 +470,8 @@ describe("Slice 5 governed creation", () => {
       screen.getByLabelText("Project (optional)"),
       "project-public",
     );
-    await user.selectOptions(
-      screen.getByLabelText("Origin روش تعیین مکان"),
-      "geography",
-    );
-    await user.selectOptions(
-      screen.getByLabelText("Destination روش تعیین مکان"),
-      "geography",
-    );
-    fireEvent.change(screen.getByLabelText("Origin province"), {
-      target: { value: "1" },
-    });
-    await user.selectOptions(
-      screen.getByLabelText("Destination"),
-      "international_city:66",
-    );
+    await selectCanonical("Origin");
+    await selectCanonical("Destination","141681");
     fireEvent.change(screen.getByLabelText("Planned departure"), {
       target: { value: "2026-08-10T10:00" },
     });
@@ -523,8 +490,8 @@ describe("Slice 5 governed creation", () => {
       source_type: "direct",
       customer_id: 7,
       project_public_id: "project-public",
-      origin: { source_type: "province", source_id: 1 },
-      destination: { source_type: "international_city", source_id: 66 },
+      origin: { source_type: "city", source_id: 20 },
+      destination: { source_type: "city", source_id: 66 },
     });
     expect(submit).toBeDisabled();
   });
@@ -609,112 +576,14 @@ describe("Slice 5 governed creation", () => {
       ),
     );
   });
-  it("requires and reviews an Iran origin province", async () => {
-    vi.mocked(api.getOperationalContext).mockResolvedValue({
-      data: {
-        organization_id: 1,
-        permissions: ["operational_shipment.create_direct"],
-      },
-    });
+  it("allows an explicit province endpoint and keeps transport labels localized",async()=>{
+    vi.mocked(api.getOperationalContext).mockResolvedValue({data:{organization_id:1,permissions:["operational_shipment.create_direct"]}});
     renderPage("/operations/shipments/new?source=direct");
-    fireEvent.change(await screen.findByLabelText("Origin روش تعیین مکان"), {
-      target: { value: "geography" },
-    });
-    fireEvent.change(await screen.findByLabelText("Origin route type"), {
-      target: { value: "international" },
-    });
-    fireEvent.change(screen.getByLabelText("Origin روش تعیین مکان"), {
-      target: { value: "geography" },
-    });
-    fireEvent.change(screen.getByLabelText("Origin country"), {
-      target: { value: "10" },
-    });
-    expect(await screen.findByLabelText("Origin Iran province")).toBeRequired();
-    fireEvent.change(screen.getByLabelText("Origin Iran province"), {
-      target: { value: "1" },
-    });
-    expect(screen.getAllByText(/Tehran/).length).toBeGreaterThan(1);
-  });
-  it("uses one typed Iran destination selector with derived province", async () => {
-    vi.mocked(api.getOperationalContext).mockResolvedValue({
-      data: {
-        organization_id: 1,
-        permissions: ["operational_shipment.create_direct"],
-      },
-    });
-    renderPage("/operations/shipments/new?source=direct");
-    fireEvent.change(
-      await screen.findByLabelText("Destination روش تعیین مکان"),
-      { target: { value: "geography" } },
-    );
-    fireEvent.change(await screen.findByLabelText("Destination route type"), {
-      target: { value: "international" },
-    });
-    fireEvent.change(screen.getByLabelText("Destination روش تعیین مکان"), {
-      target: { value: "geography" },
-    });
-    fireEvent.change(screen.getByLabelText("Destination country"), {
-      target: { value: "10" },
-    });
-    expect(await screen.findByLabelText("Destination")).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText("Destination province"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: /Hormozgan/ }),
-    ).toBeInTheDocument();
-  });
-  it("uses the governed Iran selector for a domestic Tehran to Bandar Abbas operation", async () => {
-    const user = userEvent.setup();
-    vi.mocked(api.getOperationalContext).mockResolvedValue({
-      data: {
-        organization_id: 1,
-        permissions: ["operational_shipment.create_direct"],
-      },
-    });
-    vi.mocked(api.createDirectOperationalShipment).mockResolvedValue({
-      data: { public_id: "11111111-1111-4111-8111-111111111111" },
-      meta: { created: true, replayed: false },
-    } as never);
-    renderPage("/operations/shipments/new?source=direct");
-    await screen.findByRole("option", { name: "Canonical Co" });
-    expect(api.searchIranDestinations).toHaveBeenCalledWith();
-    await user.selectOptions(
-      screen.getByLabelText("Origin روش تعیین مکان"),
-      "geography",
-    );
-    await user.selectOptions(
-      screen.getByLabelText("Destination روش تعیین مکان"),
-      "geography",
-    );
-    await user.selectOptions(screen.getByLabelText("Customer"), "7");
-    await user.selectOptions(screen.getByLabelText("Origin province"), "1");
-    expect(screen.getByLabelText("Destination")).toHaveTextContent(
-      "شهر — تهران · ایران",
-    );
-    expect(screen.getByLabelText("Destination")).toHaveTextContent(
-      "فرودگاه بین‌المللی امام خمینی تهران",
-    );
-    await user.selectOptions(
-      screen.getByLabelText("Destination"),
-      "international_city:66",
-    );
-    fireEvent.change(screen.getByLabelText("Planned departure"), {
-      target: { value: "2026-08-10T10:00" },
-    });
-    fireEvent.change(screen.getByLabelText("Planned arrival"), {
-      target: { value: "2026-08-10T11:00" },
-    });
-    await user.click(screen.getByRole("button", { name: "Create operation" }));
-    await waitFor(() =>
-      expect(api.createDirectOperationalShipment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          origin: { source_type: "province", source_id: 1 },
-          destination: { source_type: "international_city", source_id: 66 },
-        }),
-        expect.any(String),
-      ),
-    );
+    await selectCanonical("Origin");
+    fireEvent.click(screen.getByRole("button",{name:"استفاده از استان — تهران"}));
+    expect(screen.getByText("Origin انتخاب شد.")).toBeInTheDocument();
+    expect(screen.getByRole("option",{name:"جاده‌ای"})).toHaveValue("road");
+    expect(screen.getByLabelText("Planned departure")).toHaveAttribute("placeholder","سال-ماه-روز ساعت:دقیقه (میلادی)");
   });
   it.each(["direct", "accepted_quote"] as const)(
     "persists selected active catalog cargo before leaving the %s creation flow",
@@ -753,19 +622,8 @@ describe("Slice 5 governed creation", () => {
           expect(screen.getByLabelText("Accepted quote")).toHaveValue("9"),
         );
       }
-      fireEvent.change(screen.getByLabelText("Origin روش تعیین مکان"), {
-        target: { value: "geography" },
-      });
-      fireEvent.change(screen.getByLabelText("Destination روش تعیین مکان"), {
-        target: { value: "geography" },
-      });
-      fireEvent.change(screen.getByLabelText("Origin province"), {
-        target: { value: "1" },
-      });
-      await user.selectOptions(
-        screen.getByLabelText("Destination"),
-        "international_city:66",
-      );
+      await selectCanonical("Origin");
+      await selectCanonical("Destination","141681");
       fireEvent.change(screen.getByLabelText("Planned departure"), {
         target: { value: "2026-08-10T10:00" },
       });

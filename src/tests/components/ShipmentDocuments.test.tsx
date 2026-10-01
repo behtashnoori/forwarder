@@ -100,4 +100,16 @@ describe("contextual Shipment documents", () => {
     expect((retryForm.get("file") as File).name).toBe("b.pdf");
     expect(api.upload.mock.calls[2][2]).toBe(api.upload.mock.calls[1][2]);
   });
+  it("keeps closed files readable and suppresses upload, replacement, and context writes",async()=>{
+    const {rerender}=render(<ShipmentDocuments shipmentPublicId="shipment-1" readOnly/>);
+    await screen.findByText("bol.pdf");
+    expect(screen.queryByLabelText("انتخاب فایل سند")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:"جایگزینی این نسخه"})).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("زمینه بارگذاری سند")).not.toBeInTheDocument();
+    expect(screen.getByText("تاریخچه زمینه و دسترسی")).toBeInTheDocument();
+    rerender(<ShipmentDocuments shipmentPublicId="shipment-1" readOnly={false}/>);
+    expect(await screen.findByLabelText("انتخاب فایل سند")).toBeInTheDocument();
+    expect(api.upload).not.toHaveBeenCalled();
+  });
+
 });

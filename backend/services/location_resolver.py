@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import or_, select
 
 from backend.extensions import db
+from backend.services import geography_presentation as geo
 from backend.models import (
     City,
     Country,
@@ -160,11 +161,11 @@ def resolve_location(
         if source.country_id is not None and province.country_id != source.country_id:
             raise LocationResolutionError("LOCATION_ANCESTRY_MISMATCH", "City ancestry is inconsistent.")
         country, location_type = country, "city"
-        city_id, city_name = source.id, source.name_fa
+        city_id, city_name = source.id, geo.name_fa(source) if isinstance(source, City) else source.name_fa
     elif source_type == "international_city":
         source = _required(InternationalCity, source_id, source_type)
         country, location_type = _country(source.country_id), "city"
-        city_id, city_name = source.id, source.name_fa
+        city_id, city_name = source.id, geo.name_fa(source) if isinstance(source, City) else source.name_fa
         metadata = {"city_type": source.city_type}
     elif source_type == "iran_port":
         source = _required(IranPort, source_id, source_type)
@@ -193,7 +194,7 @@ def resolve_location(
             city = _required(City, source.city_id, "city")
             if city.province_id != province.id or (county is not None and city.county_id != county.id):
                 raise LocationResolutionError("LOCATION_ANCESTRY_MISMATCH", "Customs ancestry is inconsistent.")
-            city_id, city_name = city.id, city.name_fa
+            city_id, city_name = city.id, geo.name_fa(city)
         location_type = "customs"
         metadata = {"customs_type": source.customs_type}
 
@@ -202,13 +203,13 @@ def resolve_location(
     if expected_province_id is not None and (province is None or province.id != expected_province_id):
         raise LocationResolutionError("LOCATION_ANCESTRY_MISMATCH", "The selected location does not belong to the selected province.")
 
-    label = str(source.name_fa)
+    label = str(geo.name_fa(source) if isinstance(source, (City, Province)) else source.name_fa)
     canonical = _canonical(source_type, source.id, location_type, label, country.code if country else None)
     return ResolvedLocation(
         canonical, source_type, source.id, location_type, label,
         country.id if country else None, country.code if country else None,
         country.name_fa if country else None,
-        province.id if province else None, province.name_fa if province else None,
+        province.id if province else None, geo.name_fa(province) if province else None,
         county.id if county else None, county.name_fa if county else None,
         city_id, city_name, metadata,
     )

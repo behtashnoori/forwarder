@@ -73,9 +73,11 @@ const locationLabel = (value: unknown) => {
 export default function OperationalGuidance({
   projection,
   locale = "fa",
+  closed = false,
 }: {
   projection: OperationalProjection;
   locale?: string;
+  closed?: boolean;
 }) {
   const stage = projection.stage_progress;
   const eta = projection.current_operation.eta;
@@ -139,14 +141,14 @@ export default function OperationalGuidance({
           )}
         </div>
         <div
-          className={`rounded-2xl border p-4 sm:p-5 ${projection.recommended_action ? "border-blue-300 bg-slate-950 text-white" : "border-slate-200 bg-white"}`}
+          className={`rounded-2xl border p-4 sm:p-5 ${!closed && projection.recommended_action ? "border-blue-300 bg-slate-950 text-white" : "border-slate-200 bg-white"}`}
         >
           <p
-            className={`text-xs font-bold ${projection.recommended_action ? "text-blue-200" : "text-slate-500"}`}
+            className={`text-xs font-bold ${!closed && projection.recommended_action ? "text-blue-200" : "text-slate-500"}`}
           >
-            بهترین اقدام بعدی
+            {closed ? "پرونده بسته‌شده" : "بهترین اقدام بعدی"}
           </p>
-          {projection.recommended_action ? (
+          {!closed && projection.recommended_action ? (
             <>
               <h2 className="mt-1 text-xl font-black">
                 {projection.recommended_action.label}
@@ -166,11 +168,10 @@ export default function OperationalGuidance({
           ) : (
             <>
               <h2 className="mt-1 text-lg font-bold">
-                اقدام مجازی پیشنهاد نمی‌شود
+                {closed ? "پرونده بسته شد" : "اقدام مجازی پیشنهاد نمی‌شود"}
               </h2>
               <p className="mt-2 text-sm text-slate-600">
-                پرونده بسته است، اختیار اقدام ندارید، یا واقعیت کافی برای
-                پیشنهاد امن وجود ندارد.
+                {closed ? "اطلاعات و هشدارهای باقی‌مانده، سابقه پرونده‌اند و وضعیت بسته‌شده را تغییر نمی‌دهند." : "اختیار اقدام ندارید یا واقعیت کافی برای پیشنهاد امن وجود ندارد."}
               </p>
             </>
           )}
@@ -226,14 +227,14 @@ export default function OperationalGuidance({
         <article className="rounded-xl border bg-white p-4">
           <div className="flex items-center gap-2 text-sm font-bold">
             <RouteIcon className="h-4 w-4 text-blue-700" />
-            آمادگی پرونده
+            {closed ? "کامل بودن اطلاعات" : "آمادگی پرونده"}
           </div>
           <p className="mt-2 text-2xl font-black">
             {projection.readiness.percent}٪
           </p>
           <p className="mt-1 text-xs text-slate-500">
             {projection.readiness.completed} از {projection.readiness.total} کار
-            · {projection.readiness.blocker_count} مانع
+            · {projection.readiness.blocker_count} {closed ? "مورد اطلاعاتی" : "مانع"}
           </p>
         </article>
       </div>
@@ -244,7 +245,7 @@ export default function OperationalGuidance({
           aria-labelledby="task-readiness-heading"
         >
           <h3 id="task-readiness-heading" className="font-bold">
-            آمادگی پرونده
+            {closed ? "کامل بودن اطلاعات" : "آمادگی پرونده"}
           </h3>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {projection.tasks.map((task) => (
@@ -263,7 +264,7 @@ export default function OperationalGuidance({
                         : "text-slate-600"
                   }
                 >
-                  {statusLabel[task.status] || "وضعیت ثبت‌شده"}
+                  {closed && ["NEEDS_ACTION","BLOCKED","IN_PROGRESS"].includes(task.status) ? "اطلاعات باقی‌مانده" : statusLabel[task.status] || "وضعیت ثبت‌شده"}
                 </strong>
               </li>
             ))}
@@ -274,12 +275,12 @@ export default function OperationalGuidance({
           aria-labelledby="attention-items-heading"
         >
           <h3 id="attention-items-heading" className="font-bold">
-            موارد نیازمند توجه
+            {closed ? "هشدارهای اطلاعاتی باقی‌مانده" : "موارد نیازمند توجه"}
           </h3>
           {projection.attention.length ? (
             <ul className="mt-3 space-y-2">
               {projection.attention.map((item) => {
-                const presentation = attentionPresentation[item.category];
+                const presentation = attentionPresentation[closed?"INFORMATIONAL":item.category];
                 return (
                   <li
                     key={item.key}

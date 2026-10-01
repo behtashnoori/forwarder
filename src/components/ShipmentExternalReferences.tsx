@@ -14,9 +14,11 @@ import {
 } from "@/lib/api";
 export default function ShipmentExternalReferences({
   shipmentPublicId,
+  readOnly = false,
 }: {
   shipmentPublicId: string;
   requestId?: string | null;
+  readOnly?: boolean;
 }) {
   const [rows, setRows] = useState<ExternalOperationalReference[]>([]),
     [types, setTypes] = useState<ShipmentEligibleExternalReferenceType[]>([]),
@@ -123,7 +125,7 @@ export default function ShipmentExternalReferences({
           </p>
         )}
         {loading && <p role="status">در حال دریافت شماره‌های مرجع…</p>}
-        {!types.length ? (
+        {readOnly ? <p className="text-sm text-slate-600">نمایش فقط خواندنی شماره‌های ثبت‌شده</p> : !types.length ? (
           <p className="rounded border border-amber-200 bg-amber-50 p-4 text-amber-900">
             نوع مرجع فعالی پیکربندی نشده است.
           </p>
@@ -211,7 +213,7 @@ export default function ShipmentExternalReferences({
                   فایل شاهد پیوست شده · نسخه {row.evidence.version}
                 </p>
               )}
-              {row.lifecycle_status === "ACTIVE" && (
+              {!readOnly && row.lifecycle_status === "ACTIVE" && (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Input
                     aria-label={`دلیل تغییر ${row.display_value}`}

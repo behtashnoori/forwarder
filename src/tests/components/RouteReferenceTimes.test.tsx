@@ -99,8 +99,8 @@ describe("explicit route reference basis",()=>{
     fireEvent.click(await screen.findByRole("button",{name:"تعریف زمان مرجع تازه"}));
     const originCountry=await screen.findByLabelText("مبدأ مرجع کشور");
     const destinationCountry=screen.getByLabelText("مقصد مرجع کشور");
-    expect(screen.getAllByRole("option",{name:"ایران · IR"})).toHaveLength(2);
-    expect(screen.getAllByRole("option",{name:"چین · CN"})).toHaveLength(2);
+    expect(screen.getAllByRole("option",{name:"ایران"})).toHaveLength(2);
+    expect(screen.getAllByRole("option",{name:"چین"})).toHaveLength(2);
     fireEvent.change(originCountry,{target:{value:"1"}});
     fireEvent.change(destinationCountry,{target:{value:"1"}});
     fireEvent.change(await screen.findByLabelText("مبدأ مرجع استان"),{target:{value:"418862"}});
@@ -135,7 +135,7 @@ describe("explicit route reference basis",()=>{
     fireEvent.change(screen.getByLabelText("مبدأ مرجع جست‌وجوی مکان سازمان"),{target:{value:"ناشناخته"}});
     api.points.mockRejectedValueOnce(new Error("network"));
     fireEvent.click(within(origin).getAllByRole("button",{name:"جست‌وجو"})[1]);
-    expect(await within(origin).findByRole("alert")).toHaveTextContent("جست‌وجوی مکان سازمان ممکن نشد");
+    expect(await within(origin).findByRole("alert")).toHaveTextContent("دریافت مکان‌های سازمان ممکن نشد");
   });
   it("does not turn Persian free text into endpoint identity",async()=>{
     api.canonicalCities.mockResolvedValue({items:[]});

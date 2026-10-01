@@ -1,3 +1,4 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +53,7 @@ function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | nul
   const labels=["حداقل حرکت (ساعت)","حداکثر حرکت (ساعت)","حداقل توقف (ساعت)","حداکثر توقف (ساعت)"];
   return <section className="space-y-4 rounded-2xl border border-blue-200 bg-white p-4" aria-label="فرم زمان مرجع">
     <h3 className="text-lg font-semibold">{reference?"ثبت نسخه تازه زمان مرجع":"تعریف زمان مرجع مسیر"}</h3>
-    {reference?<p>{reference.origin_label} ← {reference.destination_label} · {transportLabel(reference.transport_mode)}</p>:<>
+    {reference?<p>از {reference.origin_label} به {reference.destination_label} · {transportLabel(reference.transport_mode)}</p>:<>
       <div className="grid min-w-0 gap-4 md:grid-cols-2"><RouteReferenceLocationPicker id="reference-origin" label="مبدأ مرجع" value={origin} onChange={setOrigin}/><RouteReferenceLocationPicker id="reference-destination" label="مقصد مرجع" value={destination} onChange={setDestination}/></div>
       <label className="block space-y-2">روش حمل مرجع<select aria-label="روش حمل مرجع" className={routeSelectClass} value={mode} onChange={event=>setMode(event.target.value)}><option value="">انتخاب روش حمل</option>{["road","rail","sea","air","multimodal_transfer","customs_handling"].map(value=><option key={value} value={value}>{transportLabel(value)}</option>)}</select></label>
     </>}
@@ -60,7 +61,7 @@ function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | nul
     <label className="block max-w-md space-y-2">فاصله برنامه‌ریزی‌شده (کیلومتر)<Input aria-label="فاصله برنامه‌ریزی‌شده" type="number" min="0.001" step="0.001" value={distance} onChange={event=>setDistance(event.target.value)}/></label>
     <p className="text-sm text-slate-600">فاصله اختیاری است. اگر تعریف نشود، پیشرفت مسافتی نمی‌تواند زمان رسیدن بسازد.</p>
     <p className="text-sm text-slate-600">حرکت و توقف جدا ثبت می‌شوند. برای بازه نامشخص، هر دو کادر را خالی بگذارید.</p>
-    <label className="block max-w-md space-y-2">شروع اعتبار<Input aria-label="شروع اعتبار" type="datetime-local" value={effective} onChange={event=>setEffective(event.target.value)}/></label>
+    <label className="block max-w-md space-y-2">شروع اعتبار<LocalizedDateTimeInput aria-label="شروع اعتبار" type="datetime-local" value={effective} onChange={event=>setEffective(event.target.value)}/></label>
     <p className="text-sm text-slate-600">زمان با منطقه زمانی دستگاه شما ثبت می‌شود. نسخه تازه باید در آینده معتبر شود؛ برنامه‌های قبلی تغییر نمی‌کنند.</p>
     {error&&<p role="alert" className="rounded bg-red-50 p-3 text-red-800">{error}</p>}
     <div className="flex gap-2"><Button disabled={busy} onClick={()=>void submit()}>{busy?"در حال ثبت…":"ثبت زمان مرجع"}</Button><Button variant="outline" disabled={busy} onClick={cancel}>انصراف</Button></div>
@@ -77,7 +78,7 @@ export default function OrganizationRouteTimesTab(){
     <Card className="rounded-3xl"><CardHeader><CardTitle>زمان مرجع مسیر</CardTitle><p className="text-sm leading-7 text-slate-600">بازهٔ معمول حرکت و توقف برای برنامه‌ریزی سازمان. این مقدار نه SLA است، نه زمان تقریبی رسیدن و نه زمان واقعی سفر.</p></CardHeader><CardContent className="flex flex-wrap gap-2"><Button onClick={()=>setEditing(null)}>تعریف زمان مرجع تازه</Button><Button variant="outline" onClick={()=>void load()}>به‌روزرسانی فهرست</Button></CardContent></Card>
     {editing!==undefined&&<ReferenceForm key={editing?.public_id??"new"} reference={editing} cancel={()=>setEditing(undefined)} saved={()=>{setEditing(undefined);void load();}}/>}
     {error&&<p role="alert" className="rounded bg-red-50 p-3 text-red-800">{error}</p>}
-    {loading?<p role="status">در حال دریافت زمان‌های مرجع…</p>:!items.length&&!error?<p className="rounded-xl border bg-white p-5">زمان مرجع تعریف نشده است. هیچ زمان پیش‌فرضی اعمال نمی‌شود.</p>:items.map(item=><Card key={item.public_id} className="rounded-2xl" data-reference-id={item.public_id}><CardHeader><CardTitle>{item.origin_label} ← {item.destination_label}</CardTitle><p>{transportLabel(item.transport_mode)}</p></CardHeader><CardContent className="space-y-3">
+    {loading?<p role="status">در حال دریافت زمان‌های مرجع…</p>:!items.length&&!error?<p className="rounded-xl border bg-white p-5">زمان مرجع تعریف نشده است. هیچ زمان پیش‌فرضی اعمال نمی‌شود.</p>:items.map(item=><Card key={item.public_id} className="rounded-2xl" data-reference-id={item.public_id}><CardHeader><CardTitle>از {item.origin_label} به {item.destination_label}</CardTitle><p>{transportLabel(item.transport_mode)}</p></CardHeader><CardContent className="space-y-3">
       <p className="text-sm font-medium">مرجع معتبر اکنون{item.current?` · نسخه ${item.current.version}`:""}</p><ReferenceRanges value={item.current}/>
       <Button variant="outline" onClick={()=>setEditing(item)}>ثبت نسخه تازه</Button>
       <details className="rounded-xl border p-3"><summary className="cursor-pointer font-medium">تاریخچه نسخه‌ها ({item.versions.length})</summary><div className="mt-3 space-y-4">{item.versions.map(version=><article key={version.public_id} className="space-y-2 border-t pt-3"><h4 className="font-semibold">نسخه {version.version}</h4><ReferenceRanges value={version}/><p className="text-sm">اعتبار از {formatDualCalendarInstant(version.effective_from,"fa-IR")} تا {version.effective_until?formatDualCalendarInstant(version.effective_until,"fa-IR"):"بدون پایان تعیین‌شده"}</p><p className="text-xs text-slate-600">ثبت‌کننده: {version.recorded_by||"ثبت‌شده"} · ثبت: {formatDualCalendarInstant(version.recorded_at,"fa-IR")}</p></article>)}</div></details>

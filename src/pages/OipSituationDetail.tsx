@@ -244,7 +244,7 @@ export default function OipSituationDetailPage() {
             </p>
             <p>وضعیت عملیاتی: {businessLabel(row.status)}</p>
             <p>
-              سلامت تحلیل: {businessLabel(health.health_state)} · نسخه برآورد {health.projection_version.toLocaleString("fa-IR")} · نسخه سیاست {health.policy_version.toLocaleString("fa-IR")}
+              سلامت تحلیل: {businessLabel(health.health_state)} · نسخه برآورد {Number(health.projection_version).toLocaleString("fa-IR")} · نسخه سیاست {Number(health.policy_version).toLocaleString("fa-IR")}
             </p>
           </CardContent>
         </Card>
@@ -269,7 +269,7 @@ export default function OipSituationDetailPage() {
                   {businessLabel(e.source_domain)} / {businessLabel(e.source_type)}
                 </b>
                 <p>
-                  منبع ثبت‌شده · نسخه {e.source_version.toLocaleString("fa-IR")} · {businessLabel(e.validity)}
+                  منبع ثبت‌شده · نسخه {Number(e.source_version).toLocaleString("fa-IR")} · {businessLabel(e.validity)}
                 </p>
                 <details className="text-xs text-slate-500"><summary className="cursor-pointer">شناسه‌های فنی شاهد</summary><p><bdi>{e.source_public_id}</bdi> · <bdi>{e.fact_public_id}</bdi> · <bdi>{e.signal_public_id}</bdi></p></details>
               </div>

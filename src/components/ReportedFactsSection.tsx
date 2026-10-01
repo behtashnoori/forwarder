@@ -1,3 +1,4 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ function ReportForm({ data, initial, pending, onSubmit, onCancel }: {
       <label>فاصله باقی‌مانده (کیلومتر)<Input required aria-label="فاصله باقی‌مانده مسیر" type="number" min="0" step="0.001" value={draft.route_progress?.distance_remaining_km || ""} onChange={e => setDraft({ ...draft, route_progress: { stage_execution_public_id: draft.route_progress?.stage_execution_public_id || "", distance_remaining_km: e.target.value } })}/></label>
       <p className="text-xs text-slate-700 sm:col-span-2">این مقدار به نسخه فعال برنامه، بخش مسیر و اجرای انتخاب‌شده متصل می‌شود. توضیح موقعیت زیر فقط متن انسانی است و از آن فاصله یا پیشرفت استنباط نمی‌شود.</p>
     </fieldset>}
-    <label>زمان وقوع<Input required aria-label="زمان وقوع گزارش" type="datetime-local" step="0.001" dir="ltr" value={draft.occurred_at} onChange={e => setDraft({ ...draft, occurred_at: e.target.value })} /><span className="text-xs text-slate-600">زمان محلی شما؛ ثبت دیرهنگام مجاز است.</span></label>
+    <label>زمان وقوع<LocalizedDateTimeInput required aria-label="زمان وقوع گزارش" type="datetime-local" step="0.001" dir="ltr" value={draft.occurred_at} onChange={e => setDraft({ ...draft, occurred_at: e.target.value })} /><span className="text-xs text-slate-600">زمان محلی شما؛ ثبت دیرهنگام مجاز است.</span></label>
     <label>موقعیت گزارش‌شده{draft.kind === "LOCATION" ? " (الزامی)" : " (اختیاری، داخلی)"}<Input aria-label="موقعیت گزارش‌شده" required={draft.kind === "LOCATION"} maxLength={255} placeholder="برای نمونه: نزدیک مرز" value={draft.location?.location_text || ""} onChange={e => setDraft({ ...draft, location: e.target.value.trim() ? { location_text: e.target.value } : null })} /></label>
     <label className="sm:col-span-2">یادداشت داخلی<textarea aria-label="یادداشت داخلی گزارش" className={`${selectClass} py-2`} maxLength={4000} value={draft.internal_note || ""} onChange={e => setDraft({ ...draft, internal_note: e.target.value || null })} /></label>
     <fieldset className="space-y-2 rounded-lg border bg-white p-3 sm:col-span-2"><legend className="px-1 font-medium">اثر برای مشتری</legend><p className="text-xs text-slate-600">فقط کالاهای متأثر را انتخاب کنید. بدون انتخاب، این گزارش در نمای مشتری نمایش داده نمی‌شود.</p>

@@ -1,3 +1,4 @@
+import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { useEffect, useState } from "react";
 import OperationalPermission from "@/components/OperationalPermission";
 import {
@@ -174,8 +175,8 @@ export default function RouteActualSection({
               <RouteLocationPicker id="actual-route-destination" label="مقصد مسیر واقعی" value={destination} onChange={setDestination} catalog={catalog} searchIran={searchIran} />
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <div><label htmlFor="actual-route-departure">زمان واقعی حرکت</label><Input id="actual-route-departure" type="datetime-local" value={departure} onChange={(event) => setDeparture(event.target.value)} /><Button type="button" variant="outline" className="mt-2" onClick={now}>اکنون</Button></div>
-              <div><label htmlFor="actual-route-arrival">زمان واقعی رسیدن (اختیاری)</label><Input id="actual-route-arrival" type="datetime-local" value={arrival} onChange={(event) => setArrival(event.target.value)} /></div>
+              <div><label htmlFor="actual-route-departure">زمان واقعی حرکت</label><LocalizedDateTimeInput id="actual-route-departure" type="datetime-local" value={departure} onChange={(event) => setDeparture(event.target.value)} /><Button type="button" variant="outline" className="mt-2" onClick={now}>اکنون</Button></div>
+              <div><label htmlFor="actual-route-arrival">زمان واقعی رسیدن (اختیاری)</label><LocalizedDateTimeInput id="actual-route-arrival" type="datetime-local" value={arrival} onChange={(event) => setArrival(event.target.value)} /></div>
             </div>
             <div><label htmlFor="actual-route-notes">یادداشت (اختیاری)</label><Input id="actual-route-notes" value={notes} onChange={(event) => setNotes(event.target.value)} /></div>
             <Button type="button" disabled={pending} onClick={() => void submit()}>{pending ? "در حال ثبت…" : "ثبت واقعیت پیمایش"}</Button>

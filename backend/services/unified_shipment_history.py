@@ -1,6 +1,6 @@
 """Bounded, read-only composition of authoritative shipment history sources."""
 
-from sqlalchemy import func, literal, select, union_all
+from sqlalchemy import case, func, literal, select, union_all
 
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
@@ -39,8 +39,27 @@ OMIT_AUDIT_ACTIONS = {
 }
 
 
+CATEGORIES = {"SHIPMENT", "ROUTE", "ROUTE_OCCURRENCE", "CHECKPOINT", "EXECUTION_STAGE",
+              "DELAY", "EXCEPTION", "WORK_ITEM", "REFERENCE", "DOCUMENT", "AUDIT",
+              "EXECUTION", "CARGO", "TRACKING", "DELIVERY", "OPERATIONAL_STAGE", "CLOSURE"}
+
+
 def _branch(kind, ident, phase, instant, predicate):
-    return select(literal(kind).label("kind"), ident.label("id"),
+    category = literal({"shipment":"SHIPMENT", "revision":"ROUTE", "execution":"EXECUTION",
+                        "allocation":"CARGO", "report":"TRACKING", "delivery":"DELIVERY",
+                        "shipment_stage":"OPERATIONAL_STAGE", "closure":"CLOSURE",
+                        "delay":"DELAY", "exception":"EXCEPTION", "document":"DOCUMENT"}.get(kind,"AUDIT"))
+    if kind == "event":
+        category = case(
+            (MilestoneEvent.milestone_id.in_(select(Milestone.id).where(Milestone.checkpoint_id.is_not(None))), "CHECKPOINT"),
+            (MilestoneEvent.event_type.in_((*reads.authority.DECISIONS, "reported", "corrected", "CORRECTED")), "ROUTE_OCCURRENCE"),
+            else_="EXECUTION_STAGE")
+    elif kind == "audit":
+        category = case((OperationalAudit.entity_type == "shipment_external_reference", "REFERENCE"),
+                        (OperationalAudit.entity_type == "CaseDocumentFile", "DOCUMENT"),
+                        (OperationalAudit.entity_type == "OperationalWorkItem", "WORK_ITEM"),
+                        (OperationalAudit.entity_type == "RoutePlan", "ROUTE"), else_="AUDIT")
+    return select(literal(kind).label("kind"), ident.label("id"), category.label("category"),
                   literal(phase).label("phase"), instant.label("sort_at")).where(*predicate)
 
 
@@ -148,7 +167,7 @@ def _item(shipment, kind, ident, phase):
         row = db.session.get(ClosureDecision, ident)
         item = _base(kind, row, phase, "CLOSURE", "shipment.closed",
                      row.occurred_at, row.recorded_at, row.actor_user_id)
-        item.update({"business_label": "پرونده حمل با استثنای مدیر بسته شد" if row.kind == "EXCEPTIONAL" else "پرونده حمل پس از ارزیابی الزامات بسته شد",
+        item.update({"business_label": "پرونده حمل با استثنای مدیر بسته شد" if row.kind == "EXCEPTIONAL" else "پرونده بسته شد",
                      "status": row.kind, "reason_label": row.reason, "closure_assessment": row.assessment,
                      "closure_missing_items": row.missing_items, "source_entity_id": row.public_id})
         return item
@@ -163,7 +182,7 @@ def _item(shipment, kind, ident, phase):
                      "source_route_revision": source_plan.revision_number if source_plan else None,
                      "reason": row.replan_reason, "reason_label": row.replan_reason,
                      "status": row.status, "is_active": row.is_active,
-                     "business_label": "Route changed" if row.created_from_plan_id else "Route prepared"})
+                     "business_label": "مسیر بازبرنامه‌ریزی شد" if row.created_from_plan_id else "مسیر آماده شد"})
         return item
     if kind in {"delay", "exception"}:
         model = OperationalDelay if kind == "delay" else OperationalException
@@ -220,7 +239,9 @@ def _item(shipment, kind, ident, phase):
     return item
 
 
-def history(shipment, page=1, per_page=50, user=None):
+def history(shipment, page=1, per_page=50, user=None, category=None):
+    if category not in (None, "", "ALL") and category not in CATEGORIES:
+        raise OperationalError("INVALID_HISTORY_CATEGORY", "Unknown history category.", 422)
     try:
         page, per_page = int(page), int(per_page)
     except (ValueError, TypeError) as exc:
@@ -274,6 +295,8 @@ def history(shipment, page=1, per_page=50, user=None):
              DocumentReadinessAudit.operational_shipment_id == shipment.id,
              DocumentReadinessAudit.event_type.in_(DOCUMENT_ACTIONS))))
     feed = union_all(*branches).subquery()
+    if category not in (None, "", "ALL"):
+        feed = select(feed).where(feed.c.category == category).subquery()
     total = db.session.scalar(select(func.count()).select_from(feed)) or 0
     rows = db.session.execute(select(feed).order_by(feed.c.sort_at.desc(), feed.c.kind,
         feed.c.phase, feed.c.id.desc()).offset((page - 1) * per_page).limit(per_page)).all()
