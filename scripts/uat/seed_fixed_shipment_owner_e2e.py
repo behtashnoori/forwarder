@@ -31,6 +31,7 @@ from backend.operational_models import (
 )
 from backend.services.user_service import hash_password
 from backend.security import security
+from scripts.uat.canonical_geography_fixture import ensure_canonical_geography
 
 
 DATABASE_NAME = "forwarder_integrated_cert_fixed_shipment_owner_e2e"
@@ -74,6 +75,7 @@ def main() -> None:
     manifest_path = Path(os.environ["FORWARDER_E2E_FIXTURE_PATH"]).resolve()
     app = create_app(skip_startup=True)
     with app.app_context():
+        ensure_canonical_geography()
         organization = OperationalOrganization(
             public_id=str(uuid4()),
             name="[ADR-047-E2E] Organization",

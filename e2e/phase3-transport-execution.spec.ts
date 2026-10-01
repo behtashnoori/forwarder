@@ -76,6 +76,7 @@ async function openShipmentThroughNavigation(page: Page) {
   await expect(shipment).toBeVisible();
   await shipment.click();
   await expect(page.locator("#shipment-overview h1")).toBeVisible();
+  await openShipmentSection(page, "route", fixture.p304_shipment);
   await expect(page.getByRole("heading", { name: "وسیله و شرکت حمل هر بخش مسیر" })).toBeVisible();
 }
 

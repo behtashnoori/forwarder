@@ -19,7 +19,7 @@ async function login(page: Page, persona: string) {
 async function openShipment(page: Page) {
   await page.goto("/operations/shipments");
   await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`)).click();
-  await expect(page.getByRole("heading", {name: "خلاصه محموله", exact: true})).toBeVisible();
+  await expect(page.locator("#shipment-overview h1")).toBeVisible();
 }
 async function ownership(page: Page) {
   await openShipmentSection(page, "summary", fixture.p313_shipment);
@@ -85,7 +85,7 @@ test("P3-13 Admin transfer changes live Expert access and preserves Customer doc
   expect((await request(next, `${root}/owner-transfers`, "POST", payload, "ordinary-expert")).status).toBe(403);
 
   await old.bringToFront(); await old.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await expect(old.getByRole("heading", {name: "خلاصه محموله", exact: true})).toHaveCount(0);
+  await expect(old.locator("#shipment-overview h1")).toHaveCount(0);
   await expect(old.getByRole("alert").first()).toContainText("دسترس نیست");
   expect((await request(old, download)).status).toBe(404);
   expect((await request(old, `${root}/owner-transfers`)).status).toBe(404);

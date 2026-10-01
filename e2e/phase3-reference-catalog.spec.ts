@@ -142,12 +142,12 @@ test("P3-01 — central definitions → organization activation → expert use �
   await shipmentLink.click();
   await expect(page.locator("#shipment-overview h1")).toBeVisible();
   await openCargoEditor(page);
-  await page.getByLabel("Cargo line number").fill("2");
-  await page.getByLabel("Cargo display name").fill("[P3-01-E2E] کالای فعال سازمان");
-  await page.getByLabel("Cargo type").selectOption({ label: "کالای مرجع پی‌سه" });
-  await page.getByLabel("Cargo customer", { exact: true }).selectOption(String(fixture.owner_a_id));
-  await page.getByLabel("Planned quantity", { exact: true }).fill("7.25");
-  await page.getByLabel("Unit of measure").selectOption({ label: "واحد مرجع پی‌سه (P3U)" });
+  await page.getByLabel("شماره ردیف کالا").fill("2");
+  await page.getByLabel("نام نمایشی کالا").fill("[P3-01-E2E] کالای فعال سازمان");
+  await page.getByLabel("نوع کالا").selectOption({ label: "کالای مرجع پی‌سه" });
+  await page.getByLabel("مالک کالا", { exact: true }).selectOption(String(fixture.owner_a_id));
+  await page.getByLabel("مقدار برنامه‌ریزی‌شده", { exact: true }).fill("7.25");
+  await page.getByLabel("واحد اندازه‌گیری").selectOption({ label: "واحد مرجع پی‌سه (P3U)" });
   const createCargo = page.waitForResponse(item =>
     item.request().method() === "POST" && item.url().includes(`/operational-shipments/${fixture.shipment_a}/cargo-items`)
   );
@@ -174,7 +174,7 @@ test("P3-01 — central definitions → organization activation → expert use �
   await openShipmentSection(page, "cargo", fixture.shipment_a);
   await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible({ timeout: 15_000 });
   await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();
-  await expect(page.getByLabel("Cargo type").locator("option", { hasText: "کالای مرجع پی‌سه" })).toHaveCount(0);
+  await expect(page.getByLabel("نوع کالا").locator("option", { hasText: "کالای مرجع پی‌سه" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "افزودن کالا", exact: true })).toBeDisabled();
 
   clean(evidence);

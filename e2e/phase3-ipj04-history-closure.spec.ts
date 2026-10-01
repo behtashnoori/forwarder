@@ -89,7 +89,7 @@ async function openCompletedShipment(page: Page) {
   const all = page.getByRole("button", { name: "نمایش همه وضعیت‌ها", exact: true });
   if (await all.isVisible()) await all.click();
   await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`)).click();
-  await expect(page.getByRole("heading", { name: "خلاصه محموله", exact: true })).toBeVisible();
+  await expect(page.locator("#shipment-overview h1")).toBeVisible();
 }
 
 async function loginCustomer(browser: Browser, name: "a" | "b") {

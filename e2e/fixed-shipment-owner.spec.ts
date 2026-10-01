@@ -118,8 +118,17 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   await expect(page.locator("#quote")).not.toHaveValue("", { timeout: 60_000 });
   await page.getByLabel("مبدأ روش تعیین مکان").selectOption("geography");
   await page.getByLabel("مقصد روش تعیین مکان").selectOption("geography");
-  await page.getByLabel("مبدأ استان").selectOption(String(fixture.origin_province_id));
-  await page.getByLabel("مقصد در ایران", { exact: true }).selectOption(fixture.destination_identity);
+  for (const [side, province, city] of [["مبدأ", "110791", "112931"], ["مقصد", "418862", "418863"]]) {
+    const country = page.getByLabel(`${side} کشور`, { exact: true });
+    await expect(country.locator("option", { hasText: /^ایران$/ })).toHaveCount(1);
+    await country.selectOption({ label: "ایران" });
+    const region = page.getByLabel(`${side} استان`, { exact: true });
+    await expect(region.locator(`option[value="${province}"]`)).toHaveCount(1);
+    await region.selectOption(province);
+    const locality = page.getByLabel(`${side} شهر`, { exact: true });
+    await expect(locality.locator(`option[value="${city}"]`)).toHaveCount(1);
+    await locality.selectOption(city);
+  }
   await page.getByLabel("زمان برنامه‌ریزی‌شده حرکت").fill("2026-09-19T08:00");
   await page.getByLabel("زمان برنامه‌ریزی‌شده رسیدن").fill("2026-09-20T08:00");
   await page.getByRole("button", { name: "ایجاد پرونده عملیاتی" }).click();
