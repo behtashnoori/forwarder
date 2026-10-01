@@ -171,7 +171,7 @@ def test_postgresql18_migration_guards_and_exact_closure_contract():
 
         # Synthetic route-completion precondition; stage/delivery/allocation/report/closure use real commands.
         db.session.get(RouteLeg,ctx["leg"]).status = "completed"
-        execution.execution_unit.lifecycle_status = "completed"
+        execution.execution_unit.lifecycle_status = "delivered"
         shipment.lifecycle_status = "completed"
         db.session.commit()
         assessment = closure_service.assess(shipment)
