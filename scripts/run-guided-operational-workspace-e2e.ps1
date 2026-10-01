@@ -146,14 +146,22 @@ try {
     production_accessed = $false
     preserved_walkthrough_accessed = $false
     business_actions_on_preserved_walkthrough = 0
+    browser_test_count = 11
+    journey_count = 13
     product_journeys = @(
       'expert home priority and exception queue',
       'shipment list priority queue at desktop and mobile widths',
       'five-second shipment summary with stage progress task readiness and one next action',
+      'expert Request and Quote commercial progress and state-derived next action',
+      'customer Request and Quote current action with progressive disclosure',
       'route and execution decomposition',
       'closure readiness without a closure command',
       'organization admin semantic IA and platform authority separation',
-      'fixed owner tenant isolation customer account and public tracking regressions'
+      'normal expert operational overview shipment context and history',
+      'fixed owner and cross-tenant isolation',
+      'empty and temporary-error states',
+      'customer account quote history response recovery and tenant admin',
+      'capability-only public tracking and anonymous request intake'
     )
   } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $evidence 'result.json') -Encoding UTF8
 

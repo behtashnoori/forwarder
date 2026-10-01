@@ -2,47 +2,79 @@
 
 Source audit: `docs/operational/evidence/ux-system-wide-audit-20261001-96a9d526/`
 
-This comparison is limited to evidence produced by the guided operational workspace mission. It does not claim that every system-wide UX gap is resolved.
+Authority: tracked LPAF v2.7 (`ACTIVE / FROZEN / CANONICAL`). This reconciliation covers the complete Guided Operational Workspace candidate and does not redefine the repository-level `Product validation = EVIDENCE_PENDING` state.
 
 ## High gaps
 
 | Gap | Result | Current → Implemented evidence |
 |---|---|---|
-| UX-001 — Role Home / Operations Home | RESOLVED | The Expert Console now opens with a compact operational status strip and ranked Shipment queue above the commercial request workspace. The full Operations Workspace uses the same projection and adds actionable/attention counters. |
-| UX-002 — Shipment Summary | RESOLVED | The Summary now presents human identity, current ordered stage/progress, independent task readiness, attention, current position, ETA or explicit unavailability reason, and one primary action. |
-| UX-003 — Shipment Next Action | RESOLVED | A server-authorized, deterministic Shipment-wide projection ranks one primary navigation action, explains why it is next, deep-links to the owning section, and bounds secondary suggestions to three. Closed or unauthorized Shipments receive no recommendation. |
-| UX-004 — Shipment List | RESOLVED | The card grid became a responsive priority-row queue with human label, state, route, stage/progress, readiness, top issue, last change, and one action. Metadata and UUID are secondary disclosure. PostgreSQL ordering prioritizes critical/open work without leaking work-item state to callers lacking `work_item.read`. |
-| UX-005 — Route & Execution | RESOLVED | The explicit Route surface is operate-first, ranks only the first valid route action, separates Route/Stages/Cargo/Documents/Tracking/Delivery/Closure/History, and collapses reference-time, execution detail, finance, reconciliation, revisions, and technical history behind task-specific disclosure. Domain commands and authorities are unchanged. |
-| UX-006 — Admin navigation | RESOLVED | Navigation is grouped into Overview & Reporting, People/Access/Assignment, Organization Operations, Organization Data/Network, and visually distinct Platform Governance. Existing tab values and authority guards remain compatible. |
-| UX-007 — Request / Quote workspace | DEFERRED_WITH_REASON | The operational access card now uses semantic Shipment identity, route, stage, and next action, but the full Customer/Expert commercial Request and Quote workspace was not restructured. That work was outside the mission's five authorized priority slices and needs its own customer/commercial journey evidence. |
-| UX-008 — Entity labels / localization | PARTIALLY_RESOLVED | Changed operational surfaces use a human Shipment label first, move UUIDs under “technical ID”, use `bdi` for IDs, humanize admin labels, and remove a false direct-Shipment fallback. A system-wide raw-enum/i18n inventory was not authorized or completed; legacy surfaces still contain technical terms. |
-| UX-009 — Closure | RESOLVED | Closure begins with a dominant READY/NOT READY verdict, X/Y completion, blocker/warning counts, ranked blockers, separate warnings, collapsed completed criteria, one normal close action, and a distinct exceptional-admin path. |
+| UX-001 — Role Home / Operations Home | RESOLVED | Preserved Expert Home operational status strip, ranked Shipment queue, actionable/attention counts, and shared projection. |
+| UX-002 — Shipment Summary | RESOLVED | Preserved semantic identity, ordered stage progress, independent task readiness, attention, current position, ETA/reason, and one primary action. |
+| UX-003 — Shipment Next Action | RESOLVED | Preserved authorized deterministic Shipment-wide ranking, reason, deep link, bounded secondary suggestions, and no action for closed/unauthorized Shipment. |
+| UX-004 — Shipment List | RESOLVED | Preserved responsive priority queue with human label, route, state, stage/progress, readiness, issue, last change, and one action; UUID remains secondary disclosure. |
+| UX-005 — Route & Execution | RESOLVED | Preserved operate-first Route surface and task decomposition with command authority unchanged. |
+| UX-006 — Admin navigation | RESOLVED | Preserved semantic organization groups and distinct Platform Governance authority boundary. |
+| UX-007 — Request / Quote workspace | RESOLVED | Expert and Customer Request detail now lead with concise commercial facts, non-rigid progress, latest Quote state, one state-derived action or explicit waiting/concluded state, and progressive disclosure for detail/history. Accepted Quote still requires explicit authorized Shipment creation; Quote history remains immutable. |
+| UX-008 — Entity labels / localization | RESOLVED | System-wide substantive-route inventory completed. Primary raw enums/UUIDs, browser-native file copy, mixed English labels, unlocalized units/statuses, and bidi leakage were replaced with semantic localized presentation. Technical identity remains only in explicit detail/admin contexts. No HIGH primary leakage remains. |
+| UX-009 — Closure | RESOLVED | Preserved dominant readiness verdict, X/Y progress, blocker/warning hierarchy, completed disclosure, and normal/exceptional action separation. |
 
 `HIGH_GAPS_START=9`
 
-`HIGH_GAPS_RESOLVED=7`
+`HIGH_GAPS_RESOLVED=9`
 
-`HIGH_GAPS_REMAINING=2` (UX-007 deferred; UX-008 partial)
+`HIGH_GAPS_REMAINING=0`
 
-## Medium gaps touched
+`PREVIOUS_SEVEN_HIGH_GAPS_REGRESSION=NO`
 
-- UX-013 — Tracking & ETA: current location and ETA/reason are summarized before provenance/detail.
-- UX-016 — Operations Workspace: adds compact actionable/attention counts and projected next action on active Shipment cards; the pre-existing attention cards remain.
-- UX-020 — Help/copy density: changed Summary, Route, List, Closure, and Admin surfaces use shorter contextual copy and progressive disclosure.
-- UX-022 — Request and Shipment collections: Shipment collection changed to a responsive comparison queue; Request collections were not changed.
-- UX-023 — Small viewport: priority order, vertical row adaptation, compact scrollable section navigation, and no-horizontal-overflow evidence were added.
+## UX-007 acceptance
 
-## Polish gaps touched
+- Expert Request identity, Customer, assignee, Request state, Quote state, progress, prior outcome, and next action are visible within the first workspace section.
+- Customer Request detail puts the current Quote and response action before Request facts and Quote history.
+- Non-linear negotiation is represented through state-aware progress/readiness rather than a false mandatory workflow.
+- Terminal/completed controls are absent; waiting states do not present impossible actions.
+- Shipment creation remains a separate explicit capability-gated action after accepted Quote and commercial conclusion.
+- Request assignment, Shipment ownership, Customer/Expert permissions, and immutable Quote/negotiation history are unchanged.
 
-- UX-024 — Container simplification on the Shipment list, priority overview, Summary guidance, Closure, and Admin navigation.
-- UX-025 — exact IDs, projection sources, and freshness are disclosed on demand; one meaningful operational time remains primary.
-- UX-027 — outcome-oriented action labels and secondary `bdi` UUID treatment on changed surfaces.
-- UX-028 — reduced repeated heading/copy layers and established task-first section rhythm on changed surfaces.
+## UX-008 acceptance
+
+- `RAW_ID_PRIMARY_UI_REMAINING=0`
+- `RAW_ENUM_PRIMARY_UI_REMAINING=0`
+- `UNLOCALIZED_PRIMARY_UI_REMAINING=0`
+- Native file inputs use localized visible controls; stored values and upload semantics are unchanged.
+- Unit/status/date presentation uses existing locale helpers; stored values and timezone semantics are unchanged.
+- IDs, immutable codes, reason codes, policy IDs, and provenance remain available only as explicit technical/detail disclosure where operationally useful.
+- Route-by-route classifications are recorded in `LABEL-LOCALIZATION-INVENTORY.md`.
+
+## Previously qualified capability regression
+
+`SHARED_OPERATIONAL_PROJECTION=PASS`
+
+`NEXT_ACTION_MODEL=PASS`
+
+`PROCESS_PROGRESS=PASS`
+
+`TASK_LIST=PASS`
+
+`LIGHT_GAMIFICATION=PASS`
+
+`EXPERT_HOME=PASS`
+
+`SHIPMENT_LIST=PASS`
+
+`SHIPMENT_SUMMARY=PASS`
+
+`ROUTE_EXECUTION=PASS`
+
+`TRACKING_ETA=PASS`
+
+`CLOSURE=PASS`
+
+`ADMIN=PASS`
 
 ## Semantics preserved
 
 - No schema or migration was added; repository head remains `20261015_org_shipment_stages`.
-- The projection stores no workflow state and is rebuilt on request from authorized current facts.
-- Existing write endpoints, transitions, permissions, ownership, fixed Shipment responsibility, tenant scope, customer/public payloads, and closure rules remain authoritative.
+- Presentation derives from existing authorized Request, Quote, Shipment, policy, and projection facts.
+- Existing write endpoints, transitions, permissions, ownership, tenant scope, public payloads, and closure rules remain authoritative.
 - Missing data stays unknown; it is never coerced to readiness or success.
-
+- No workflow engine, localization platform, translation CMS, design system, geography model, analytics system, or gamification engine was introduced.

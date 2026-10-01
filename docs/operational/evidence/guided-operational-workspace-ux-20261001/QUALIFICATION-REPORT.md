@@ -1,76 +1,104 @@
-# Guided Operational Workspace — Final Qualification Report
+# Guided Operational Workspace — Qualification Report
 
 `TARGET_EXPERIENCE=FORWARDER GUIDED OPERATIONAL WORKSPACE`
 
+`AUTHORITATIVE_LPAF_BASELINE=LPAF v2.7 — ACTIVE / FROZEN / CANONICAL`
+
+`UX_007_REQUEST_QUOTE_WORKSPACE=RESOLVED`
+
+`UX_008_SYSTEM_LABELS_LOCALIZATION=RESOLVED`
+
 `HIGH_GAPS_START=9`
 
-`HIGH_GAPS_RESOLVED=7`
+`HIGH_GAPS_RESOLVED=9`
 
-`HIGH_GAPS_REMAINING=2 (UX-007 deferred; UX-008 partially resolved)`
+`HIGH_GAPS_REMAINING=0`
 
-`MEDIUM_GAPS_TOUCHED=UX-013, UX-016, UX-020, UX-022, UX-023`
+`PREVIOUS_SEVEN_HIGH_GAPS_REGRESSION=NO`
 
-`POLISH_GAPS_TOUCHED=UX-024, UX-025, UX-027, UX-028`
+`RAW_ID_PRIMARY_UI_REMAINING=0`
 
-`SHARED_OPERATIONAL_PROJECTION=PASS — additive authorized on-request projection with version, freshness, sources, limitations, and rebuild contract`
+`RAW_ENUM_PRIMARY_UI_REMAINING=0`
 
-`NEXT_ACTION_MODEL=PASS — one primary justified deep link, at most three secondary suggestions, none for closed/unauthorized Shipment`
+`UNLOCALIZED_PRIMARY_UI_REMAINING=0`
 
-`PROCESS_PROGRESS=PASS — ordered stages and explicit unconfigured state, separate from task readiness`
+`CLEAN=PASS`
 
-`TASK_LIST=PASS — route, execution, stages, cargo, documents, tracking, delivery, and closure readiness`
+`GUIDED=PASS`
 
-`LIGHT_GAMIFICATION=PASS — progress/readiness only; no points, scoring, streaks, or leaderboards`
+`PROGRESS_AWARE=PASS`
 
-`EXPERT_HOME=PASS — operational priority strip and queue precede commercial request details`
+`LIGHT_GAMIFICATION=PASS`
 
-`SHIPMENT_LIST=PASS — PostgreSQL-safe priority queue, seven essential fields, desktop/mobile evidence, one action`
+## Request and Quote outcome
 
-`SHIPMENT_SUMMARY=PASS — semantic identity, route, stage, progress, readiness, attention, location, ETA/reason, one CTA`
+`REQUEST_NEXT_ACTION=PASS — one state-derived Expert action, wait state, terminal state, or operations handoff; only currently authorized/possible actions are shown`
 
-`ROUTE_EXECUTION=PASS — operate-first hierarchy and progressive disclosure with unchanged command authority`
+`QUOTE_NEXT_ACTION=PASS — Customer sees the current Quote response action or an explicit waiting/concluded state; accepted Quote does not create Shipment automatically`
 
-`CARGO_ALLOCATION=PRESERVED — summarized in readiness; existing detailed allocation authority and UI retained`
+`REQUEST_DENSITY_REDUCTION=PASS — concise identity/commercial facts and progress precede tabbed/collapsed request, operations, documents, and audit detail`
 
-`DOCUMENTS=PRESERVED — prioritized in readiness/attention; existing document authority and detailed UI retained`
+`QUOTE_DENSITY_REDUCTION=PASS — current Quote is immediate; immutable prior Quote history and secondary Request detail are progressive disclosure`
 
-`TRACKING_ETA=PASS — current location and final ETA or explicit unavailable reason surfaced in Summary`
+`REQUEST_SHIPMENT_SEPARATION=PRESERVED`
 
-`DELIVERY=PRESERVED — readiness/next-action projection added; existing delivery facts and commands unchanged`
+`REQUEST_ASSIGNEE_SHIPMENT_OWNER_SEPARATION=PRESERVED`
 
-`CLOSURE=PASS — dominant verdict, X/Y progress, blockers, warnings, completed disclosure, normal/exceptional separation`
+`QUOTE_HISTORY_IMMUTABILITY=PRESERVED`
 
-`HISTORY=PRESERVED — dedicated navigation and governed history regression passed; no history semantics changed`
+`CUSTOMER_EXPERT_PERMISSIONS=PRESERVED`
 
-`ADMIN=PASS — semantic scope groups with explicit organization/platform authority separation`
+## Previously qualified capabilities
 
-`CARD_DENSITY_REDUCTION=PASS_ON_CHANGED_SURFACES — row/list composition and progressive disclosure replace major hotspots`
+`SHARED_OPERATIONAL_PROJECTION=PASS`
 
-`COPY_DENSITY_REDUCTION=PASS_ON_CHANGED_SURFACES — shorter task-first explanations; system-wide copy inventory deferred`
+`NEXT_ACTION_MODEL=PASS`
 
-`RAW_ID_LEAKAGE=PARTIALLY_RESOLVED — semantic identity primary and UUID secondary on changed operational surfaces; legacy surfaces remain`
+`PROCESS_PROGRESS=PASS`
 
-`RAW_ENUM_LEAKAGE=PARTIALLY_RESOLVED — changed labels localized; system-wide inventory remains`
+`TASK_LIST=PASS`
 
-`FRONTEND_TESTS=PASS — 102 files / 483 tests; final focused Shipment regression 2 files / 35 tests`
+`EXPERT_HOME=PASS`
+
+`SHIPMENT_LIST=PASS`
+
+`SHIPMENT_SUMMARY=PASS`
+
+`ROUTE_EXECUTION=PASS`
+
+`TRACKING_ETA=PASS`
+
+`CLOSURE=PASS`
+
+`ADMIN=PASS`
+
+## Qualification gates
+
+`FRONTEND_TESTS=PASS — 102 files / 485 tests`
+
+`FOCUSED_REQUEST_QUOTE_BACKEND=PASS — 34 tests`
 
 `TYPECHECK=PASS`
 
 `BUILD=PASS — production Vite build; advisory bundle-size/Browserslist warnings only`
 
-`LINT=PASS — 0 errors / 16 pre-existing warnings`
+`LINT=PASS — 0 errors / 16 advisory warnings`
 
-`JOURNEY_RESULT=PASS — 9 Chrome journeys on owned disposable PostgreSQL 18 at exact head 20261015_org_shipment_stages; cleanup PASS`
+`ARCHITECTURE_GOVERNANCE=PASS`
 
-`PRODUCT_SHA=501fcad9a646045c4f9df636188a2ed664682701`
+`STRUCTURE_AND_DETERMINISM=PASS`
 
-`EVIDENCE_SHA=162eac1216b3d3b3385a54531dbbc20cd15a028a`
+`JOURNEY_RESULT=PASS — 11 Chrome tests / 13 journey areas on owned disposable PostgreSQL 18 at exact head 20261015_org_shipment_stages; cleanup PASS`
 
-`FINAL_CANONICAL_SHA=96a9d52602febc6ab1b9d29e92e83fe3eb7e8dd5 (unchanged; partial verdict closed integration gate)`
+`PRODUCT_SHA=6d69e832e5a5c8b6041d5579d4581d0a53a6b013`
 
-`AHEAD_BEHIND=4/0 candidate ahead/behind canonical after this report commit; 0/0 push/fetch verification not applicable because no integration occurred`
+`EVIDENCE_SHA=PENDING_THIS_EVIDENCE_COMMIT`
 
-`WALKTHROUGH_DATABASE_PRESERVED=YES`
+`FINAL_CANONICAL_SHA=PENDING_CONTROLLED_INTEGRATION`
+
+`AHEAD_BEHIND=PENDING_FINAL_PUSH_FETCH_VERIFICATION`
+
+`WALKTHROUGH_DATABASE_PRESERVED=PENDING_POST_INTEGRATION_RUNTIME_UPDATE`
 
 `WALKTHROUGH_BUSINESS_ACTIONS_PERFORMED=0`
 
@@ -82,10 +110,12 @@
 
 `RELEASE_CREATED=NO`
 
-## Integration decision
+`HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS`
 
-The scoped guided-workspace slices passed their tests and browser journeys, but the system-wide audit still has two HIGH findings that are not fully resolved. Controlled integration and push were therefore withheld under the mission stop condition. `origin/integration/golden-controlled` was fetched and verified unchanged at the canonical start SHA.
+`RELEASE_READY=NO`
 
-The repository-level known evidence state remains `Product validation = EVIDENCE_PENDING`.
+## Qualification decision
 
-PARTIAL PASS — HIGH-VALUE UX GAPS REMAIN
+The complete candidate resolves all nine HIGH UX gaps and passes the exact-candidate automated/browser gates. Controlled integration is authorized only if the fetched canonical target is still the compatible start SHA. The preserved Human Walkthrough may then receive a runtime-only source update with database hashes/counts verified before and after and zero business actions.
+
+`QUALIFIED_FOR_CONTROLLED_INTEGRATION=YES`

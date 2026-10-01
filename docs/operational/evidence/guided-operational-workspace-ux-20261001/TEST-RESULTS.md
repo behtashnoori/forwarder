@@ -2,50 +2,56 @@
 
 ## Environment and boundary
 
-- Governed repository baseline: LPAF v2.6, as required by repository `AGENTS.md`.
-- Task-brief discrepancy: the supplied brief names LPAF v2.7; it was not treated as normative.
-- Canonical product start: `96a9d52602febc6ab1b9d29e92e83fe3eb7e8dd5`.
-- Product implementation commit: `501fcad9a646045c4f9df636188a2ed664682701`.
-- Migration head: `20261015_org_shipment_stages`.
-- Browser database: runner-owned PostgreSQL 18 cluster/database on loopback, migrated from base to exact head, seeded with synthetic fixtures, then stopped and removed.
-- Preserved Human Walkthrough: not accessed or mutated.
-- Production/deployment/release systems: not accessed.
+- Governed repository baseline: `LPAF v2.7 — ACTIVE / FROZEN / CANONICAL` from tracked canonical governance.
+- Canonical Product start: `96a9d52602febc6ab1b9d29e92e83fe3eb7e8dd5`.
+- Final Product implementation commit: `6d69e832e5a5c8b6041d5579d4581d0a53a6b013`.
+- Migration head: `20261015_org_shipment_stages`; no schema/migration change.
+- Browser database: runner-owned PostgreSQL 18 cluster/database on loopback, migrated from base to exact head, seeded with synthetic fixtures, stopped, and removed.
+- Preserved Human Walkthrough: not accessed by automation; business actions `0`.
+- Production, deployment, and release systems: not accessed or changed.
 
 ## Automated evidence
 
 | Gate | Result |
 |---|---|
-| Focused projection/workspace backend tests | 9 passed |
-| Affected backend matrix | 196 passed |
-| PostgreSQL-ordering correction regression | 38 passed |
-| Governance/migration/browser-contract tests | 16 passed |
-| Architecture governance script | PASS |
-| Full frontend suite | 102 files, 483 tests passed |
-| Final focused Shipment UI regression | 2 files, 35 tests passed |
+| Expanded UX-007/UX-008 focused frontend matrix | PASS — 8 files / 65 tests |
+| Original acceptance regression matrix | PASS — 7 files / 40 tests |
+| Additional full-suite localization regressions | PASS — 2 files / 5 tests |
+| Request/Quote backend commercial-state contracts | PASS — 34 tests |
+| Full frontend suite | PASS — 102 files / 485 tests |
 | TypeScript `tsc --noEmit` | PASS |
-| Production Vite build | PASS; only bundle-size and stale Browserslist advisories |
-| ESLint | PASS with 0 errors and 16 pre-existing warnings |
-| Disposable PostgreSQL + Chrome journeys | 9 passed |
+| Production Vite build | PASS — 2,594 modules; advisory bundle-size and stale Browserslist warnings only |
+| ESLint | PASS — 0 errors / 16 existing advisory warnings |
+| Architecture governance | PASS |
+| Repository structure check | PASS |
+| Backend determinism check | PASS |
+| `git diff --check` | PASS |
+| Disposable PostgreSQL 18 + Chrome journeys | PASS — 11 browser tests / 13 journey areas |
 | Disposable runtime cleanup | PASS |
 
 ## Browser journeys
 
-The final Playwright run covered:
-
 1. Expert Home operational priority and exception queue.
 2. Shipment priority queue at desktop and 390 px mobile widths, including horizontal-overflow assertion.
-3. Five-second Summary with semantic identity, process progress, task readiness, attention, location, ETA reason, and exactly one primary action.
-4. Route/execution operate-first hierarchy.
-5. Closure readiness without issuing a close command.
-6. Organization Admin semantic IA and absence of Platform Governance for an organization-only admin.
-7. Fixed Shipment owner and cross-tenant isolation.
-8. Customer Account request/quote/recovery regressions.
-9. Capability-only Public Tracking and anonymous intake regression.
+3. Five-second Shipment Summary with semantic identity, process progress, task readiness, attention, location, ETA reason, and one action.
+4. Expert Request/Quote workspace with commercial facts, progress, semantic state, and state-derived next action.
+5. Customer Request/Quote workspace with current Quote/action before collapsed detail and history.
+6. Route/execution operate-first hierarchy.
+7. Closure readiness without issuing a close command.
+8. Organization Admin semantic IA and absence of Platform Governance for an organization-only admin.
+9. Normal Expert overview, Shipment context, and governed history.
+10. Fixed Shipment owner and cross-tenant isolation.
+11. Empty and temporary-error states.
+12. Customer Account Quote history/response, recovery, and tenant admin boundaries.
+13. Capability-only Public Tracking and anonymous request intake.
 
-Machine-readable result: `browser/result.json`.
+The Request/Quote-specific journeys were read-only. The broader pre-existing Customer Account regression performed its existing synthetic Quote discussion action only inside the runner-owned disposable database.
 
 ## Evidence files
 
+- `browser/result.json`
+- `browser/guided-expert-request-quote-workspace.png`
+- `browser/guided-customer-request-quote-workspace.png`
 - `browser/guided-expert-home-priority.png`
 - `browser/guided-shipment-priority-queue-desktop.png`
 - `browser/guided-shipment-priority-queue-mobile.png`
@@ -58,7 +64,6 @@ Machine-readable result: `browser/result.json`.
 
 ## Qualification interpretation
 
-The authorized guided operational workspace slices meet their mission Definition of Done and preserve product semantics. However, two audit HIGH gaps remain outside or only partly inside this mission (UX-007 and UX-008). The truthful system-wide verdict is therefore partial, and the controlled-integration gate remains closed.
+All exact-candidate qualification gates required for UX-007, UX-008, and regression of the seven previously qualified HIGH gaps pass. The complete candidate is qualified for the controlled canonical fast-forward, subject to the final remote canonical stability check.
 
-The repository-level known evidence state remains `Product validation = EVIDENCE_PENDING`; this mission evidence does not silently redefine that global status.
-
+The repository-level known evidence state remains `Product validation = EVIDENCE_PENDING`; this mission does not silently redefine it. `HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS` and `RELEASE_READY=NO` remain unchanged.
