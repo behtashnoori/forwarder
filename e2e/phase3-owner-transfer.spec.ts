@@ -18,7 +18,7 @@ async function login(page: Page, persona: string) {
 }
 async function openShipment(page: Page) {
   await page.goto("/operations/shipments");
-  await page.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`).click();
+  await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`)).click();
   await expect(page.getByRole("heading", {name: "خلاصه محموله", exact: true})).toBeVisible();
 }
 async function ownership(page: Page) {
@@ -99,7 +99,7 @@ test("P3-13 Admin transfer changes live Expert access and preserves Customer doc
   }
 
   await next.bringToFront(); await next.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await next.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`).click();
+  await next.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(next.locator(`a[href="/operations/shipments/${fixture.p313_shipment}"]`)).click();
   const currentFile = await request(next, download); expect(currentFile).toEqual(originalFile);
   const currentDocuments = await request(next, documents);
   expect(JSON.parse(currentDocuments.text).data).toEqual(JSON.parse(originalDocuments.text).data);

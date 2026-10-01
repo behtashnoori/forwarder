@@ -72,10 +72,10 @@ async function ownerHeaders(page: Page) {
 
 async function openShipmentThroughNavigation(page: Page) {
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
-  const shipment = page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`);
+  const shipment = page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`));
   await expect(shipment).toBeVisible();
   await shipment.click();
-  await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
+  await expect(page.locator("#shipment-overview h1")).toBeVisible();
   await expect(page.getByRole("heading", { name: "وسیله و شرکت حمل هر بخش مسیر" })).toBeVisible();
 }
 

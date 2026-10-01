@@ -98,7 +98,7 @@ test("structured remaining distance entered in the human workflow drives ETA v2"
   const item = fixture.p311_cases.structured;
   expect(item.progress_unit).toBeTruthy(); expect(item.progress_stage).toBeTruthy();
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
-  await page.locator(`a[href="/operations/shipments/${item.shipment}"]`).click();
+  await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${item.shipment}"]`)).click();
   await openShipmentSection(page, "tracking", item.shipment);
   const reports = page.getByRole("region", { name: "گزارش‌های موقعیت و تغییرات حمل" });
   await reports.getByRole("button", { name: "گزارش تازه" }).click();

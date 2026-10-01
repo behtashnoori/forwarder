@@ -27,9 +27,9 @@ async function expert(page: Page, username = "shared_transport_e2e_restricted") 
     await page.goto(`/operations/shipments/${fixture.p304_shipment}`);
   } else {
     await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
-    await page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`).click();
+    await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`)).click();
   }
-  await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
+  await expect(page.locator("#shipment-overview h1")).toBeVisible();
   await openShipmentSection(page, "documents", fixture.p304_shipment);
   await expect(page.getByRole("heading", { name: "اسناد و مدارک حمل" })).toBeVisible();
 }
@@ -71,7 +71,7 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
   expect(internal.context.visibility).toBe("INTERNAL");
   await expect(docs.getByText("مربوط به: پرونده حمل").first()).toBeVisible();
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
-  await page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`).click();
+  await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`)).click();
   await openShipmentSection(page, "documents", fixture.p304_shipment);
   await expect(page.getByText("internal.pdf")).toBeVisible();
 

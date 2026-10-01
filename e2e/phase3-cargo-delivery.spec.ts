@@ -12,7 +12,7 @@ test.setTimeout(180_000);
 
 async function openDeliveries(page: Page) {
   await page.getByRole("link", { name: "پرونده‌های عملیاتی حمل", exact: true }).click();
-  await page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`).click();
+  await page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`)).click();
   await openShipmentSection(page, "delivery", fixture.p304_shipment);
   return page.getByRole("region", { name: "تحویل کالاها" });
 }

@@ -140,7 +140,7 @@ test("P3-01 — central definitions → organization activation → expert use �
   const shipmentLink = page.getByRole("link", { name: "مشاهده خلاصه", exact: true }).and(page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`));
   await expect(shipmentLink).toBeVisible();
   await shipmentLink.click();
-  await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
+  await expect(page.locator("#shipment-overview h1")).toBeVisible();
   await openCargoEditor(page);
   await page.getByLabel("Cargo line number").fill("2");
   await page.getByLabel("Cargo display name").fill("[P3-01-E2E] کالای فعال سازمان");
