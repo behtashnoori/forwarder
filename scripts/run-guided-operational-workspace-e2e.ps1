@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+  [string]$EvidenceDirectory = ''
+)
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -12,7 +14,11 @@ $pgLog = Join-Path $runtime 'postgres.log'
 $fixture = Join-Path $runtime 'fixtures.json'
 $playwrightOutput = Join-Path $runtime 'playwright'
 $databaseName = "forwarder_workspace_phase1_guided_$($runId.Substring(0, 12))"
-$evidence = Join-Path $root 'docs\operational\evidence\guided-operational-workspace-ux-20261001\browser'
+$evidence = if ([string]::IsNullOrWhiteSpace($EvidenceDirectory)) {
+  Join-Path $root 'docs\operational\evidence\guided-operational-workspace-ux-20261001\browser'
+} else {
+  [System.IO.Path]::GetFullPath($EvidenceDirectory)
+}
 $backend = $null
 $frontend = $null
 $postgresStarted = $false
@@ -138,6 +144,7 @@ try {
   [pscustomobject]@{
     result = 'PASS'
     executed_at_utc = (Get-Date).ToUniversalTime().ToString('o')
+    product_sha = (git -C $root rev-parse HEAD).Trim()
     environment = 'owned disposable local/UAT PostgreSQL'
     postgresql_major = 18
     alembic_head = $repositoryHead

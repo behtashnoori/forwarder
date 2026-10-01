@@ -1817,8 +1817,8 @@ export interface OperationalProjection {
   stage_progress: {
     completed: number;
     total: number;
-    current: { code: string; display_name_fa: string; status: string; required_for_completion: boolean } | null;
-    items: Array<{ code: string; display_name_fa: string; status: string; required_for_completion: boolean }>;
+    current: { public_id: string; code: string; display_name_fa: string; status: string; required_for_completion: boolean } | null;
+    items: Array<{ public_id: string; code: string; display_name_fa: string; status: string; required_for_completion: boolean }>;
     can_record: boolean;
     configured: boolean;
   };

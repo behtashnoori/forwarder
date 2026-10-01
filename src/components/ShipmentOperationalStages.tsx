@@ -20,6 +20,10 @@ export default function ShipmentOperationalStages({shipmentId}: {shipmentId: str
     catch { setError("دریافت مراحل عملیاتی ممکن نشد."); }
   }, [shipmentId]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!view || !window.location.hash) return;
+    document.getElementById(window.location.hash.slice(1))?.scrollIntoView?.({block: "center"});
+  }, [view]);
   const run = async (definition: string, eventType: "STARTED" | "COMPLETED") => {
     if (!view?.configuration) return;
     const payload = {event_type: eventType, occurred_at: new Date(occurred).toISOString(), expected_policy_version_public_id: view.configuration.public_id};
@@ -38,7 +42,7 @@ export default function ShipmentOperationalStages({shipmentId}: {shipmentId: str
     {view?.configuration && <>
       <p className="text-sm text-slate-600">نسخه مراحل {view.configuration.version} · {view.pinned ? "برای این محموله تثبیت شده" : "با اولین رخداد برای محموله تثبیت می‌شود"}</p>
       {view.can_record && <label className="block max-w-sm">زمان رخداد (زمان محلی)<Input aria-label="زمان رخداد مرحله" type="datetime-local" value={occurred} onChange={event => setOccurred(event.target.value)}/></label>}
-      <ol className="space-y-3">{view.stages.map((stage, index) => <li key={stage.public_id} className="rounded-xl border p-3">
+      <ol className="space-y-3">{view.stages.map((stage, index) => <li id={`shipment-operational-stage-${stage.public_id}`} key={stage.public_id} className="scroll-mt-28 rounded-xl border p-3">
         <div className="flex flex-wrap items-center justify-between gap-2"><strong>{stage.sequence}. {stage.display_name_fa}</strong><span>{stage.status === "COMPLETED" ? "کامل‌شده" : stage.status === "STARTED" ? "شروع‌شده" : "شروع‌نشده"} · {stage.required_for_completion ? "الزامی" : "اختیاری"}</span></div>
         {stage.started_at && <p className="text-sm">شروع: {formatDualCalendarInstant(stage.started_at, "fa-IR")}</p>}
         {stage.completed_at && <p className="text-sm">تکمیل: {formatDualCalendarInstant(stage.completed_at, "fa-IR")}</p>}

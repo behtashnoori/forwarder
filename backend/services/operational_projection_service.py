@@ -188,35 +188,84 @@ def _attention(graph: dict, assessment: dict, permissions: set[str]) -> list[dic
     return sorted(unique.values(), key=lambda item: (order[item["severity"]], item["key"]))
 
 
-def _action(shipment: OperationalShipment, tasks: list[dict], attention: list[dict], can_manage: bool) -> tuple[dict | None, list[dict]]:
+def _stage_action(shipment: OperationalShipment, stages: dict) -> tuple[int, str, str, str] | None:
+    current = stages.get("current") if stages else None
+    if not current or not current.get("required_for_completion"):
+        return None
+    name = current.get("display_name_fa") or "جاری"
+    public_id = current.get("public_id")
+    fragment = f"#shipment-operational-stage-{public_id}" if public_id else ""
+    href = f"/operations/shipments/{shipment.public_id}/stages{fragment}"
+    if current.get("status") == "STARTED":
+        return (
+            30,
+            href,
+            f"تکمیل مرحله «{name}»",
+            "مرحله الزامی جاری شروع شده اما هنوز کامل نشده است.",
+        )
+    if current.get("status") == "NOT_STARTED":
+        return (
+            30,
+            href,
+            f"شروع مرحله «{name}»",
+            "مرحله الزامی بعدی آماده شروع است.",
+        )
+    return None
+
+
+def _attention_rank(section: str) -> int:
+    return {
+        "route": 5,
+        "stages": 30,
+        "cargo": 40,
+        "documents": 50,
+        "tracking": 60,
+        "delivery": 70,
+        "closure": 75,
+    }.get(section, 75)
+
+
+def _action(
+    shipment: OperationalShipment,
+    tasks: list[dict],
+    attention: list[dict],
+    can_manage: bool,
+    stages: dict | None = None,
+) -> tuple[dict | None, list[dict]]:
     if shipment.lifecycle_status == "closed" or not can_manage:
         return None, []
     task_by_key = {task["key"]: task for task in tasks}
-    candidates: list[tuple[int, str, str, str]] = []
+    candidates: list[tuple[int, str, str, str, str]] = []
     if task_by_key["route"]["status"] != "DONE":
-        candidates.append((10, "route", "تعریف مسیر عملیاتی", "برای شروع اجرا، مسیر فعال لازم است."))
+        candidates.append((10, "route", f"/operations/shipments/{shipment.public_id}/route", "تعریف مسیر عملیاتی", "برای شروع اجرا، مسیر فعال لازم است."))
     elif task_by_key["execution"]["status"] != "DONE":
-        candidates.append((20, "route", "تکمیل اجرای حمل", "وسیله یا اجرای حمل برای مسیر فعال کامل نشده است."))
+        candidates.append((20, "route", f"/operations/shipments/{shipment.public_id}/route", "تکمیل اجرای حمل", "وسیله یا اجرای حمل برای مسیر فعال کامل نشده است."))
     if task_by_key["stages"]["status"] not in {"DONE", "UNKNOWN"}:
-        candidates.append((30, "stages", "ثبت پیشرفت مرحله جاری", "مرحله جاری فرایند هنوز کامل نشده است."))
+        stage_action = _stage_action(shipment, stages or {})
+        if stage_action:
+            rank, href, label, reason = stage_action
+            candidates.append((rank, "stages", href, label, reason))
+        else:
+            candidates.append((30, "stages", f"/operations/shipments/{shipment.public_id}/stages", "ثبت پیشرفت مرحله جاری", "مرحله جاری فرایند هنوز کامل نشده است."))
     if task_by_key["cargo"]["status"] != "DONE":
-        candidates.append((40, "cargo", "تکمیل واقعیت کالای حمل‌شده", "مقدار واقعی یک یا چند قلم هنوز قطعی نیست."))
+        candidates.append((40, "cargo", f"/operations/shipments/{shipment.public_id}/cargo", "تکمیل واقعیت کالای حمل‌شده", "مقدار واقعی یک یا چند قلم هنوز قطعی نیست."))
     if task_by_key["documents"]["status"] != "DONE":
-        candidates.append((50, "documents", "تکمیل مدارک الزامی", "آمادگی یک یا چند سند الزامی کامل نیست."))
+        candidates.append((50, "documents", f"/operations/shipments/{shipment.public_id}/documents", "تکمیل مدارک الزامی", "آمادگی یک یا چند سند الزامی کامل نیست."))
     if task_by_key["tracking"]["status"] != "DONE":
-        candidates.append((60, "tracking", "ثبت موقعیت یا پیشرفت", "آخرین موقعیت یا پیشرفت عملیاتی ثبت نشده است."))
+        candidates.append((60, "tracking", f"/operations/shipments/{shipment.public_id}/tracking", "ثبت موقعیت یا پیشرفت", "آخرین موقعیت یا پیشرفت عملیاتی ثبت نشده است."))
     if task_by_key["delivery"]["status"] != "DONE":
-        candidates.append((70, "delivery", "ثبت تحویل کالا", "تحویل کامل کالا هنوز با واقعیت‌های ثبت‌شده اثبات نشده است."))
+        candidates.append((70, "delivery", f"/operations/shipments/{shipment.public_id}/delivery", "ثبت تحویل کالا", "تحویل کامل کالا هنوز با واقعیت‌های ثبت‌شده اثبات نشده است."))
     if task_by_key["closure"]["status"] == "READY":
-        candidates.append((80, "closure", "بررسی و بستن پرونده", "همه الزامات بستن عادی آماده‌اند."))
+        candidates.append((80, "closure", f"/operations/shipments/{shipment.public_id}/closure", "بررسی و بستن پرونده", "همه الزامات بستن عادی آماده‌اند."))
     if attention and attention[0]["severity"] == "BLOCKER":
         blocker = attention[0]
-        candidates.append((5, blocker["section"], blocker["label"], blocker["reason"]))
+        section = blocker["section"]
+        candidates.append((_attention_rank(section), section, f"/operations/shipments/{shipment.public_id}/{section}", blocker["label"], blocker["reason"]))
     candidates.sort(key=lambda row: (row[0], row[1]))
     actions = [{
         "rank": rank, "section": section, "label": label, "reason": reason,
-        "href": f"/operations/shipments/{shipment.public_id}/{section}",
-    } for rank, section, label, reason in candidates]
+        "href": href,
+    } for rank, section, href, label, reason in candidates]
     return (actions[0] if actions else None), actions[1:4]
 
 
@@ -271,7 +320,7 @@ def build(shipment: OperationalShipment, user: dict, *, graph: dict | None = Non
     tasks = _tasks(shipment, graph, stages, assessment)
     attention = _attention(graph, assessment, permissions)
     can_manage = authorize_document_management(user, shipment).allowed
-    recommended, secondary = _action(shipment, tasks, attention, can_manage)
+    recommended, secondary = _action(shipment, tasks, attention, can_manage, stages)
     completed = sum(1 for task in tasks if task["status"] in {"DONE", "NOT_APPLICABLE"})
     now = utcnow()
     updated = _aware(shipment.updated_at)

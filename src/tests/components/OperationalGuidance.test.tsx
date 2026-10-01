@@ -7,10 +7,10 @@ import type { OperationalProjection } from "@/lib/api";
 const projection: OperationalProjection = {
   identity: {label:"P-1042",source:"PROJECT_CODE",technical_id:"shipment",requested_route:null},
   overall_state:"in_progress", operational_route:null,
-  stage_progress:{completed:2,total:5,current:{code:"CUSTOMS",display_name_fa:"تشریفات گمرکی",status:"STARTED",required_for_completion:true},items:[
-    {code:"INTAKE",display_name_fa:"پذیرش",status:"COMPLETED",required_for_completion:true},
-    {code:"PLAN",display_name_fa:"برنامه‌ریزی",status:"COMPLETED",required_for_completion:true},
-    {code:"CUSTOMS",display_name_fa:"تشریفات گمرکی",status:"STARTED",required_for_completion:true},
+  stage_progress:{completed:2,total:5,current:{public_id:"stage-customs",code:"CUSTOMS",display_name_fa:"تشریفات گمرکی",status:"STARTED",required_for_completion:true},items:[
+    {public_id:"stage-intake",code:"INTAKE",display_name_fa:"پذیرش",status:"COMPLETED",required_for_completion:true},
+    {public_id:"stage-plan",code:"PLAN",display_name_fa:"برنامه‌ریزی",status:"COMPLETED",required_for_completion:true},
+    {public_id:"stage-customs",code:"CUSTOMS",display_name_fa:"تشریفات گمرکی",status:"STARTED",required_for_completion:true},
   ],can_record:true,configured:true},
   tasks:[{key:"documents",label:"مدارک الزامی",status:"NEEDS_ACTION",section:"documents",required:true}],
   attention:[{key:"documents",severity:"BLOCKER",label:"مدارک الزامی کامل نیست",reason:"یک سند هنوز آماده نیست.",section:"documents"}],

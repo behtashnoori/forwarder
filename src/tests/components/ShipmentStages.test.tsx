@@ -70,4 +70,15 @@ describe("Organization Shipment stages", () => {
       expect.any(String),
     ));
   });
+
+  it("exposes and scrolls to the exact stage addressed by a next-action deep link", async () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {configurable: true, value: scrollIntoView});
+    window.history.replaceState({}, "", "/operations/shipments/shipment/stages#shipment-operational-stage-stage-1");
+    render(<ShipmentOperationalStages shipmentId="shipment" />);
+    await screen.findByText(/این زنجیره به پروژه وابسته نیست/);
+    expect(document.getElementById("shipment-operational-stage-stage-1")).toBeInTheDocument();
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({block: "center"}));
+    window.history.replaceState({}, "", "/");
+  });
 });
