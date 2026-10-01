@@ -25,7 +25,8 @@ from backend.services import route_orchestration_service as routes
 
 POSTGRES_URL = os.environ.get("P3_BRANCHED_ROUTE_POSTGRES_URL", "")
 PREVIOUS = "20261001_phase3_cargo_lineage"
-HEAD = "20261002_phase3_branched_route"
+SLICE_HEAD = "20261002_phase3_branched_route"
+REPOSITORY_HEAD = "20261015_org_shipment_stages"
 
 pytestmark = pytest.mark.skipif(
     not POSTGRES_URL,
@@ -53,7 +54,7 @@ def _assert_disposable_postgres_18():
 def test_postgresql18_upgrade_roundtrip_constraints_and_route_runtime():
     _assert_disposable_postgres_18()
     config = alembic_config(POSTGRES_URL)
-    command.upgrade(config, HEAD)
+    command.upgrade(config, SLICE_HEAD)
     engine = sa.create_engine(POSTGRES_URL)
     inspector = sa.inspect(engine)
     assert {"route_cargo_destination", "route_traversal_fact"}.issubset(
@@ -67,7 +68,8 @@ def test_postgresql18_upgrade_roundtrip_constraints_and_route_runtime():
     assert "parent_route_leg_id" not in {
         row["name"] for row in sa.inspect(engine).get_columns("route_leg")
     }
-    command.upgrade(config, HEAD)
+    command.upgrade(config, SLICE_HEAD)
+    command.upgrade(config, REPOSITORY_HEAD)
 
     app = create_app(
         {
@@ -289,9 +291,9 @@ def test_postgresql18_upgrade_roundtrip_constraints_and_route_runtime():
             )
         )
     command.downgrade(config, PREVIOUS)
-    command.upgrade(config, HEAD)
+    command.upgrade(config, REPOSITORY_HEAD)
     with engine.connect() as connection:
         assert connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
-        ).scalar_one() == HEAD
+        ).scalar_one() == REPOSITORY_HEAD
     engine.dispose()

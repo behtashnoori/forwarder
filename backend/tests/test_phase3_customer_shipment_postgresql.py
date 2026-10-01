@@ -20,7 +20,7 @@ from backend.tests.test_phase3_transport_execution_postgresql import _seed_runti
 from backend.tests.test_phase3_customer_shipment import new_cargo
 
 URL = os.environ.get("P3_CUSTOMER_SHIPMENT_POSTGRES_URL", "")
-HEAD = "20261008_phase3_cargo_delivery"
+HEAD = "20261015_org_shipment_stages"
 pytestmark = pytest.mark.skipif(not URL, reason="requires owned P3_CUSTOMER_SHIPMENT_POSTGRES_URL")
 
 
