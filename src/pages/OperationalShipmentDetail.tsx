@@ -306,7 +306,7 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
           {activeSection==="route" && activePlan && <RouteStageTransportExecutionSection shipmentId={shipmentPublicId} planId={activePlan.id} closed={data.status === "closed"} />}
-          {activeSection==="route" && !!plans.length && <details className="rounded-2xl border bg-white" onToggle={event=>setReferenceTimesOpen(event.currentTarget.open)}><summary className="cursor-pointer p-4 font-semibold">زمان مرجع و مبنای برنامه</summary>{referenceTimesOpen&&<RouteReferenceTimes shipmentId={shipmentPublicId} plans={plans}/>}</details>}
+          {activeSection==="route" && !!plans.length && <details open={referenceTimesOpen} className="rounded-2xl border bg-white" onToggle={event=>setReferenceTimesOpen(event.currentTarget.open)}><summary className="cursor-pointer p-4 font-semibold">زمان مرجع و مبنای برنامه</summary>{referenceTimesOpen&&<RouteReferenceTimes shipmentId={shipmentPublicId} plans={plans}/>}</details>}
           {activeSection==="cargo" && activePlan && <details open className="rounded border bg-white" onToggle={(event) => setCargoTraceOpen(event.currentTarget.open)}>
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">تخصیص و مسیر هر کالا</summary>
             {cargoTraceOpen && <div className="border-t p-3 sm:p-4"><CargoAllocationTraceSection shipmentId={shipmentPublicId} planId={activePlan.id} closed={data.status === "closed"} /></div>}

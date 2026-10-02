@@ -30,7 +30,8 @@ async function draft(page:Page,mode="rail"){
   await page.locator("#leg-arrival-new").fill(local(new Date(Date.now()+12*86400_000)),{force:true});
   const saved=page.waitForResponse(response=>response.url().endsWith("/legs")&&response.request().method()==="POST");
   await page.getByRole("button",{name:"ذخیره بخش مسیر",exact:true}).click();expect((await saved).status()).toBe(201);
-  await page.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"}).click();
+  const basis=page.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"});
+  if(!(await basis.locator("xpath=..").getAttribute("open")))await basis.click();
   await expect(page.getByRole("heading",{name:/مرجع قابل استفاده/})).toBeVisible();
 }
 test("P3-10 normal Admin reference → Expert pinned basis → future version and new plan",async({browser},testInfo)=>{
@@ -112,7 +113,9 @@ test("P3-10 normal Admin reference → Expert pinned basis → future version an
   await expect(expert.getByRole("heading",{name:"مرجع قابل استفاده · نسخه 2",exact:true})).toBeVisible();
   await expert.getByRole("button",{name:"ثبت این نسخه برای برنامه",exact:true}).click();
   await expect(expert.getByRole("heading",{name:"مبنای تثبیت‌شده برنامه · نسخه مرجع 2",exact:true})).toBeVisible();
-  await openShipment(expert,fixture.p310_old_shipment);await expert.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"}).click();
+  await openShipment(expert,fixture.p310_old_shipment);
+  const historicalBasis=expert.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"});
+  if(!(await historicalBasis.locator("xpath=..").getAttribute("open")))await historicalBasis.click();
   await expect(expert.getByRole("heading",{name:"مبنای تثبیت‌شده برنامه · نسخه مرجع 1",exact:true})).toBeVisible();
   expect((await expert.request.post(`/api/admin/organization-route-reference-times/${reference.public_id}/versions`,{headers:await headers(expert),data:{expected_version:2}})).status()).toBe(403);
   expect((await admin.request.post(`/api/admin/organization-route-reference-times/${fixture.p310_foreign_reference}/versions`,{headers:await headers(admin),data:{expected_version:1}})).status()).toBe(404);
