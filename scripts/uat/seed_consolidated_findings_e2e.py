@@ -20,6 +20,11 @@ def main():
     fixture = json.loads(path.read_text(encoding="utf-8"))
     app = create_app(skip_startup=True)
     with app.app_context():
+        # The revision journey starts after an explicit synthetic customer response.
+        discussion = fixture["journeys"]["discussion"]
+        quoted = ExpertQuote.query.filter_by(public_id=discussion["quote_public_id"]).one()
+        quoted.customer_response = "discussion"
+        quoted.responded_at = datetime.now(timezone.utc)
         ensure_canonical_geography()
         origin = City.query.filter_by(geoname_id=1795855).one()
         other = City.query.filter_by(geoname_id=1796562).one()

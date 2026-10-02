@@ -71,10 +71,14 @@ test("H1-H6 exact Request reuse, parent filters, deliberate variance and date-on
   await dialog.getByLabel("تاریخ اعتبار روز").selectOption("4");
   await dialog.getByRole("button",{name:"شمسی",exact:true}).click();
   await expect(dialog.getByLabel("تاریخ اعتبار")).toHaveValue("2026-10-04");
+  await page.setViewportSize({width:390,height:844});
+  await dialog.screenshot({path:info.outputPath("quote-date-picker-mobile.png")});
   const quote=page.waitForResponse(r=>r.request().method()==="POST"&&r.url().includes("quote"));
   await dialog.getByRole("button",{name:"ارسال پیشنهاد",exact:true}).click();
   const quoted=await quote; expect(quoted.ok()).toBe(true);
   expect(quoted.request().postDataJSON().valid_until).toBe("2026-10-04");
+  const reopened=page.waitForResponse(r=>r.request().method()==="GET"&&r.url().endsWith(`/api/expert/requests/${fixture.journeys.discussion.request_public_id}`));
   await page.reload();
+  expect((await (await reopened).json()).latest_quote.valid_until).toBe("2026-10-04");
   await page.screenshot({path:info.outputPath("quote-date-reopened.png"),fullPage:true});
 });
