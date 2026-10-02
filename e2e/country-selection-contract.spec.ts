@@ -141,6 +141,7 @@ test.describe.serial("HW_GEO_008 country selection contract", () => {
     await expert.getByLabel("نام کاربری").fill("workspace_phase1_peer");
     await expert.getByLabel("رمز عبور").fill(expertPassword!);
     await expert.getByRole("dialog").getByRole("button", { name: "ورود", exact: true }).click();
+    await expect(expert).not.toHaveURL(/\/$/);
     await expert.goto(`/expert/requests/${created.request_public_id}`);
     await expect(expert.getByRole("heading", { name: created.tracking_code, exact: true })).toBeVisible();
     await expect(expert.getByText(iran.name, { exact: false }).first()).toBeVisible();
