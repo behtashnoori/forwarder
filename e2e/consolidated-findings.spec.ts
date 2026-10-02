@@ -19,6 +19,11 @@ test("H1-H6 exact Request reuse, parent filters, deliberate variance and date-on
     await expect(page.getByText(fixture.crm_customer_name,{exact:true}).first()).toBeVisible();
     await page.reload();
     await expect(page.getByText("نام درخواست‌دهنده ثبت نشده").first()).toBeVisible();
+    await page.setViewportSize({width:390,height:844});
+    await expect(page.getByText("مشتری سازمانی مرتبط",{exact:true})).toBeVisible();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.screenshot({path:info.outputPath(`request-linked-customer-mobile-${index}.png`),fullPage:true});
+    await page.setViewportSize({width:1280,height:900});
     await page.getByRole("link",{name:"ایجاد پرونده عملیاتی",exact:true}).first().click();
     await page.getByRole("button",{name:"استفاده از محل درخواستی مشتری · مبدأ",exact:true}).click();
     await page.getByRole("button",{name:"استفاده از محل درخواستی مشتری · مقصد",exact:true}).click();
@@ -63,14 +68,14 @@ test("H1-H6 exact Request reuse, parent filters, deliberate variance and date-on
   await page.getByRole("button",{name:/ارسال پیشنهاد|صدور پیشنهاد/}).first().click();
   const dialog=page.getByRole("dialog",{name:"ارسال پیشنهاد"});
   await dialog.getByLabel("مبلغ (الزامی)").fill("1500000");
-  await expect(dialog.getByLabel("تاریخ اعتبار")).toHaveValue("");
+  await expect(dialog.getByLabel("تاریخ اعتبار",{exact:true})).toHaveValue("");
   await dialog.getByRole("button",{name:/انتخاب تاریخ/}).click();
   await dialog.getByRole("button",{name:"میلادی",exact:true}).click();
   await dialog.getByLabel("تاریخ اعتبار سال").selectOption("2026");
   await dialog.getByLabel("تاریخ اعتبار ماه").selectOption("10");
   await dialog.getByLabel("تاریخ اعتبار روز").selectOption("4");
   await dialog.getByRole("button",{name:"شمسی",exact:true}).click();
-  await expect(dialog.getByLabel("تاریخ اعتبار")).toHaveValue("2026-10-04");
+  await expect(dialog.getByLabel("تاریخ اعتبار",{exact:true})).toHaveValue("2026-10-04");
   await page.setViewportSize({width:390,height:844});
   await dialog.screenshot({path:info.outputPath("quote-date-picker-mobile.png")});
   const quote=page.waitForResponse(r=>r.request().method()==="POST"&&r.url().includes("quote"));
