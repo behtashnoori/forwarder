@@ -1,0 +1,49 @@
+{
+  "mission": "ACTUAL_CARGO_SAVE_AND_NAVIGATION_COLORS",
+  "entry_sha": "e5ff5e9dd70b6d05cb83321086d851e790b78946",
+  "product_sha": "fe20ea67d0714ed288cf48bcb8d94e9121cccc73",
+  "schema_head": "20261017_document_type_ownership",
+  "schema_head_count": 1,
+  "migration_required": false,
+  "evidence_root": "D:\\1-webapp\\forwarder-dev\\actual-cargo-nav-evidence\\qualification-final-fe20ea67",
+  "results": {
+    "focused_backend": "75 passed",
+    "postgresql_18": "fresh base-to-head PASS; selected contracts 3 passed",
+    "frontend": "110 files / 526 tests passed",
+    "typecheck": "PASS",
+    "build": "PASS",
+    "lint": "PASS with 0 errors and 16 existing warnings",
+    "structure": "PASS",
+    "browser": {
+      "P302": "1 passed",
+      "P311": "4 passed",
+      "P314": "3 passed",
+      "P315_CORE": "3 passed"
+    }
+  },
+  "contrast_ratios": {
+    "default": 11.15,
+    "muted": 6.61,
+    "active": 8.03,
+    "hover": 9.14,
+    "disabled": 5.24
+  },
+  "sha256": {
+    "result.json": "EF54BB99AE8F5E9BAA226D0E3D51245F66B062C6B6CFC379652CF2F04C7A9AB5",
+    "frontend-full.log": "BC3A382751DB23A133696CE5951E5512182E55AFD1C9825D98A23F46BF6387F8",
+    "backend-focused.log": "35BBD98C2CFCEB7E4E9550A3B2E5EA09BE6BE87CEDD36BCB3D25F59783687D47",
+    "postgresql-phase3.log": "62362E145C29903E5C5D7791D2F799C68E1F1222F9AF2015D935AC5C545B2F3E",
+    "P302/browser.log": "E6CCF204675C1E606D7B9FD686854EFE1AA0B4220A5D3560C4E383C4ECC885FC",
+    "P314/browser.log": "CB0B76C631B4031D4200D73752E2739FF0DDF33DF068967C89A9383C93408EA2",
+    "actual-cargo-reopened.png": "B0CF3B495E5CCF3002D69762E2679BFAEF230A221A653621B5E0F9052B77267E",
+    "expert-shipment-mobile-rtl.png": "ED579F1B8CC5D5540CC3C7BE13FF25EC29D03DF088E5BBF3822FC8537EBCD73F",
+    "customer-shipment-mobile-navigation.png": "86435EA48EB3CB862FD5BFAEBA9680CF1FF2B9907FE9B8EFD20FCFE0810509E7",
+    "customer-request-detail.png": "A232396D0A549C8F9E7D2044C544D8029E2EC94C03D71E77CD1CAB29A88A6378"
+  },
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "human_product_walkthrough": "IN_PROGRESS",
+  "release_ready": false
+}

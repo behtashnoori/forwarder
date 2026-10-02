@@ -590,10 +590,15 @@ Entry candidate `e5ff5e9dd70b6d05cb83321086d851e790b78946`; schema remains
 
 | ID | Severity | Root cause | Correction and recurrence guard | Status |
 |---|---|---|---|---|
-| HW_ACTUAL_CARGO_SAVE_001 | HIGH | The preserved request reached the existing Cargo PATCH route with unchanged planned quantity and null actual quantity. The backend correctly treated that payload as a no-op, but the adjacent placeholder-only inputs did not make the intended fact binding clear and the UI gave no saved/no-change result. | Keep the existing planned/actual SOR and PATCH contract; render explicit planned and actual labels/explanations, normalize Persian/Arabic decimal input, validate the bound field, and show fact-specific saved or no-change feedback. Backend, component, PostgreSQL 18 and real-browser tests cover null→value, correction, planned-only, actual-only, history, reload, authorization and tenant isolation. | IMPLEMENTED — QUALIFICATION PENDING |
-| HW_NAV_COLOR_001 | MEDIUM | Equivalent navigation states were expressed independently with raw slate, blue, primary, muted and component-variant colors across global, Shipment, Customer/Request and Admin surfaces. | Shared semantic HSL roles now govern surface, inactive, hover, active, focus-visible and disabled navigation states. Deterministic WCAG AA contrast tests and desktop/narrow RTL browser evidence cover representative surfaces; status and alert colors and the font system remain unchanged. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_ACTUAL_CARGO_SAVE_001 | HIGH | The preserved request reached the existing Cargo PATCH route with unchanged planned quantity and null actual quantity. The backend correctly treated that payload as a no-op, but the adjacent placeholder-only inputs did not make the intended fact binding clear and the UI gave no saved/no-change result. | Keep the existing planned/actual SOR and PATCH contract; render explicit planned and actual labels/explanations, normalize Persian/Arabic decimal input, validate the bound field, and show fact-specific saved or no-change feedback. Backend, component, PostgreSQL 18 and real-browser tests cover null→value, correction, planned-only, actual-only, history, reload, authorization and tenant isolation. | RESOLVED — exact-candidate qualification PASS |
+| HW_NAV_COLOR_001 | MEDIUM | Equivalent navigation states were expressed independently with raw slate, blue, primary, muted and component-variant colors across global, Shipment, Customer/Request and Admin surfaces. | Shared semantic HSL roles now govern surface, inactive, hover, active, focus-visible and disabled navigation states. Deterministic WCAG AA contrast tests and desktop/narrow RTL browser evidence cover representative surfaces; status and alert colors and the font system remain unchanged. | RESOLVED — exact-candidate qualification PASS |
 
 The mission protects every preserved walkthrough business fact, including the
 new ETA Shipment with unknown Actual Cargo and no basis, Execution, Allocation,
 departure or arrival. Human Product validation remains IN_PROGRESS and Release
 Ready remains NO.
+
+Exact Product candidate `fe20ea67d0714ed288cf48bcb8d94e9121cccc73` passed
+the evidence matrix in
+[the qualification report](HUMAN-WALKTHROUGH-ACTUAL-CARGO-NAV-COLORS-QUALIFICATION.md)
+and [manifest](HUMAN-WALKTHROUGH-ACTUAL-CARGO-NAV-COLORS-EVIDENCE.json).
