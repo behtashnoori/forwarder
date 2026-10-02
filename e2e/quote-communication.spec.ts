@@ -93,6 +93,7 @@ test.describe.serial("Simple Quote Communication", () => {
     const evidence = observe(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await openCustomer(page, fixture.journeys.discussion);
+    await page.locator("summary").filter({hasText:"جزئیات درخواست"}).click();
     await expect(page.getByText("حمل ترکیبی", { exact: true })).toBeVisible();
     await expect(page.getByText("کالای اول برای حمل ترکیبی")).toBeVisible();
     await expect(page.getByText("کالای دوم برای حمل ترکیبی")).toBeVisible();
@@ -123,7 +124,7 @@ test.describe.serial("Simple Quote Communication", () => {
     await page.getByRole("button", { name: new RegExp(fixture.crm_customer_name) }).click();
     await page.getByRole("button", { name: "اتصال مشتری انتخاب‌شده" }).click();
     await expect(page.getByText("مشتری سازمان به درخواست متصل شد.", { exact: true })).toBeVisible();
-    await expect(page.getByText(fixture.crm_customer_name, { exact: true })).toBeVisible();
+    await expect(page.getByText(fixture.crm_customer_name, { exact: true }).first()).toBeVisible();
     await expect(page.getByText("مشتری نیاز به گفتگو دارد")).toBeVisible();
     await expect(page.getByRole("main").getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم")).toBeVisible();
     await page.getByRole("button", { name: "صدور پیشنهاد بازنگری‌شده" }).click();
@@ -134,6 +135,7 @@ test.describe.serial("Simple Quote Communication", () => {
     await dialog.getByRole("button", { name: "ارسال پیشنهاد", exact: true }).click();
     await expect(page.getByText("۱٬۵۰۰٬۰۰۰ دلار آمریکا (USD)").first()).toBeVisible();
     await expect(page.getByText("تاریخچه پیشنهادها")).toBeVisible();
+    await page.locator("summary").filter({hasText:"تاریخچه پیشنهادها"}).click();
     await expect(page.getByRole("main").getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم")).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("quote-revised-expert-desktop.png"), fullPage: true });
     expectClean(evidence);
@@ -146,6 +148,7 @@ test.describe.serial("Simple Quote Communication", () => {
     await page.getByRole("button", { name: "تأیید پیشنهاد" }).click();
     await expect(page.getByText("شما این پیشنهاد را تأیید کردید").first()).toBeVisible();
     await expect(page.getByText("تاریخچه پیشنهادهای رسمی")).toBeVisible();
+    await page.locator("summary").filter({hasText:"تاریخچه پیشنهادهای رسمی"}).click();
     await expect(page.getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم").first()).toBeVisible();
     expectClean(evidence);
   });
@@ -158,6 +161,7 @@ test.describe.serial("Simple Quote Communication", () => {
     await expect(page.getByText("پیشنهاد پذیرفته شده است", { exact: true })).toBeVisible();
     await expect(page.getByText("در انتظار جمع‌بندی کارشناس", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("ثبت نتیجه تجاری توسط کارشناس", { exact: true }).first()).toBeVisible();
+    await page.locator("summary").filter({hasText:"تایم‌لاین"}).click();
     await expect(page.getByText("مشتری پیشنهاد را پذیرفت", { exact: true })).toBeVisible();
     await expect(page.getByText("مشتری درخواست مذاکره کرد", { exact: true })).toBeVisible();
     await expect(page.getByText("پیشنهاد برای مشتری ارسال شد", { exact: true })).toHaveCount(2);
