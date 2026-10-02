@@ -10,7 +10,7 @@ from backend import create_app
 from backend.extensions import db
 from backend.geonames_geography_catalog import DATASET_ID as GEONAMES_DATASET_ID
 from backend.cargo_models import ShipmentCargoItem
-from backend.models import City, Country, Customer
+from backend.models import City, Country, Customer, DocumentDefinition, ExpertUser
 from backend.operational_models import OperationalShipment
 from scripts.uat.canonical_geography_fixture import ensure_canonical_geography
 from scripts.uat.seed_phase3_cargo_allocation_e2e import main as seed_cargo
@@ -31,6 +31,30 @@ def main():
         if destination is None or destination.province is None:
             raise RuntimeError("P3-08 requires a qualified canonical delivery city")
         shipment = OperationalShipment.query.filter_by(public_id=fixture["p304_shipment"]).one()
+        admin = ExpertUser.query.filter_by(username="shared_transport_e2e_admin").one()
+        for order, (code, name_fa, name_en) in enumerate((
+            ("HW_BILL_OF_LADING", "بارنامه", "Transport Document"),
+            ("HW_INVOICE", "فاکتور", "Invoice"),
+            ("HW_PACKING_LIST", "پکینگ لیست", "Packing List"),
+            ("HW_DELIVERY_RECEIPT", "رسید تحویل", "Delivery Receipt"),
+        ), start=1):
+            if DocumentDefinition.query.filter_by(code=code).one_or_none() is None:
+                db.session.add(DocumentDefinition(
+                    code=code,
+                    title=name_fa,
+                    name_fa=name_fa,
+                    name_en=name_en,
+                    is_required=False,
+                    allowed_formats='["pdf"]',
+                    max_file_size_bytes=2 * 1024 * 1024,
+                    max_active_file_count=4,
+                    sort_order=-100 + order,
+                    applicability_scope="all",
+                    catalog_lifecycle_status="ACTIVE",
+                    source_review_status="VERIFIED",
+                    created_by=admin.id,
+                    updated_by=admin.id,
+                ))
         a = ShipmentCargoItem.query.filter_by(public_id=fixture["p305_cargo"]).one()
         a.actual_quantity = Decimal("100")
         owner = Customer(company_name="مشتری دوم آزمایشی", ownership_scope="TENANT", operational_organization_id=shipment.organization_id, status="active")
