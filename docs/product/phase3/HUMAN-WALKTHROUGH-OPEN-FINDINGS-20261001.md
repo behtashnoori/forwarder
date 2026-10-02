@@ -416,8 +416,76 @@ not recover identities absent from the response.
 
 | ID | Severity | Root cause | Required correction | Qualification | Status |
 |---|---|---|---|---|---|
-| HW_GEO_008 | HIGH | The Customer Request plus route authoring/actual consumers retained the legacy `/api/countries` projection, which silently coupled country eligibility to active `InternationalCity` coverage. Prior HW-GEO browser proof exercised canonical Direct Operation, Route Reference, Delivery and Admin surfaces but never the Customer International Request country controls or the legacy projection. | Align every general-purpose country consumer with the active Country SOR, retain safe public/authenticated boundaries, disclose missing deeper coverage and promote this escaped class into source/API, consumer and browser regression guards. | Independent PostgreSQL SOR comparison; public/authenticated HTTP contracts; consumer inventory guard; Customer/representative browser journeys; preserved-runtime read-only proof. | DIAGNOSED — IMPLEMENTATION PENDING |
+| HW_GEO_008 | HIGH | The Customer Request plus route authoring/actual consumers retained the legacy `/api/countries` projection, which silently coupled country eligibility to active `InternationalCity` coverage. Prior HW-GEO browser proof exercised canonical Direct Operation, Route Reference, Delivery and Admin surfaces but never the Customer International Request country controls or the legacy projection. | `/api/countries` now returns every active Country independently of deeper coverage and supplies a separate safe availability flag. Shared search retains canonical identity and unsupported depth is explained without invalidating the selected country. Source/API, consumer and browser guards cover the escaped class. | Independent PostgreSQL SOR comparison; public/authenticated HTTP contracts; consumer inventory guard; Customer/representative browser journeys; preserved-runtime read-only proof. | RESOLVED |
 
 LPAF reference impact is `NONE`: the frozen framework is unchanged. Project
 reference impact is `UPDATE_REQUIRED`: this finding register, API country
 contract and affected journey evidence must record the final candidate.
+
+### Final correction, selector inventory and qualification
+
+The defect was an unintended server-side eligibility filter, not a dropdown
+viewport or scrolling problem. Legacy `GET /api/countries` returned only active
+countries having an active `InternationalCity`; on the preserved database that
+was 12 of 249 active canonical countries. The correction removes that coverage
+filter and reports deeper-location availability as a separate boolean. A country
+therefore remains a valid selection even when no governed deeper location is
+available. Request submission still requires the same governed international
+location it required before this mission.
+
+Earlier qualification missed the defect because `HW-GEO` exercised the shared
+canonical picker used by Direct Operation, Route Reference, Delivery and Admin,
+but did not exercise `LocationForm`, Customer International Request or the legacy
+country endpoint. The previous proof established its sampled surfaces only; it
+did not establish all country consumers.
+
+The source inventory found 14 country controls across eight actual selector
+surfaces. Thirteen controls across seven surfaces are general-purpose. The one
+Platform Admin catalog control is a reference-maintenance selector and retains
+inactive records by design. Domestic Request has no country control: Iran is an
+explicit Product scope and the branch begins at canonical Admin1/City. Expert
+Request/Quote detail has no country selector and renders submitted Request facts.
+Inline Organization Location creation reuses the surrounding
+`CanonicalLocationPicker`; it does not introduce another country catalog.
+
+| Surface / route | Role | Component | API / source | Filter, paging and search | Classification | Result |
+|---|---|---|---|---|---|---|
+| Anonymous International Request `/` — origin + destination | public | `LocationForm` / `InternationalLocationSelector` | public `/api/countries` | all active rows in one response; normalized Persian/English/ISO client search; selected identity retained | general-purpose, 2 controls | 249/249 reachable; unsupported AU/BR retained with explicit depth status |
+| Customer International Request `/customer/requests/new` — origin + destination | authenticated Customer | same shared `LocationForm` | same safe public projection | same search/retention behavior; no silent first-page truncation | general-purpose, 2 controls | 249/249 reachable; IR/TR submitted and received unchanged by assigned Expert |
+| Domestic Request on `/` and `/customer/requests/new` | public / Customer | `LocationForm` domestic branch | public canonical country lookup fixed to `IR`, then Admin1/City | canonical Iran scope; city remains optional under the existing contract | no country selector; approved Product scope | Iran → Isfahan, Hormozgan → Bandar Abbas and Tehran compatibility retained |
+| Direct Operation creation | Expert | `CanonicalLocationPicker` | authenticated `/api/internal/geography/countries` | all active rows; normalized Persian/English/ISO search; country list unpaged, deeper cities paged | general-purpose, 2 controls | 249/249 and representative depth/browser checks pass |
+| Shipment Route authoring | Expert | `RouteLocationPicker` / `InternationalLocationSelector` | `/api/countries` | same complete active response and shared normalized match | general-purpose, 2 controls | 249/249 contract; unsupported depth disclosed |
+| Shipment actual route | Expert | same `RouteLocationPicker` | `/api/countries` | same as route authoring | general-purpose, 2 controls | same identity and coverage contract |
+| Structured Delivery destination | Expert | `CanonicalLocationPicker` | authenticated canonical geography | same canonical picker behavior | general-purpose, 1 control | representative browser journey passes |
+| Organization Route Reference — origin + destination | Organization Admin | `RouteReferenceLocationPicker` → `CanonicalLocationPicker` | authenticated canonical geography | same canonical picker behavior | general-purpose, 2 controls | representative browser journey passes |
+| Platform Locations → international country catalog | Platform Admin | `LocationsAdminTab` / `ResourcePanel` | authorized Admin country catalog | management list intentionally includes inactive rows and edits catalog state | intentionally scoped, 1 control | retained as reference maintenance; not used for operational eligibility |
+| Expert Request / Quote detail | Expert | read-only detail/proposal views | stored Request facts | no country selection | not applicable | no hidden selector found |
+
+Regression protection now has all three required layers. The PostgreSQL 18
+contract independently queries active `Country` identities, compares the public
+legacy, public canonical and authenticated canonical projections, and asserts no
+missing, unexpected, duplicate or inactive identity, so a city-coverage
+eligibility filter fails the contract. The consumer guard checks the inventoried
+component/data-path bindings and rejects alternative static catalogs. The browser proof
+covers anonymous and authenticated Customer origin/destination, countries beyond
+the former corridor, search clearing and selection retention, absent deeper
+coverage, a synthetic Customer submission and unchanged Expert-side identities.
+The existing HW-GEO journey re-verifies Direct Operation, Route Reference,
+Delivery, inline Location creation/Admin review and the Iran city cases.
+
+Clean qualification candidate `3e4adaddfc84620ff6968eb5d2a2c81b2ff247b6`:
+
+- PostgreSQL 18 country contract: 1/1 PASS against a freshly migrated owned
+  database; active canonical count 249, missing 0, unexpected 0, duplicates 0.
+- Focused backend geography/API suites: 28/28 PASS.
+- Frontend: 105 files / 503 tests PASS; TypeScript and production build PASS;
+  ESLint 0 errors with the existing 16 warnings; structure check PASS.
+- Chrome on fresh owned PostgreSQL 18 databases: HW-GEO 1/1 and HW-GEO008 2/2
+  PASS. All mutations were confined to disposable test databases.
+- Migration required: NO. The unique head remains
+  `20261017_document_type_ownership` and migration readiness reports pending=no.
+
+Product implementation SHA is `463acbd2754572234b96b41e3848c361c15f8c0a`;
+later candidate commits change only tests and disposable fixtures. Evidence root:
+`D:\1-webapp\forwarder-dev\hw-geo-008-evidence\candidate-3e4adadd`.
+Human Product Walkthrough remains `IN_PROGRESS`; `RELEASE_READY=NO`.
