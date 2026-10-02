@@ -91,7 +91,7 @@ test("Organization Admin configures projectless stages and Expert closes only af
   const stages = expert.getByRole("region", { name: "مراحل عملیاتی محموله" });
   await expect(stages.getByText("این زنجیره به پروژه وابسته نیست.", { exact: false })).toBeVisible();
   await expect(stages.locator("ol > li")).toHaveCount(5);
-  const stageTime=stages.getByLabel("زمان رخداد مرحله");
+  const stageTime=stages.getByRole("textbox", { name: "زمان رخداد مرحله", exact: true });
   const stagePicker=stageTime.locator("xpath=..");
   await stagePicker.getByRole("button").first().click();
   await stagePicker.getByRole("button", { name: "میلادی", exact: true }).click();
@@ -116,7 +116,7 @@ test("Organization Admin configures projectless stages and Expert closes only af
   await delivery.getByRole("button", { name: /تحویل تازه برای/ }).click();
   await delivery.getByLabel("مقدار تحویل", { exact: true }).fill("95");
   await selectDestination(delivery);
-  await delivery.getByLabel("زمان وقوع تحویل").fill(local(new Date()), { force: true });
+  await delivery.getByRole("textbox", { name: "زمان وقوع تحویل", exact: true }).fill(local(new Date()), { force: true });
   await delivery.getByLabel("تحویل نهایی محموله").check();
   const delivered = expert.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/deliveries"));
   await delivery.getByRole("button", { name: "ثبت تحویل", exact: true }).click();
