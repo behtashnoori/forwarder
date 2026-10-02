@@ -24,6 +24,9 @@ def main():
         discussion = fixture["journeys"]["discussion"]
         quoted = ExpertQuote.query.filter_by(public_id=discussion["quote_public_id"]).one()
         quoted.customer_response = "discussion"
+        quoted.customer_response_message = "درخواست آزمایشی برای بازنگری اعتبار پیشنهاد"
+        quoted.responded_by_customer_id = discussion["customer_id"]
+        quoted.response_version = 1
         quoted.responded_at = datetime.now(timezone.utc)
         ensure_canonical_geography()
         origin = City.query.filter_by(geoname_id=1795855).one()
