@@ -308,11 +308,11 @@ status depends on the clean-candidate evidence recorded below.
 
 ### Second-batch final qualification and resolution
 
-Product source was last changed by `71a4680222a0d803715dbedb30462ede52bb8460`.
-The clean qualification candidate is
-`28cde865dd5a276fc7005f30fd4f9ad21d6dc4df`; commits after the Product-source
-change adjust only deterministic browser/backend assertions to the established
-UI and closure-history contracts.
+Product source and the clean qualification candidate are
+`849ab15047dab753bca12f266951477a0528c0d2`. The preserved-runtime read exposed
+one raw upstream spelling in the Customer Shipment route projection; the final
+candidate applies the same stable-identity Persian presentation used by Customer
+Request and Expert details, without changing stored geography or route snapshots.
 
 The active-plan first-pin database guard required one additive migration because
 the PostgreSQL trigger at the previous head rejected every active RoutePlan even
@@ -323,32 +323,33 @@ cancelled Shipments, and performs no business-data rewrite.
 
 | ID | Final status | Hash-bound proof |
 |---|---|---|
-| HW_CUSTOMER_GEO_001 | RESOLVED | `browser-final-candidate-2/P315-CORE`, `postgresql-final-candidate-2` |
-| HW_ROUTE_BASIS_001 | RESOLVED | `browser-final-candidate-2/P310`, `postgresql-final-candidate-2` |
-| HW_ROUTE_BASIS_002 | RESOLVED | `browser-final-candidate-2/P310` success/refusal coverage |
-| HW_GUIDANCE_003 | RESOLVED | `browser-final-candidate-2/HW-STAGES` |
-| HW_DATE_PICKER_001 | RESOLVED | `browser-final-candidate-2/HW-STAGES` and `P315-CORE`; 496 frontend tests |
-| HW_DIRECT_OP_REVIEW_001 | RESOLVED | `browser-final-candidate-2/HW-GEO`; frontend review tests |
+| HW_CUSTOMER_GEO_001 | RESOLVED | `browser-final-candidate-3/P315-CORE`, `postgresql-final-candidate-3`; Customer Shipment projection test and preserved read |
+| HW_ROUTE_BASIS_001 | RESOLVED | `browser-final-candidate-3/P310`, `postgresql-final-candidate-3` |
+| HW_ROUTE_BASIS_002 | RESOLVED | `browser-final-candidate-3/P310` success/refusal coverage |
+| HW_GUIDANCE_003 | RESOLVED | `browser-final-candidate-3/HW-STAGES` |
+| HW_DATE_PICKER_001 | RESOLVED | `browser-final-candidate-3/HW-STAGES` and `P315-CORE`; 496 frontend tests |
+| HW_DIRECT_OP_REVIEW_001 | RESOLVED | `browser-final-candidate-3/HW-GEO`; frontend review tests |
 | HW_UOM_001 | RESOLVED | frontend cargo/request tests; `P315-CORE` |
-| HW_DOC_ADMIN_001 | RESOLVED | `browser-final-candidate-2/HW-GEO`; document-policy tests |
-| HW_DOC_ADMIN_002 | RESOLVED | `browser-final-candidate-2/HW-GEO`; document-policy tests |
-| HW_STAGE_ADMIN_001 | RESOLVED | `browser-final-candidate-2/HW-STAGES` |
-| HW_STAGE_ADMIN_002 | RESOLVED | `browser-final-candidate-2/HW-STAGES` |
-| HW_CLOSURE_ADMIN_001 | RESOLVED | `browser-final-candidate-2/HW-STAGES`; closure tests |
-| HW_CLOSURE_ADMIN_002 | RESOLVED | `browser-final-candidate-2/HW-STAGES`; closure tests |
-| HW_CLOSURE_ADMIN_003 | RESOLVED | `browser-final-candidate-2/HW-STAGES`; closure tests |
-| HW_CLOSURE_ADMIN_004 | RESOLVED | `browser-final-candidate-2/HW-STAGES`; closure tests |
-| HW_CLOSURE_ADMIN_005 | RESOLVED | `browser-final-candidate-2/HW-STAGES`; closure tests |
-| HW_CLOSURE_ADMIN_006 | RESOLVED | `browser-final-candidate-2/HW-STAGES`; shared-picker tests |
-| HW_LOCATION_ADMIN_001 | RESOLVED | `browser-final-candidate-2/HW-GEO` |
-| HW_LOCATION_ADMIN_002 | RESOLVED | `browser-final-candidate-2/HW-GEO`, `postgresql-final-candidate-2` |
+| HW_DOC_ADMIN_001 | RESOLVED | `browser-final-candidate-3/HW-GEO`; document-policy tests |
+| HW_DOC_ADMIN_002 | RESOLVED | `browser-final-candidate-3/HW-GEO`; document-policy tests |
+| HW_STAGE_ADMIN_001 | RESOLVED | `browser-final-candidate-3/HW-STAGES` |
+| HW_STAGE_ADMIN_002 | RESOLVED | `browser-final-candidate-3/HW-STAGES` |
+| HW_CLOSURE_ADMIN_001 | RESOLVED | `browser-final-candidate-3/HW-STAGES`; closure tests |
+| HW_CLOSURE_ADMIN_002 | RESOLVED | `browser-final-candidate-3/HW-STAGES`; closure tests |
+| HW_CLOSURE_ADMIN_003 | RESOLVED | `browser-final-candidate-3/HW-STAGES`; closure tests |
+| HW_CLOSURE_ADMIN_004 | RESOLVED | `browser-final-candidate-3/HW-STAGES`; closure tests |
+| HW_CLOSURE_ADMIN_005 | RESOLVED | `browser-final-candidate-3/HW-STAGES`; closure tests |
+| HW_CLOSURE_ADMIN_006 | RESOLVED | `browser-final-candidate-3/HW-STAGES`; shared-picker tests |
+| HW_LOCATION_ADMIN_001 | RESOLVED | `browser-final-candidate-3/HW-GEO` |
+| HW_LOCATION_ADMIN_002 | RESOLVED | `browser-final-candidate-3/HW-GEO`, `postgresql-final-candidate-3` |
 
 Final qualification on the clean candidate:
 
 - PostgreSQL 18: 8/8 affected suites PASS, base-to-head migration PASS, public
   tracking PASS; schema `20261016_active_route_basis`.
 - Chrome: P310, HW-GEO, HW-STAGES and P315-CORE PASS in disposable databases.
-- Backend: 143/143 affected SQLite tests PASS.
+- Backend: 159/159 affected SQLite tests PASS, including Customer Shipment
+  canonical route presentation.
 - Frontend: 103 files / 496 tests PASS; TypeScript and production build PASS;
   ESLint has 0 errors and the existing 16 warnings.
 
