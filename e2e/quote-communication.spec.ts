@@ -158,7 +158,7 @@ test.describe.serial("Simple Quote Communication", () => {
     await loginExpert(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/expert/requests/${fixture.journeys.discussion.request_public_id}`);
-    await expect(page.getByText("پیشنهاد پذیرفته شده است", { exact: true })).toBeVisible();
+    await expect(page.getByText("پیشنهاد پذیرفته شده است", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("در انتظار جمع‌بندی کارشناس", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("ثبت نتیجه تجاری توسط کارشناس", { exact: true }).first()).toBeVisible();
     await page.locator("summary").filter({hasText:"تایم‌لاین"}).click();
