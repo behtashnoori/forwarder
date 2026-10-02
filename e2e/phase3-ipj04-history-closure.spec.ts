@@ -130,7 +130,7 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   await openShipmentSection(owner, "route", fixture.p313_shipment);
   await expect(owner.getByRole("heading", { name: "وسیله و شرکت حمل هر بخش مسیر" })).toBeVisible();
   const basisSummary = owner.locator("summary", { hasText: "زمان مرجع و مبنای برنامه" });
-  if (!(await basisSummary.locator("xpath=..").getAttribute("open"))) await basisSummary.click();
+  if (!(await basisSummary.locator("xpath=..").evaluate(node => (node as HTMLDetailsElement).open))) await basisSummary.click();
   expect((await routeReferenceTimes).status()).toBe(200);
   await openShipmentSection(owner, "cargo", fixture.p313_shipment);
   await expect(owner.getByRole("heading", { name: "تخصیص و مسیر هر کالا" })).toBeVisible();

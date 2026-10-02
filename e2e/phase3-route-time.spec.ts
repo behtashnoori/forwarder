@@ -31,7 +31,7 @@ async function draft(page:Page,mode="rail"){
   const saved=page.waitForResponse(response=>response.url().endsWith("/legs")&&response.request().method()==="POST");
   await page.getByRole("button",{name:"ذخیره بخش مسیر",exact:true}).click();expect((await saved).status()).toBe(201);
   const basis=page.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"});
-  if(!(await basis.locator("xpath=..").getAttribute("open")))await basis.click();
+  if(!(await basis.locator("xpath=..").evaluate(node=>(node as HTMLDetailsElement).open)))await basis.click();
   await expect(page.getByRole("heading",{name:/مرجع قابل استفاده/})).toBeVisible({timeout:15_000});
 }
 test("P3-10 normal Admin reference → Expert pinned basis → future version and new plan",async({browser},testInfo)=>{
@@ -80,7 +80,7 @@ test("P3-10 normal Admin reference → Expert pinned basis → future version an
   await expect(expert.getByText("برنامه مسیر فعال",{exact:true})).toBeVisible();
   const basisSummary=expert.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"});
   const basisDetails=basisSummary.locator("xpath=..");
-  if(!(await basisDetails.getAttribute("open")))await basisSummary.click();
+  if(!(await basisDetails.evaluate(node=>(node as HTMLDetailsElement).open)))await basisSummary.click();
   await basisDetails.getByRole("button",{name:"بررسی دوباره مراجع",exact:true}).click();
   await expert.getByRole("button",{name:"ثبت این نسخه برای برنامه",exact:true}).click();
   await expect(expert.getByRole("status")).toContainText("با موفقیت");
@@ -115,7 +115,7 @@ test("P3-10 normal Admin reference → Expert pinned basis → future version an
   await expect(expert.getByRole("heading",{name:"مبنای تثبیت‌شده برنامه · نسخه مرجع 2",exact:true})).toBeVisible();
   await openShipment(expert,fixture.p310_old_shipment);
   const historicalBasis=expert.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"});
-  if(!(await historicalBasis.locator("xpath=..").getAttribute("open")))await historicalBasis.click();
+  if(!(await historicalBasis.locator("xpath=..").evaluate(node=>(node as HTMLDetailsElement).open)))await historicalBasis.click();
   await expect(expert.getByRole("heading",{name:"مبنای تثبیت‌شده برنامه · نسخه مرجع 1",exact:true})).toBeVisible();
   expect((await expert.request.post(`/api/admin/organization-route-reference-times/${reference.public_id}/versions`,{headers:await headers(expert),data:{expected_version:2}})).status()).toBe(403);
   expect((await admin.request.post(`/api/admin/organization-route-reference-times/${fixture.p310_foreign_reference}/versions`,{headers:await headers(admin),data:{expected_version:1}})).status()).toBe(404);
