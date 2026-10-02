@@ -11,6 +11,7 @@ from typing import Any
 
 from backend.extensions import db
 from backend.models import City, Country, County, CustomsOffice, InternationalCity, IranPort, Province, ShipmentRequest
+from backend.services.geography_presentation import name_fa as presented_name_fa
 
 UNKNOWN = "نامشخص"
 
@@ -42,12 +43,12 @@ def build_iran_destination_payload(req: ShipmentRequest) -> dict[str, Any] | Non
         label = office.name_fa if office else None
     elif req.iran_dest_type == "city":
         city = db.session.get(City, req.iran_dest_city_id) if req.iran_dest_city_id else None
-        label = city.name_fa if city else None
+        label = presented_name_fa(city) if city else None
 
     return {
         "type": req.iran_dest_type,
         "label": label,
-        "province": province.name_fa if province else (req.iran_entry_province or None),
+        "province": presented_name_fa(province) if province else (req.iran_entry_province or None),
     }
 
 
@@ -79,14 +80,14 @@ def build_route_payload(req: ShipmentRequest) -> dict[str, Any]:
         dest_county = db.session.get(County, req.dest_county_id) if req.dest_county_id else None
         dest_city = db.session.get(City, req.dest_city_id) if req.dest_city_id else None
         origin.update({
-            "province": origin_province.name_fa if origin_province else UNKNOWN,
+            "province": presented_name_fa(origin_province) if origin_province else UNKNOWN,
             "county": origin_county.name_fa if origin_county else UNKNOWN,
-            "city": origin_city.name_fa if origin_city else UNKNOWN,
+            "city": presented_name_fa(origin_city) if origin_city else UNKNOWN,
         })
         destination.update({
-            "province": dest_province.name_fa if dest_province else UNKNOWN,
+            "province": presented_name_fa(dest_province) if dest_province else UNKNOWN,
             "county": dest_county.name_fa if dest_county else UNKNOWN,
-            "city": dest_city.name_fa if dest_city else UNKNOWN,
+            "city": presented_name_fa(dest_city) if dest_city else UNKNOWN,
         })
 
     return {
