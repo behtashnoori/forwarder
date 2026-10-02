@@ -1,0 +1,304 @@
+{
+  "phase": 1,
+  "entry_sha": "9264c106fcf7eef5e5e5a4fd473d24dd88381c44",
+  "product_sha": "a705c9cb77f0a337a63f4d59a3dcdc5032546244",
+  "final_qualification_sha": "7756349eef0fb75f778619380587a91f78f4b11f",
+  "test_only_changes_after_product": [
+    "backend/tests/test_document_phase1.py",
+    "e2e/document-phase1.spec.ts",
+    "e2e/operational-workspace-phase1.spec.ts",
+    "e2e/phase3-ipj04-history-closure.spec.ts"
+  ],
+  "evidence_root": "D:\\1-webapp\\forwarder-dev\\document-phase1-evidence",
+  "migration_head": "20261017_document_type_ownership",
+  "head_count": 1,
+  "backend": "113 passed; final upload follow-up 10 passed",
+  "frontend": "104 files, 499 tests passed",
+  "typescript": "PASS",
+  "build": "PASS",
+  "lint": "PASS, 0 errors, 16 existing warnings",
+  "qualification_cases": {
+    "1": "PASS",
+    "2": "PASS",
+    "3": "PASS",
+    "4": "PASS",
+    "5": "PASS",
+    "6": "PASS",
+    "7": "PASS",
+    "8": "PASS"
+  },
+  "accepted_runs": [
+    {
+      "directory": "candidate-2",
+      "qualified_sha": "dc6f43b1831a47ec69d7c7ccb20bb67c56678f62",
+      "accepted_results": [
+        "PostgreSQL 18 base-to-head migration chain",
+        "Phase 3 PostgreSQL 18",
+        "Public Tracking regression",
+        "P306 Chrome"
+      ],
+      "stopped": true,
+      "schema": "20261017_document_type_ownership"
+    },
+    {
+      "directory": "candidate-3",
+      "qualified_sha": "bcd37e9b48143dbdebb81d0ed0980deadf9d1d4d",
+      "accepted_results": [
+        "DOC-PHASE1 Chrome"
+      ],
+      "stopped": true,
+      "schema": "20261017_document_type_ownership"
+    },
+    {
+      "directory": "candidate-4",
+      "qualified_sha": "a392ac1a621727a65386d70c5eb3da35ee1c6403",
+      "accepted_results": [
+        "IPJ02-IPJ03 Chrome"
+      ],
+      "stopped": true,
+      "schema": "20261017_document_type_ownership"
+    },
+    {
+      "directory": "candidate-5",
+      "qualified_sha": "7756349eef0fb75f778619380587a91f78f4b11f",
+      "accepted_results": [
+        "IPJ04 Chrome"
+      ],
+      "stopped": true,
+      "schema": "20261017_document_type_ownership"
+    }
+  ],
+  "proofs": [
+    {
+      "path": "backend-final.log",
+      "bytes": 210,
+      "sha256": "7e93f624366b6ad6c633fa568200f778eec543dcfc04a032b20ea696d0eac00f"
+    },
+    {
+      "path": "build.log",
+      "bytes": 1239,
+      "sha256": "a15f9644f80b9467fe241b6a877013ea24826fc5d3773eab2093461c986b4627"
+    },
+    {
+      "path": "candidate-2/DOC-PHASE1/browser/document-phase1-Phase-1-\u2014--a5bc6-ivate-\u2192-historical-download/admin-catalog.png",
+      "bytes": 175756,
+      "sha256": "cbf616e0a0fbee884756d3703841140aef791736059d55f39e48e19c3f550f14"
+    },
+    {
+      "path": "candidate-2/DOC-PHASE1/browser/document-phase1-Phase-1-\u2014--a5bc6-ivate-\u2192-historical-download/expert-document-desktop.png",
+      "bytes": 167753,
+      "sha256": "8ab4b347091e5de7212f5003633c5ddc20846238540f0f25ab0f02c2fcabb217"
+    },
+    {
+      "path": "candidate-2/DOC-PHASE1/browser/document-phase1-Phase-1-\u2014--a5bc6-ivate-\u2192-historical-download/test-failed-1.png",
+      "bytes": 93948,
+      "sha256": "34e24c5cbb1f630ab88ce2933acd97c361e2bff31035bace11aab6cd92e039ed"
+    },
+    {
+      "path": "candidate-2/DOC-PHASE1/browser/document-phase1-Phase-1-\u2014--a5bc6-ivate-\u2192-historical-download/test-failed-2.png",
+      "bytes": 78646,
+      "sha256": "942f8446e465b45107c44cd77e8df5436766f7297cefef081e9b8628c7c54312"
+    },
+    {
+      "path": "candidate-2/DOC-PHASE1/browser/document-phase1-Phase-1-\u2014--a5bc6-ivate-\u2192-historical-download/test-failed-3.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401"
+    },
+    {
+      "path": "candidate-2/DOC-PHASE1/browser.log",
+      "bytes": 5320,
+      "sha256": "aa12ec89bfa7a4f98e45e21b391c6651d60c33f77b04c0891ab0c7b9f2a87f00"
+    },
+    {
+      "path": "candidate-2/P306/browser/phase3-document-context-DN-0cf05-\u2192-mobile-back-reopen-denied/dn10-admin.png",
+      "bytes": 118207,
+      "sha256": "0928701de0aad5abc5a2e24628882af868f0387fdba8b6a938ba0ba0fcf4c739"
+    },
+    {
+      "path": "candidate-2/P306/browser/phase3-document-context-DN-0cf05-\u2192-mobile-back-reopen-denied/dn10-customer-mobile.png",
+      "bytes": 34313,
+      "sha256": "c6c289847f50dbaf7251c6cdefd7a6c702ac2c179b9a6d0617d313bd5cc43c98"
+    },
+    {
+      "path": "candidate-2/P306/browser.log",
+      "bytes": 520,
+      "sha256": "7a4b6abc91324caed36ee37061d997da4ba40c96aef630ba63026d4db300ab5b"
+    },
+    {
+      "path": "candidate-2/postgresql-migration-chain.log",
+      "bytes": 22851,
+      "sha256": "25639a1b8c77a5225986e272d05b54bc15ce3d0a0cbc04e2e2404f11b238a402"
+    },
+    {
+      "path": "candidate-2/postgresql-phase3.log",
+      "bytes": 125,
+      "sha256": "d7fbdcd9c811d726438d9d25890245443d5a0d2b4284dba7a5c10e087795d17d"
+    },
+    {
+      "path": "candidate-2/public-tracking-postgresql.log",
+      "bytes": 113,
+      "sha256": "e8716fd2f95e2ab602314a427f69111b3d79c202e9efa09cbca6b1198d26d3c2"
+    },
+    {
+      "path": "candidate-2/result.json",
+      "bytes": 1305,
+      "sha256": "97327942508ce8350784c2b28cc006f1cade644355fa4c7fcfefe0a37ffd730d"
+    },
+    {
+      "path": "candidate-3/DOC-PHASE1/browser/document-phase1-Phase-1-\u2014--a5bc6-ivate-\u2192-historical-download/admin-catalog.png",
+      "bytes": 175756,
+      "sha256": "cbf616e0a0fbee884756d3703841140aef791736059d55f39e48e19c3f550f14"
+    },
+    {
+      "path": "candidate-3/DOC-PHASE1/browser/document-phase1-Phase-1-\u2014--a5bc6-ivate-\u2192-historical-download/expert-document-desktop.png",
+      "bytes": 167833,
+      "sha256": "b343849cf466f67afeebd188b74ce6f41782b975c6cd56f401005ec50c3cd35c"
+    },
+    {
+      "path": "candidate-3/DOC-PHASE1/browser/document-phase1-Phase-1-\u2014--a5bc6-ivate-\u2192-historical-download/expert-document-mobile.png",
+      "bytes": 157349,
+      "sha256": "e85f6a68f4da11820395b7c9cdeeb31ad7f40c7275d4db3f78514f3e717d67cd"
+    },
+    {
+      "path": "candidate-3/DOC-PHASE1/browser.log",
+      "bytes": 368,
+      "sha256": "8bfe8baea6409a89e707a3da600e131737d3282623e915e7b21f9b8a7588d908"
+    },
+    {
+      "path": "candidate-3/IPJ02-IPJ03/browser/operational-workspace-phas-bf179-hipment-context-and-history/test-failed-1.png",
+      "bytes": 101141,
+      "sha256": "6585405742db130dd756e153bfc03683ea185ac3dccebe38921a201fade4e5ac"
+    },
+    {
+      "path": "candidate-3/IPJ02-IPJ03/browser.log",
+      "bytes": 5879,
+      "sha256": "970952134644cbeb6cd154902ffabad58052e17f31fc060d849194903c2b28f0"
+    },
+    {
+      "path": "candidate-3/result.json",
+      "bytes": 858,
+      "sha256": "f880d84b6febae263f759f7590a2bdddfbe44008d451cb914a4a117246fde444"
+    },
+    {
+      "path": "candidate-4/IPJ02-IPJ03/browser.log",
+      "bytes": 1182,
+      "sha256": "2d1c4a3d10c660cddd1a6cbdebca05e380668f510a34ec77fa2034aba1e62ba5"
+    },
+    {
+      "path": "candidate-4/IPJ02-IPJ03/shipment-context-history.png",
+      "bytes": 180735,
+      "sha256": "55ec045ce20e89bdf0eada7ac63d7e25c5a3b9e97cc0137bf7ab5551221ed9d2"
+    },
+    {
+      "path": "candidate-4/IPJ02-IPJ03/workspace-empty.png",
+      "bytes": 109896,
+      "sha256": "28dfa3e9bce591768968e8aebf6ec3250e2a776c1b2f6ff6f45db27c2ed4ced8"
+    },
+    {
+      "path": "candidate-4/IPJ02-IPJ03/workspace-overview.png",
+      "bytes": 240179,
+      "sha256": "eb5566ba5b4a64694f07d318f2d5e82bb37d5dc4a9b4a98254162ae786c86aec"
+    },
+    {
+      "path": "candidate-4/IPJ04/browser/phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope/owner-transfer-admin-confirm.png",
+      "bytes": 273777,
+      "sha256": "d1e796d4403901c9c9d67008d0cee44a37210a178dce7d5152946a971fcfd45f"
+    },
+    {
+      "path": "candidate-4/IPJ04/browser/phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope/owner-transfer-customer-unchanged.png",
+      "bytes": 203084,
+      "sha256": "3604ee134a09ecd765832682854bb41561b0f1a1a05068942f8b3a3869b39d7b"
+    },
+    {
+      "path": "candidate-4/IPJ04/browser/phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope/owner-transfer-new-owner-mobile.png",
+      "bytes": 229021,
+      "sha256": "a65b1ff94ac8f3cfd7a227d45726455ce9825f3bf3a54ae7e556ced6a2fbfe15"
+    },
+    {
+      "path": "candidate-4/IPJ04/browser-follow-up.log",
+      "bytes": 784,
+      "sha256": "c6d78a2cc5e7d5d6f5c30ac2f8dffde94e9b1c6b91d4c0484cc0e3207465b464"
+    },
+    {
+      "path": "candidate-4/IPJ04/browser.log",
+      "bytes": 361,
+      "sha256": "df53c59a3c7727515c2487eed1bd2cd655de9643729b783e796714182c09e2c4"
+    },
+    {
+      "path": "candidate-4/result.json",
+      "bytes": 853,
+      "sha256": "da380674df2a2e0bef3488e16e06fcfd9250790a55de104e874709a36f7faf58"
+    },
+    {
+      "path": "candidate-5/IPJ04/browser/phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope/owner-transfer-admin-confirm.png",
+      "bytes": 273933,
+      "sha256": "75564c0250315c758ba369b1c1a712e66e7137d82a757cbe8d425a0029c4b631"
+    },
+    {
+      "path": "candidate-5/IPJ04/browser/phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope/owner-transfer-customer-unchanged.png",
+      "bytes": 203229,
+      "sha256": "a9c71c25bdbca7b4f1346914a8cfc4c35af665df4931c0aa8de9a694a5ac4a88"
+    },
+    {
+      "path": "candidate-5/IPJ04/browser/phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope/owner-transfer-new-owner-mobile.png",
+      "bytes": 228770,
+      "sha256": "3fd83267fe9d54d8d9841ca325d0f77abf1b28bd16df4a8bb7d3b958880005dc"
+    },
+    {
+      "path": "candidate-5/IPJ04/browser-follow-up/phase3-ipj04-history-closu-084e1-osure-and-post-close-denial/ipj04-closed-history-mobile.png",
+      "bytes": 362799,
+      "sha256": "c5f07c5719efaf1152b39572b582ef7a0826e536b43d3fbd205458517ff32d29"
+    },
+    {
+      "path": "candidate-5/IPJ04/browser-follow-up.log",
+      "bytes": 386,
+      "sha256": "9857b6e0a0fa3f6e2737de0be2078bb7c9f6bf661704b5f1de08b5077e8666b4"
+    },
+    {
+      "path": "candidate-5/IPJ04/browser.log",
+      "bytes": 361,
+      "sha256": "756cc3458833c1f424f562fb53c1beaf3e57b9723f4cfda89ecf556fea984e3f"
+    },
+    {
+      "path": "candidate-5/result.json",
+      "bytes": 820,
+      "sha256": "ff9f71cedd64bf1f7a5b7d8722524a2eb9245f52f3a675dc0c81d8355835391f"
+    },
+    {
+      "path": "frontend.log",
+      "bytes": 333,
+      "sha256": "2a2879c2ea2aba5b5aaf5e1007a5777b63379f3effc1bc5d6ed7a6ddca3cf3a8"
+    },
+    {
+      "path": "governance.log",
+      "bytes": 50,
+      "sha256": "47109b0c724cf0a14aaa0e6570abf8b39f00411150f99d0705ed657852b2d4e4"
+    },
+    {
+      "path": "lint.log",
+      "bytes": 4515,
+      "sha256": "5909e2e52a33667501d651f3ca3f9f504629af32323e129d970d0ea194515302"
+    },
+    {
+      "path": "readiness-baseline.log",
+      "bytes": 9109,
+      "sha256": "d8d202dfd912e2a71661f9c88043483653b67b398d21e89ecde30c92b7022f0d"
+    },
+    {
+      "path": "typescript.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "upload-final.log",
+      "bytes": 116,
+      "sha256": "e54914c7dcd82ea13de253864780d4213dc47a3773d5a77808967b9aa06b6df5"
+    }
+  ],
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "human_product_walkthrough": "IN_PROGRESS",
+  "release_ready": false
+}
