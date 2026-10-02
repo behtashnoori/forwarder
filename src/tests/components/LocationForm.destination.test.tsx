@@ -20,7 +20,7 @@ vi.mock("@/lib/api", async () => ({
   ...await vi.importActual<typeof import("@/lib/api")>("@/lib/api"),
   fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(), fetchTransportMethodOptions: vi.fn(), fetchRequestCargoOptions: vi.fn(),
   fetchProvinces: vi.fn(), fetchCounties:vi.fn(), fetchCities:vi.fn(), fetchIranPorts: vi.fn(), fetchBorderCustoms: vi.fn(),
-  fetchCanonicalCountries:vi.fn(), fetchCanonicalAdmin1:vi.fn(), fetchCanonicalCities:vi.fn(),
+  fetchPublicCanonicalCountries:vi.fn(), fetchPublicCanonicalAdmin1:vi.fn(), fetchPublicCanonicalCities:vi.fn(),
   submitShipmentRequest: vi.fn(),
 }));
 vi.mock("@/lib/customerPortalApi", async () => ({
@@ -40,13 +40,13 @@ beforeEach(() => {
     { id: 1, name: "Iran", name_en: "Iran", code: "IR" },
     { id: 2, name: "Turkey", name_en: "Turkey", code: "TR" },
   ]);
-  vi.mocked(api.fetchCanonicalCountries).mockResolvedValue({items:[{id:1,code:"IR",name_fa:"ایران",name_en:"Iran"}]});
-  vi.mocked(api.fetchCanonicalAdmin1).mockResolvedValue({items:[
+  vi.mocked(api.fetchPublicCanonicalCountries).mockResolvedValue({items:[{id:1,code:"IR",name_fa:"ایران",name_en:"Iran"}]});
+  vi.mocked(api.fetchPublicCanonicalAdmin1).mockResolvedValue({items:[
     {source_id:101,geoname_id:418862,code:"04",name_fa:"اصفهان",name_en:"Isfahan"},
     {source_id:102,geoname_id:131222,code:"11",name_fa:"هرمزگان",name_en:"Hormozgan"},
     {source_id:103,geoname_id:110791,code:"26",name_fa:"تهران",name_en:"Tehran"},
   ]});
-  vi.mocked(api.fetchCanonicalCities).mockImplementation(async admin=>({items:
+  vi.mocked(api.fetchPublicCanonicalCities).mockImplementation(async admin=>({items:
     admin===418862?[{source_id:201,geoname_id:418863,name_fa:"اصفهان",name_en:"Isfahan",latitude:"32",longitude:"51"}]:
     admin===131222?[{source_id:202,geoname_id:141681,name_fa:"بندرعباس",name_en:"Bandar Abbas",latitude:"27",longitude:"56"}]:
     [{source_id:203,geoname_id:112931,name_fa:"تهران",name_en:"Tehran",latitude:"35",longitude:"51"}]
@@ -123,14 +123,14 @@ describe("public destination business flow", () => {
       preference_options:[{value:"customer_choice",label:"انتخاب مشتری",description:""}],
     });
     render(<MemoryRouter><LocationForm shippingType="domestic" onBack={vi.fn()}/></MemoryRouter>);
-    await waitFor(()=>expect(api.fetchCanonicalAdmin1).toHaveBeenCalledWith("IR"));
+    await waitFor(()=>expect(api.fetchPublicCanonicalAdmin1).toHaveBeenCalledWith("IR"));
     await select("requestForm.originProvince","اصفهان");
     await userEvent.click(screen.getByRole("button",{name:/requestForm.showOriginDetails/}));
-    await waitFor(()=>expect(api.fetchCanonicalCities).toHaveBeenCalledWith(418862));
+    await waitFor(()=>expect(api.fetchPublicCanonicalCities).toHaveBeenCalledWith(418862));
     await select("requestForm.originCity","اصفهان");
     await select("requestForm.destinationProvince","هرمزگان");
     await userEvent.click(screen.getByRole("button",{name:/requestForm.showDestinationDetails/}));
-    await waitFor(()=>expect(api.fetchCanonicalCities).toHaveBeenCalledWith(131222));
+    await waitFor(()=>expect(api.fetchPublicCanonicalCities).toHaveBeenCalledWith(131222));
     await select("requestForm.destinationCity","بندرعباس");
     expect(api.fetchCounties).not.toHaveBeenCalled();
     expect(api.fetchCities).not.toHaveBeenCalled();

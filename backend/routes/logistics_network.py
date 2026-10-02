@@ -35,6 +35,27 @@ def _type(public_id):
     return row
 
 
+@logistics_network_bp.get("/api/geography/countries")
+def public_geography_countries():
+    return jsonify(svc.canonical_countries(request.args))
+
+
+@logistics_network_bp.get("/api/geography/admin1")
+def public_geography_admin1():
+    try:
+        return jsonify(svc.canonical_admin1(request.args))
+    except OperationalError as exc:
+        return _error(exc)
+
+
+@logistics_network_bp.get("/api/geography/cities")
+def public_geography_cities():
+    try:
+        return jsonify(svc.canonical_cities(request.args))
+    except OperationalError as exc:
+        return _error(exc)
+
+
 @logistics_network_bp.get("/api/admin/logistics-point-types")
 @require_organization_admin_context()
 def type_list():

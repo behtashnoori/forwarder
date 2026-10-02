@@ -135,6 +135,17 @@ def test_normalization_catalog_and_projections_are_bounded(network_app):
         assert plan["created_count"] == 10 and plan["conflict_count"] == 1
 
 
+def test_canonical_geography_has_a_public_read_only_surface(network_app):
+    app, _ = network_app
+    with app.test_client() as client:
+        countries = client.get("/api/geography/countries?q=Iran")
+        assert countries.status_code == 200
+        assert countries.get_json()["items"][0]["code"] == "IR"
+        assert client.get("/api/geography/admin1?country_code=IR").status_code == 200
+        assert client.get("/api/geography/cities").status_code == 422
+        assert client.get("/api/internal/geography/countries").status_code == 401
+
+
 def test_exact_duplicate_org_boundary_and_no_public_surface(network_app):
     app, ctx = network_app
     with app.test_client() as client:

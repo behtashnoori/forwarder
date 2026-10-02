@@ -4254,6 +4254,9 @@ export interface CanonicalCity { source_id:number; geoname_id:number; name_fa:st
 export const fetchCanonicalCountries = (q = "") => request<{items:CanonicalCountry[]}>(withQuery("/api/internal/geography/countries", {q}));
 export const fetchCanonicalAdmin1 = (countryCode:string, q = "") => request<{items:CanonicalAdmin1[]}>(withQuery("/api/internal/geography/admin1", {country_code:countryCode,q}));
 export const fetchCanonicalCities = (admin1GeonameId:number, q = "", offset = 0) => request<{items:CanonicalCity[];has_more?:boolean}>(withQuery("/api/internal/geography/cities", {admin1_geoname_id:admin1GeonameId,q,offset}));
+export const fetchPublicCanonicalCountries = (q = "") => request<{items:CanonicalCountry[]}>(withQuery("/api/geography/countries", {q}));
+export const fetchPublicCanonicalAdmin1 = (countryCode:string, q = "") => request<{items:CanonicalAdmin1[]}>(withQuery("/api/geography/admin1", {country_code:countryCode,q}));
+export const fetchPublicCanonicalCities = (admin1GeonameId:number, q = "", offset = 0) => request<{items:CanonicalCity[];has_more?:boolean}>(withQuery("/api/geography/cities", {admin1_geoname_id:admin1GeonameId,q,offset}));
 export const updateLogisticsPoint = (
   id: string,
   payload: Record<string, unknown>,

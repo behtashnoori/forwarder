@@ -25,9 +25,9 @@ import {
   type CustomerSafeAssignee,
   type CanonicalAdmin1,
   type CanonicalCity,
-  fetchCanonicalCountries,
-  fetchCanonicalAdmin1,
-  fetchCanonicalCities,
+  fetchPublicCanonicalCountries,
+  fetchPublicCanonicalAdmin1,
+  fetchPublicCanonicalCities,
   fetchCountries,
   fetchTransportMethodOptions,
   fetchRequestCargoOptions,
@@ -494,10 +494,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     const loadProvinces = async () => {
       setIsLoadingProvinces(true);
       try {
-        const countries = await fetchCanonicalCountries("IR");
+        const countries = await fetchPublicCanonicalCountries("IR");
         const iran = countries.items.find((country) => country.code === "IR");
         if (!iran) throw new Error("جغرافیای معتبر ایران در دسترس نیست.");
-        const data = await fetchCanonicalAdmin1(iran.code);
+        const data = await fetchPublicCanonicalAdmin1(iran.code);
         if (active) {
           setProvinces(data.items);
         }
@@ -567,7 +567,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
     const loadCities = async () => {
       try {
-        const data = await fetchCanonicalCities(province.geoname_id);
+        const data = await fetchPublicCanonicalCities(province.geoname_id);
         if (active) {
           setOriginCities(data.items);
         }
@@ -610,7 +610,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
     const loadCities = async () => {
       try {
-        const data = await fetchCanonicalCities(province.geoname_id);
+        const data = await fetchPublicCanonicalCities(province.geoname_id);
         if (active) {
           setDestinationCities(data.items);
         }
