@@ -91,7 +91,7 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
             "destination": {"country_id": ctx["country"], "source_type": "province", "source_id": 800002}, "transport_mode": "road",
             "movement_min_minutes": 60, "movement_max_minutes": 120,
             "stop_min_minutes": 0, "stop_max_minutes": 0,
-            "planned_distance_km": "100.000",
+            "planned_distance_km": "900.000",
             "effective_from": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
         }, str(uuid4()))
         db.session.commit()
@@ -209,14 +209,14 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
             "scope": "EXECUTION_UNIT", "target_public_id": unit.public_id,
             "kind": "PROGRESS", "source": "DRIVER_REPORT", "occurred_at": occurred.isoformat(),
             "route_progress": {"stage_execution_public_id": stage.public_id,
-                               "distance_remaining_km": "50.000"},
+                               "distance_remaining_km": "450.000"},
             "impacted_cargo_public_ids": [ctx["cargo"]],
         }, str(uuid4()))
         db.session.commit()
         progress_event_id = report.operational_event_id
         value = eta.ensure_current_eta(ctx["shipment"], ctx["cargo"], user={"id": ctx["owner"]})
         db.session.commit()
-        assert value.ruleset == "ETA_RULESET_V2" and value.result["planned_distance"] == "100.000"
+        assert value.ruleset == "ETA_RULESET_V2" and value.result["planned_distance"] == "900.000"
         assert eta.times.instant(value.result["next"]["earliest"]) == occurred + timedelta(minutes=30)
         assert eta.times.instant(value.result["next"]["latest"]) == occurred + timedelta(minutes=60)
         assert db.session.get(OperationalEventRouteProgress, progress_event_id).route_stage_execution_id == stage.id

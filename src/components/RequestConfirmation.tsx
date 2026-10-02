@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Send, User, Phone, MapPin, Package, Calendar, FileText } from "lucide-react";
 import { useI18n } from "@/i18n";
+import { formatDualCalendarDate } from "@/lib/dualCalendar";
 
 export interface LocationDisplayPayload {
   origin: string;
@@ -224,13 +225,13 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
                   {formData.pickupDate && (
                     <div>
                       <span className="text-sm text-muted-foreground">{t("common.createdAt")}:</span>
-                      <p className="text-sm font-medium">{formData.pickupDate}</p>
+                      <p className="text-sm font-medium">{formatDualCalendarDate(formData.pickupDate,"fa-IR")}</p>
                     </div>
                   )}
                   {formData.deliveryDate && (
                     <div>
                       <span className="text-sm text-muted-foreground">{t("common.createdAt")}:</span>
-                      <p className="text-sm font-medium">{formData.deliveryDate}</p>
+                      <p className="text-sm font-medium">{formatDualCalendarDate(formData.deliveryDate,"fa-IR")}</p>
                     </div>
                   )}
                 </div>

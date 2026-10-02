@@ -16,7 +16,8 @@ class PolicyError(Exception):
 
 def serialize(policy, definition: DocumentDefinition) -> dict:
     return {"document_definition_public_id": definition.public_id, "code": definition.code,
-            "title": definition.title, "description": definition.description,
+            "title": definition.title, "name_fa": definition.name_fa, "name_en": definition.name_en,
+            "description": definition.description,
             "global_is_active": definition.is_active, "global_default_required": definition.is_required,
             "applicability_scope": definition.applicability_scope,
             "policy_public_id": policy.public_id if policy else None,

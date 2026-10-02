@@ -232,24 +232,43 @@ def _basis(row):
         "actor_user_id": row.actor_user_id, "reference": project_version(db.session.get(Version, row.reference_version_id))}
 
 
+def _selection_refusal(shipment, plan, leg, current, user):
+    if shipment.primary_responsible_expert_id != int(user["id"]):
+        return "فقط کارشناس مسئول محموله می‌تواند مبنای زمان این مسیر را ثبت کند."
+    try:
+        base.require_permission(user, "route_leg.manage")
+    except base.OperationalError:
+        return "مجوز ثبت مبنای زمان مسیر برای این کاربر فراهم نیست."
+    if shipment.lifecycle_status in {"closed", "cancelled"}:
+        return "محموله بسته یا لغوشده است و مبنای تازه نمی‌پذیرد."
+    if plan.status == "draft":
+        return None
+    if plan.status != "active" or not plan.is_active:
+        return "این نسخه برنامه فعال نیست و فقط برای مشاهده سابقه در دسترس است."
+    if current:
+        return "مبنای این بخش در برنامه فعال قبلاً تثبیت شده است و از اینجا بازنویسی نمی‌شود."
+    if leg.status not in {"planned", "ready"} or leg.actual_departure is not None or leg.actual_arrival is not None:
+        return "این بخش مسیر شروع شده یا پایان یافته است؛ مبنای زمان گذشته بازنویسی نمی‌شود."
+    return None
+
+
 def plan_read(shipment_id, plan_id, user):
     org = context(user)
     shipment, plan = routes._plan(shipment_id, plan_id, user, routes.PLAN_PERMISSIONS["read"])
-    can_select = plan.status == "draft" and shipment.primary_responsible_expert_id == int(user["id"])
-    try: base.require_permission(user, "route_leg.manage")
-    except base.OperationalError: can_select = False
     result = []
     for leg in db.session.scalars(select(RouteLeg).where(RouteLeg.route_plan_id == plan.id).order_by(RouteLeg.sequence_number)).all():
         at = aware(leg.planned_departure) if leg.planned_departure else utcnow()
         history = db.session.scalars(select(Basis).where(Basis.route_leg_id == leg.id).order_by(Basis.selection_revision.desc())).all()
         selected = history[0] if history else None
+        refusal = _selection_refusal(shipment, plan, leg, len(history), user)
         result.append({"leg_id": leg.id, "leg_version": leg.version, "sequence_number": leg.sequence_number,
             "origin_label": endpoint_label(leg.origin_snapshot), "destination_label": endpoint_label(leg.destination_snapshot),
             "transport_mode": leg.transport_mode, "reference_at": at.isoformat(),
             "time_basis": "PLANNED_DEPARTURE" if leg.planned_departure else "SELECTION_TIME",
             "applicable": project_version(applicable(leg, org, at)), "selected": _basis(selected) if selected else None,
             "selection_matches_leg": bool(selected and selected.leg_basis == fingerprint(leg)),
-            "history": [_basis(row) for row in history], "can_select": can_select})
+            "history": [_basis(row) for row in history], "can_select": refusal is None,
+            "selection_refusal_reason": refusal})
     return {"plan_id": plan.id, "plan_revision": plan.revision_number, "plan_status": plan.status, "items": result}
 
 
@@ -263,9 +282,12 @@ def select_basis(shipment_id, plan_id, leg_id, user, payload, key):
     if leg is None: fail("بخش مسیر یافت نشد.", 404, "ROUTE_TIME_NOT_FOUND")
     command, request_hash = routes._idempotency(org, "route_time.select", "RouteLeg", leg.id, key, {"actor_id": user["id"], **payload})
     if command: return db.session.get(Basis, command.result_resource_id), False
-    if plan.status != "draft": fail("مبنای برنامه منتشرشده قابل تغییر نیست.", 409, "ROUTE_PLAN_NOT_DRAFT")
     context(user)
     current = db.session.scalar(select(func.max(Basis.selection_revision)).where(Basis.route_leg_id == leg.id)) or 0
+    refusal = _selection_refusal(shipment, plan, leg, current, user)
+    if refusal:
+        code = "ACTIVE_ROUTE_BASIS_ALREADY_PINNED" if plan.status == "active" and current else "ROUTE_BASIS_SELECTION_REFUSED"
+        fail(refusal, 409, code)
     if type(payload.get("expected_version")) is not int or payload["expected_version"] != leg.version or type(payload.get("expected_selection_revision")) is not int or payload["expected_selection_revision"] != current:
         fail("برنامه یا مبنای آن تغییر کرده است؛ دوباره بخوانید.", 409, "STALE_ROUTE_TIME")
     at = aware(leg.planned_departure) if leg.planned_departure else utcnow()

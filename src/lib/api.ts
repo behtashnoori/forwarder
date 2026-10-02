@@ -1548,6 +1548,8 @@ export interface DocumentDefinition {
   public_id: string;
   code: string;
   title: string;
+  name_fa?: string | null;
+  name_en?: string | null;
   description?: string | null;
   is_required: boolean;
   allowed_formats: DocumentFormat[];
@@ -1657,6 +1659,8 @@ export interface OrganizationDocumentPolicyItem {
   document_definition_public_id: string;
   code: string;
   title: string;
+  name_fa?: string | null;
+  name_en?: string | null;
   description?: string | null;
   global_is_active: boolean;
   global_default_required: boolean;

@@ -260,6 +260,7 @@ components:
       - selection_matches_leg
       - history
       - can_select
+      - selection_refusal_reason
       properties:
         leg_id:
           type: integer
@@ -296,6 +297,9 @@ components:
             $ref: '#/components/schemas/RouteTimeSelection'
         can_select:
           type: boolean
+        selection_refusal_reason:
+          type: string
+          nullable: true
     RouteTimeList:
       type: object
       additionalProperties: false

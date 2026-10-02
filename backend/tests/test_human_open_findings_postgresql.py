@@ -82,9 +82,16 @@ def test_canonical_search_parentage_pagination_and_location_review_preserve_usag
         assert next(row for row in listed if row["public_id"]==point.public_id)["city"]["name_fa"]=="اصفهان"
         assert geo.list_points({},reviewer,admin=True)["items"][0]["public_id"]==point.public_id
         point=geo.scoped_point(point.public_id,reviewer,"logistics_point.manage")
-        geo.update_point(point,{"version":point.version,"short_address":"نشانی تکمیل‌شده"},reviewer)
+        point_type = geo.list_types({}, admin=True)["items"][0]
+        geo.update_point(point,{"version":point.version,"short_address":"نشانی تکمیل‌شده",
+            "point_type_public_id":point_type["public_id"],"description":"کارخانه عملیاتی",
+            "latitude":"32.6546","longitude":"51.6680"},reviewer)
         geo.review_point(point,"approve",{"version":point.version},reviewer); db.session.commit()
-        assert geo.list_points({},owner)["items"][0]["governance_state"]=="APPROVED"
+        completed=geo.list_points({},owner)["items"][0]
+        assert completed["governance_state"]=="APPROVED"
+        assert completed["point_type"]["public_id"]==point_type["public_id"]
+        assert completed["description"]=="کارخانه عملیاتی"
+        assert completed["latitude"]=="32.6546000" and completed["longitude"]=="51.6680000"
         assert ops._endpoint(ref,shipment.organization_id).logistics_point.id==point.id
         with pytest.raises(OperationalError): geo.scoped_point(point.public_id,{"id":ctx["outsider"]},"execution_unit.update")
         db.session.rollback()

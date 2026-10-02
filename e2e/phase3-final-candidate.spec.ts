@@ -4,11 +4,12 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 
 const databaseUrl = process.env.E2E_DATABASE_URL;
 const customerPassword = process.env.FORWARDER_E2E_CUSTOMER_PASSWORD;
+const expertPassword = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
 const evidencePath = process.env.PHASE3_FINAL_CANDIDATE_EVIDENCE_PATH;
 const browserBase = process.env.PLAYWRIGHT_BASE_URL;
 const replacementPassword = process.env.FORWARDER_E2E_REPLACEMENT_PASSWORD;
-if (!databaseUrl || !customerPassword || !replacementPassword || !fixturePath || !evidencePath || !browserBase) {
+if (!databaseUrl || !customerPassword || !expertPassword || !replacementPassword || !fixturePath || !evidencePath || !browserBase) {
   throw new Error("P3-15 final-candidate proof requires its owned runtime inputs.");
 }
 if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_workspace_phase1_")) {
@@ -59,6 +60,11 @@ async function chooseSelect(page: Page, controlIndex: number, optionIndex: numbe
   await page.getByRole("option").nth(optionIndex).click();
 }
 
+async function chooseNamed(page: Page, label: string, option: string) {
+  await page.getByLabel(label, { exact: true }).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
 async function loginCustomer(page: Page, password: string) {
   await page.goto("/customer");
   await page.locator("#customer-email").fill(fixture.portal_customer_email);
@@ -103,7 +109,7 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     expectClean(evidence);
   });
 
-  test("Customer Request hardening: registration, direct chooser, committed assignment, submitted facts, and international entry", async ({ page }, testInfo) => {
+  test("Customer Request hardening: canonical geography, shared dates, committed assignment, submitted facts, and international entry", async ({ page, browser }, testInfo) => {
     test.setTimeout(60_000);
     const evidence = observe(page);
     const email = "p315-hardening-customer@example.invalid";
@@ -135,8 +141,12 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await page.getByRole("button", { name: "ثبت درخواست حمل داخلی" }).click();
     await expect(page.getByRole("heading", { name: "انتخاب مبدا و مقصد داخلی" })).toBeVisible();
 
-    await chooseSelect(page, 0, 0);
-    await chooseSelect(page, 1, 1);
+    await chooseNamed(page, "استان مبدا", "اصفهان");
+    await page.getByRole("button", { name: "+ انتخاب شهر مبدا (اختیاری)", exact: true }).click();
+    await chooseNamed(page, "شهر مبدا", "اصفهان");
+    await chooseNamed(page, "استان مقصد", "هرمزگان");
+    await page.getByRole("button", { name: "+ انتخاب شهر مقصد (اختیاری)", exact: true }).click();
+    await chooseNamed(page, "شهر مقصد", "بندرعباس");
     await page.getByLabel("شماره تماس").fill(phone);
     await expect(page.getByText("نحوه انتخاب روش حمل")).toBeVisible();
     await expect(page.getByRole("combobox").nth(2)).toContainText("خودم روش حمل را انتخاب می‌کنم");
@@ -150,8 +160,16 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await page.getByLabel("مقدار دقیق").fill("12.500000");
     await page.getByLabel("واحد مقدار").selectOption({ index: 1 });
     await page.locator("#specialInstructions").fill("تحویل با هماهنگی قبلی");
-    await page.locator("#pickupDate").fill("2026-10-01");
-    await page.locator("#deliveryDate").fill("2026-10-04");
+    const pickup=page.locator("#pickupDate");
+    await pickup.fill("2026-10-01", { force: true });
+    const pickupPicker=pickup.locator("xpath=..");
+    await expect(pickupPicker.getByRole("button").first()).toContainText("شمسی");
+    await pickupPicker.getByRole("button").first().click();
+    await pickupPicker.getByRole("button", { name: "میلادی", exact: true }).click();
+    expect(await pickup.inputValue()).toBe("2026-10-01");
+    await pickupPicker.getByRole("button", { name: "شمسی", exact: true }).click();
+    expect(await pickup.inputValue()).toBe("2026-10-01");
+    await page.locator("#deliveryDate").fill("2026-10-04", { force: true });
 
     await page.setViewportSize({ width: 390, height: 844 });
     const overflow = await page.getByTestId("transport-method-section").evaluate((section) => ({
@@ -164,6 +182,8 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
 
     await page.getByRole("button", { name: "ثبت درخواست حمل" }).click();
     await expect(page.getByText("محموله قطعات آزمون سخت‌سازی")).toBeVisible();
+    await expect(page.getByText(/اصفهان/).first()).toBeVisible();
+    await expect(page.getByText(/بندرعباس/).first()).toBeVisible();
     const createdResponse = page.waitForResponse(response =>
       response.request().method() === "POST" && response.url().endsWith("/api/shipment-request"),
     );
@@ -198,6 +218,18 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await expect(page.getByText("از تاریخ").locator("..")).not.toContainText("ثبت نشده");
     await expect(page.getByText("تا تاریخ").locator("..")).not.toContainText("ثبت نشده");
     await expect(page.getByText("تحویل با هماهنگی قبلی", { exact: true })).toBeVisible();
+    const expertContext=await browser.newContext({locale:"fa-IR"});
+    const expert=await expertContext.newPage();
+    await expert.goto("/");
+    await expert.getByRole("button", { name: "ورود به سامانه" }).first().click();
+    await expert.getByLabel("نام کاربری").fill("shared_transport_e2e_restricted");
+    await expert.getByLabel("رمز عبور").fill(expertPassword!);
+    await expert.getByRole("dialog").getByRole("button", { name: "ورود", exact: true }).click();
+    await expert.goto(`/expert/requests/${created.request_public_id}`);
+    await expect(expert.getByText(created.tracking_code, { exact: true })).toBeVisible();
+    await expect(expert.getByText(/اصفهان/).first()).toBeVisible();
+    await expect(expert.getByText(/بندرعباس/).first()).toBeVisible();
+    await expertContext.close();
     const detailOrder = await page.evaluate(() => {
       const headings = [...document.querySelectorAll("h3")];
       const cargo = headings.find((node) => node.textContent?.includes("اقلام کالا"));

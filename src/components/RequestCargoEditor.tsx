@@ -95,7 +95,7 @@ const RequestCargoEditor = ({
                 <Label htmlFor={`cargo-uom-${item.key}`}>{t("requestForm.cargoUnit")}</Label>
                 <select id={`cargo-uom-${item.key}`} className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={item.uomPublicId} onChange={(event) => update(index, { uomPublicId: event.target.value })}>
                   <option value="">{t("requestForm.cargoUnitNone")}</option>
-                  {options.uoms.map((option) => <option key={option.public_id} value={option.public_id}>{language === "fa" ? option.fa_name : option.en_name} ({option.symbol})</option>)}
+                  {options.uoms.map((option) => <option key={option.public_id} value={option.public_id}>{language === "fa" ? option.fa_name : `${option.en_name}${option.symbol ? ` (${option.symbol})` : ""}`}</option>)}
                 </select>
                 {errors[`${base}.uom_public_id`] && <p className="text-xs text-destructive" role="alert">{errorText(errors[`${base}.uom_public_id`])}</p>}
               </div>

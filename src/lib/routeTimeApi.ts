@@ -13,7 +13,8 @@ export type TimeSelection = { public_id: string; selection_revision: number; ref
   actor_user_id: number; reference: TimeVersion };
 export type LegTime = { leg_id: number; leg_version: number; sequence_number: number; origin_label: string; destination_label: string;
   transport_mode: string | null; reference_at: string; time_basis: "PLANNED_DEPARTURE" | "SELECTION_TIME";
-  applicable: TimeVersion | null; selected: TimeSelection | null; selection_matches_leg: boolean; history: TimeSelection[]; can_select: boolean };
+  applicable: TimeVersion | null; selected: TimeSelection | null; selection_matches_leg: boolean; history: TimeSelection[];
+  can_select: boolean; selection_refusal_reason?: string | null };
 export type PlanTimes = { plan_id: number; plan_revision: number; plan_status: string; items: LegTime[] };
 const post = (path: string, payload: unknown, key: string) => request<{data: {public_id: string; created: boolean}}>(path,
   {method: "POST", cache: "no-store", headers: {"Idempotency-Key": key}, body: JSON.stringify(payload)});

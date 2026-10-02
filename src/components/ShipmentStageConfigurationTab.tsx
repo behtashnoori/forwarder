@@ -54,7 +54,7 @@ export default function ShipmentStageConfigurationTab() {
   };
   return <section aria-label="پیکربندی مراحل عملیاتی محموله" className="space-y-4 rounded-2xl border bg-white p-4 sm:p-6" dir="rtl">
     <h2 className="text-xl font-bold">مراحل عملیاتی محموله</h2>
-    <p className="text-sm text-slate-600">این مراحل متعلق به سازمان‌اند و برای محموله‌های بدون پروژه نیز کار می‌کنند. تعریف‌های پروژه و Delivery مستقل می‌مانند.</p>
+    <p className="text-sm text-slate-600">این مراحل متعلق به سازمان‌اند و برای محموله‌های بدون پروژه نیز کار می‌کنند. تعریف‌های پروژه و ثبت تحویل مستقل می‌مانند.</p>
     {error && <p role="alert" className="text-red-700">{error}</p>}
     {!data ? <Button variant="outline" onClick={() => void load()}>دریافت مراحل</Button> : <>
       {!data.versions.length && <p className="rounded bg-amber-50 p-3">هنوز نسخه فعالی برای مراحل محموله تعریف نشده است.</p>}
@@ -68,7 +68,7 @@ export default function ShipmentStageConfigurationTab() {
         </article>)}
         <div className="flex gap-2"><Button disabled={busy} onClick={() => void save()}>انتشار نسخه مراحل</Button><Button variant="outline" disabled={busy} onClick={() => setEditing(false)}>انصراف</Button></div>
       </div>}
-      {data.versions.map(version => <details key={version.public_id} className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">نسخه {version.version} · از {formatDualCalendarInstant(version.effective_from, "fa-IR")}</summary><ol className="mt-3 space-y-2">{version.stages.map(stage => <li key={stage.public_id}>{stage.sequence}. {stage.display_name_fa} · {stage.active ? "فعال" : "غیرفعال"} · {stage.required_for_completion ? "الزامی" : "اختیاری"}</li>)}</ol></details>)}
+      {data.versions.map((version,index) => <details key={version.public_id} className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">نسخه {version.version} · {version.stages.filter(stage=>stage.active).length.toLocaleString("fa-IR")} مرحله · {version.stages.filter(stage=>stage.active&&stage.required_for_completion).length.toLocaleString("fa-IR")} الزامی{index===0?" · فعال":""} · از {formatDualCalendarInstant(version.effective_from, "fa-IR")}</summary><ol className="mt-3 space-y-2">{version.stages.map(stage => <li key={stage.public_id}>{stage.sequence}. {stage.display_name_fa} · {stage.active ? "فعال" : "غیرفعال"} · {stage.required_for_completion ? "الزامی" : "اختیاری"}</li>)}</ol></details>)}
     </>}
   </section>;
 }

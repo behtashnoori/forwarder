@@ -4,22 +4,23 @@ import { describe, expect, it } from "vitest";
 import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { localDateTimeInputToUtc } from "@/lib/localDateTime";
 
-function Field(){const [value,setValue]=useState("");return <><LocalizedDateTimeInput aria-label="زمان" value={value} onChange={event=>setValue(event.target.value)}/><output>{localDateTimeInputToUtc(value)}</output></>;}
-describe("localized wall-clock entry",()=>{
-  it("accepts Persian digits without changing the existing local timezone conversion",()=>{
+function Field(){const [value,setValue]=useState("2026-10-01T09:30");return <><LocalizedDateTimeInput aria-label="زمان" value={value} onChange={event=>setValue(event.target.value)}/><output>{localDateTimeInputToUtc(value)}</output></>;}
+describe("shared localized date and time picker",()=>{
+  it("switches calendar presentation without changing the logical instant",()=>{
     render(<Field/>);
     const input=screen.getByLabelText("زمان");
-    fireEvent.change(input,{target:{value:"۲۰۲۶-۱۰-۰۱ ۰۹:۳۰"}});
+    const before=screen.getByText(/معادل میلادی/).textContent;
+    fireEvent.click(screen.getByRole("button",{name:/شمسی/}));
+    fireEvent.click(screen.getByRole("button",{name:"میلادی"}));
     expect(input).toHaveValue("2026-10-01T09:30");
-    expect(input).toBeValid();
+    expect(screen.getByText(/معادل شمسی/).textContent).not.toBe(before);
     expect(screen.getByRole("status")).toHaveTextContent(new Date("2026-10-01T09:30").toISOString());
-    expect(input).toHaveAttribute("dir","ltr");
   });
-  it("rejects impossible dates instead of silently rolling to the next month",()=>{
+  it("selects minute precision and preserves the existing local-to-UTC conversion",()=>{
     render(<Field/>);
-    const input=screen.getByLabelText("زمان");
-    fireEvent.change(input,{target:{value:"2026-02-30T09:30"}});
-    expect(input).toBeInvalid();
-    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    fireEvent.click(screen.getByRole("button",{name:/شمسی/}));
+    fireEvent.change(screen.getByLabelText("زمان دقیقه"),{target:{value:"47"}});
+    expect(screen.getByLabelText("زمان")).toHaveValue("2026-10-01T09:47");
+    expect(screen.getByRole("status")).toHaveTextContent(new Date("2026-10-01T09:47").toISOString());
   });
 });

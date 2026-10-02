@@ -329,12 +329,13 @@ const translations = {
     "requestForm.selectProvince": "انتخاب استان",
     "requestForm.noProvince": "استان موجود نیست",
     "requestForm.showOriginDetails":
-      "+ جزئیات بیشتر مبدا (شهرستان و شهر، اختیاری)",
+      "+ انتخاب شهر مبدا (اختیاری)",
     "requestForm.hideOptionalDetails": "پنهان کردن جزئیات اختیاری",
     "requestForm.showDestinationDetails":
-      "+ جزئیات بیشتر مقصد (شهرستان و شهر، اختیاری)",
+      "+ انتخاب شهر مقصد (اختیاری)",
     "requestForm.provinceEnough":
-      "اگر شهر یا شهرستان را نمی‌دانید، انتخاب استان برای ثبت درخواست کافی است.",
+      "اگر شهر را نمی‌دانید، انتخاب استان برای ثبت درخواست کافی است.",
+    "requestForm.originCity": "شهر مبدا",
     "requestForm.selectProvinceFirst": "ابتدا استان را انتخاب کنید",
     "requestForm.selectCountyFirst": "ابتدا شهرستان را انتخاب کنید",
     "requestForm.selectCountryFirst": "ابتدا کشور را انتخاب کنید",
@@ -460,8 +461,8 @@ const translations = {
     "requestForm.availabilityWindow": "بازه آمادگی / تحویل کالا (اختیاری)",
     "requestForm.availabilityWindowHelp":
       "کالا را از چه تاریخی تا چه تاریخی می‌توان تحویل یا آماده کرد؟ می‌توانید کل بازه یا هر یک از تاریخ‌ها را خالی بگذارید.",
-    "requestForm.availabilityFrom": "از تاریخ (میلادی)",
-    "requestForm.availabilityTo": "تا تاریخ (میلادی)",
+    "requestForm.availabilityFrom": "از تاریخ",
+    "requestForm.availabilityTo": "تا تاریخ",
     "requestForm.availabilityFromJalali": "از تاریخ (تقویم شمسی)",
     "requestForm.availabilityToJalali": "تا تاریخ (تقویم شمسی)",
     "requestForm.domesticDateHelp":
@@ -1299,12 +1300,13 @@ const translations = {
     "requestForm.selectProvince": "Select province",
     "requestForm.noProvince": "No province available",
     "requestForm.showOriginDetails":
-      "+ More origin details (county and city, optional)",
+      "+ Select origin city (optional)",
     "requestForm.hideOptionalDetails": "Hide optional details",
     "requestForm.showDestinationDetails":
-      "+ More destination details (county and city, optional)",
+      "+ Select destination city (optional)",
     "requestForm.provinceEnough":
-      "If you do not know the city or county, selecting the province is enough to submit the request.",
+      "If you do not know the city, selecting the province is enough to submit the request.",
+    "requestForm.originCity": "Origin city",
     "requestForm.selectProvinceFirst": "Select a province first",
     "requestForm.selectCountyFirst": "Select a county first",
     "requestForm.selectCountryFirst": "Select a country first",
@@ -1436,8 +1438,8 @@ const translations = {
       "Cargo availability / delivery window (optional)",
     "requestForm.availabilityWindowHelp":
       "When can the cargo be made available or delivered? You may leave either date, or the whole window, empty.",
-    "requestForm.availabilityFrom": "From (Gregorian)",
-    "requestForm.availabilityTo": "To (Gregorian)",
+    "requestForm.availabilityFrom": "From date",
+    "requestForm.availabilityTo": "To date",
     "requestForm.availabilityFromJalali": "From (Jalali calendar)",
     "requestForm.availabilityToJalali": "To (Jalali calendar)",
     "requestForm.domesticDateHelp":

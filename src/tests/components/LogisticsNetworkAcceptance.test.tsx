@@ -105,7 +105,7 @@ describe("Release 1.7.0 logistics network acceptance", () => {
         /برگرفته از تعریف استاندارد سیستم · منبع جهانی · منسوخ‌شده در سیستم/,
       ),
     ).toHaveLength(2);
-    fireEvent.click(screen.getAllByRole("button", { name: "غنی‌سازی" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "تکمیل اطلاعات" })[0]);
     fireEvent.change(screen.getByLabelText("نام فارسی"), {
       target: { value: "نام جدید" },
     });
@@ -115,11 +115,24 @@ describe("Release 1.7.0 logistics network acceptance", () => {
     fireEvent.change(screen.getByLabelText("نشانی کوتاه"), {
       target: { value: "Address" },
     });
+    fireEvent.change(screen.getByLabelText("نوع مکان"), {
+      target: { value: type.public_id },
+    });
+    fireEvent.change(screen.getByLabelText("توضیحات"), {
+      target: { value: "Operational factory" },
+    });
+    fireEvent.change(screen.getByLabelText("عرض جغرافیایی"), {
+      target: { value: "32.65" },
+    });
+    fireEvent.change(screen.getByLabelText("طول جغرافیایی"), {
+      target: { value: "51.67" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "ذخیره تغییرات" }));
     await waitFor(() =>
       expect(api.updateLogisticsPoint).toHaveBeenCalledWith(
         point.public_id,
-        expect.objectContaining({ version: 1, fa_name: "نام جدید" }),
+        expect.objectContaining({ version: 1, fa_name: "نام جدید", point_type_public_id:type.public_id,
+          description:"Operational factory", latitude:"32.65", longitude:"51.67" }),
       ),
     );
     fireEvent.click(screen.getAllByRole("button", { name: "تأیید" })[0]);

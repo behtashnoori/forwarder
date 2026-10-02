@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -637,6 +637,17 @@ describe("Slice 5 governed creation", () => {
       await user.clear(screen.getByLabelText("Cargo quantity"));
       await user.type(screen.getByLabelText("Cargo quantity"), "4.5");
       expect(screen.getByLabelText("Unit of measure")).toHaveValue("uom-ea");
+      if(source==="direct"){
+        const review=screen.getByText("Review").closest(".rounded-lg") as HTMLElement;
+        expect(review).toBeTruthy();
+        expect(within(review).getByText("Canonical Co",{exact:true})).toBeInTheDocument();
+        expect(review).toHaveTextContent("تهران");
+        expect(review).toHaveTextContent("بندرعباس");
+        expect(review).toHaveTextContent("جاده‌ای");
+        expect(review).toHaveTextContent("Active catalog cargo");
+        expect(review).toHaveTextContent("4.5 عدد");
+        expect(review).toHaveTextContent("۲۰۲۶");
+      }
       await user.click(
         screen.getByRole("button", { name: "Create operation" }),
       );

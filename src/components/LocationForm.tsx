@@ -9,13 +9,11 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck, Package, Calendar, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import RequestConfirmation from "./RequestConfirmation";
+import { LocalizedDateInput } from "./LocalizedDateTimeInput";
 import RequestCargoEditor from "./RequestCargoEditor";
 import { type RequestCargoDraft, validateRequestCargoDrafts } from "./requestCargoDraft";
 import { InternationalLocationSelector } from "./InternationalLocationSelector";
 import {
-  City,
-  County,
-  Province,
   Country,
   InternationalCity,
   TransportMethod,
@@ -25,9 +23,11 @@ import {
   type RequestCargoItem,
   type RequestCargoOptions,
   type CustomerSafeAssignee,
-  fetchCities,
-  fetchCounties,
-  fetchProvinces,
+  type CanonicalAdmin1,
+  type CanonicalCity,
+  fetchCanonicalCountries,
+  fetchCanonicalAdmin1,
+  fetchCanonicalCities,
   fetchCountries,
   fetchTransportMethodOptions,
   fetchRequestCargoOptions,
@@ -387,19 +387,15 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { language, t, tf } = useI18n();
-  const [provinces, setProvinces] = useState<Province[]>([]);
-  const [originCounties, setOriginCounties] = useState<County[]>([]);
-  const [destinationCounties, setDestinationCounties] = useState<County[]>([]);
-  const [originCities, setOriginCities] = useState<City[]>([]);
-  const [destinationCities, setDestinationCities] = useState<City[]>([]);
+  const [provinces, setProvinces] = useState<CanonicalAdmin1[]>([]);
+  const [originCities, setOriginCities] = useState<CanonicalCity[]>([]);
+  const [destinationCities, setDestinationCities] = useState<CanonicalCity[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
   const [countrySearch, setCountrySearch] = useState({ origin: "", destination: "" });
   const [originInternationalCities, setOriginInternationalCities] = useState<InternationalCity[]>([]);
   const [destinationInternationalCities, setDestinationInternationalCities] = useState<InternationalCity[]>([]);
   const [transportMethodOptions, setTransportMethodOptions] = useState<TransportMethodOptions | null>(null);
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
-  const [isLoadingOriginCounties, setIsLoadingOriginCounties] = useState(false);
-  const [isLoadingDestinationCounties, setIsLoadingDestinationCounties] = useState(false);
   const [isLoadingOriginCities, setIsLoadingOriginCities] = useState(false);
   const [isLoadingDestinationCities, setIsLoadingDestinationCities] = useState(false);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
@@ -498,9 +494,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     const loadProvinces = async () => {
       setIsLoadingProvinces(true);
       try {
-        const data = await fetchProvinces();
+        const countries = await fetchCanonicalCountries("IR");
+        const iran = countries.items.find((country) => country.code === "IR");
+        if (!iran) throw new Error("جغرافیای معتبر ایران در دسترس نیست.");
+        const data = await fetchCanonicalAdmin1(iran.code);
         if (active) {
-          setProvinces(data);
+          setProvinces(data.items);
         }
       } catch (error) {
         if (active) {
@@ -554,94 +553,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   useEffect(() => {
     let active = true;
     if (!formData.originProvince) {
-      setOriginCounties([]);
-      setOriginCities([]);
-      setIsLoadingOriginCounties(false);
-      return () => {
-        active = false;
-      };
-    }
-
-    const provinceId = Number(formData.originProvince);
-    setIsLoadingOriginCounties(true);
-    setOriginCounties([]);
-    setOriginCities([]);
-
-    const loadCounties = async () => {
-      try {
-        const data = await fetchCounties(provinceId);
-        if (active) {
-          setOriginCounties(data);
-        }
-      } catch (error) {
-        if (active) {
-          toast({
-            title: t("requestForm.loadOriginCountiesErrorTitle"),
-            description: error instanceof Error ? error.message : t("requestForm.loadCountiesError"),
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (active) {
-          setIsLoadingOriginCounties(false);
-        }
-      }
-    };
-
-    loadCounties();
-
-    return () => {
-      active = false;
-    };
-  }, [formData.originProvince, t, toast]);
-
-  useEffect(() => {
-    let active = true;
-    if (!formData.destinationProvince) {
-      setDestinationCounties([]);
-      setDestinationCities([]);
-      setIsLoadingDestinationCounties(false);
-      return () => {
-        active = false;
-      };
-    }
-
-    const provinceId = Number(formData.destinationProvince);
-    setIsLoadingDestinationCounties(true);
-    setDestinationCounties([]);
-    setDestinationCities([]);
-
-    const loadCounties = async () => {
-      try {
-        const data = await fetchCounties(provinceId);
-        if (active) {
-          setDestinationCounties(data);
-        }
-      } catch (error) {
-        if (active) {
-          toast({
-            title: t("requestForm.loadDestinationCountiesErrorTitle"),
-            description: error instanceof Error ? error.message : t("requestForm.loadCountiesError"),
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (active) {
-          setIsLoadingDestinationCounties(false);
-        }
-      }
-    };
-
-    loadCounties();
-
-    return () => {
-      active = false;
-    };
-  }, [formData.destinationProvince, t, toast]);
-
-  useEffect(() => {
-    let active = true;
-    if (!formData.originCounty) {
       setOriginCities([]);
       setIsLoadingOriginCities(false);
       return () => {
@@ -649,15 +560,16 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       };
     }
 
-    const countyId = Number(formData.originCounty);
+    const province = provinces.find((item) => String(item.source_id) === formData.originProvince);
+    if (!province) return () => { active = false; };
     setIsLoadingOriginCities(true);
     setOriginCities([]);
 
     const loadCities = async () => {
       try {
-        const data = await fetchCities(countyId);
+        const data = await fetchCanonicalCities(province.geoname_id);
         if (active) {
-          setOriginCities(data);
+          setOriginCities(data.items);
         }
       } catch (error) {
         if (active) {
@@ -679,11 +591,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.originCounty, t, toast]);
+  }, [formData.originProvince, provinces, t, toast]);
 
   useEffect(() => {
     let active = true;
-    if (!formData.destinationCounty) {
+    if (!formData.destinationProvince) {
       setDestinationCities([]);
       setIsLoadingDestinationCities(false);
       return () => {
@@ -691,15 +603,16 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       };
     }
 
-    const countyId = Number(formData.destinationCounty);
+    const province = provinces.find((item) => String(item.source_id) === formData.destinationProvince);
+    if (!province) return () => { active = false; };
     setIsLoadingDestinationCities(true);
     setDestinationCities([]);
 
     const loadCities = async () => {
       try {
-        const data = await fetchCities(countyId);
+        const data = await fetchCanonicalCities(province.geoname_id);
         if (active) {
-          setDestinationCities(data);
+          setDestinationCities(data.items);
         }
       } catch (error) {
         if (active) {
@@ -721,26 +634,18 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.destinationCounty, t, toast]);
+  }, [formData.destinationProvince, provinces, t, toast]);
 
   const provinceOptions = useMemo(
-    () => [...provinces].sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...provinces].sort((a, b) => a.name_fa.localeCompare(b.name_fa, "fa")),
     [provinces],
   );
-  const originCountyOptions = useMemo(
-    () => [...originCounties].sort((a, b) => a.name.localeCompare(b.name)),
-    [originCounties],
-  );
-  const destinationCountyOptions = useMemo(
-    () => [...destinationCounties].sort((a, b) => a.name.localeCompare(b.name)),
-    [destinationCounties],
-  );
   const originCityOptions = useMemo(
-    () => [...originCities].sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...originCities].sort((a, b) => a.name_fa.localeCompare(b.name_fa, "fa")),
     [originCities],
   );
   const destinationCityOptions = useMemo(
-    () => [...destinationCities].sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...destinationCities].sort((a, b) => a.name_fa.localeCompare(b.name_fa, "fa")),
     [destinationCities],
   );
   const countryOptions = useMemo(
@@ -763,15 +668,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   /** Resolved origin/destination labels for confirmation page (avoids undefined when formData only has IDs). */
   const confirmationLocationDisplay = useMemo(() => {
     if (shippingType === "domestic") {
-      const oProv = provinceOptions.find((p) => p.id.toString() === formData.originProvince);
-      const oCounty = originCountyOptions.find((c) => c.id.toString() === formData.originCounty);
-      const oCity = originCityOptions.find((c) => c.id.toString() === formData.originCity);
-      const dProv = provinceOptions.find((p) => p.id.toString() === formData.destinationProvince);
-      const dCounty = destinationCountyOptions.find((c) => c.id.toString() === formData.destinationCounty);
-      const dCity = destinationCityOptions.find((c) => c.id.toString() === formData.destinationCity);
+      const oProv = provinceOptions.find((p) => p.source_id.toString() === formData.originProvince);
+      const oCity = originCityOptions.find((c) => c.source_id.toString() === formData.originCity);
+      const dProv = provinceOptions.find((p) => p.source_id.toString() === formData.destinationProvince);
+      const dCity = destinationCityOptions.find((c) => c.source_id.toString() === formData.destinationCity);
       return {
-        origin: [oCity?.name, oCounty?.name, oProv?.name].filter(Boolean).join("، ") || "—",
-        destination: [dCity?.name, dCounty?.name, dProv?.name].filter(Boolean).join("، ") || "—",
+        origin: [oCity?.name_fa, oProv?.name_fa].filter(Boolean).join("، ") || "—",
+        destination: [dCity?.name_fa, dProv?.name_fa].filter(Boolean).join("، ") || "—",
       };
     }
     const oCountry = countryOptions.find((c) => c.id.toString() === formData.originCountry);
@@ -788,18 +691,14 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   }, [
     shippingType,
     formData.originProvince,
-    formData.originCounty,
     formData.originCity,
     formData.destinationProvince,
-    formData.destinationCounty,
     formData.destinationCity,
     formData.originCountry,
     formData.originCityInternational,
     formData.destCountry,
     formData.destCityInternational,
     provinceOptions,
-    originCountyOptions,
-    destinationCountyOptions,
     originCityOptions,
     destinationCityOptions,
     countryOptions,
@@ -1142,7 +1041,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           description: item.description.trim(),
           cargoTypeLabel: cargoOptions.cargo_types.find((option) => option.public_id === item.cargoTypePublicId)?.[language === "fa" ? "fa_name" : "en_name"] || "",
           quantity: item.quantity.trim(),
-          uomLabel: cargoOptions.uoms.find((option) => option.public_id === item.uomPublicId)?.symbol || "",
+          uomLabel: (()=>{const unit=cargoOptions.uoms.find((option) => option.public_id === item.uomPublicId);return language==="fa"?(unit?.fa_name||formatUnitSymbol(unit?.symbol,"fa-IR")):(unit?.en_name||unit?.symbol||"");})(),
         }))}
       />
     );
@@ -1204,13 +1103,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   }}
                   disabled={isLoadingProvinces && provinceOptions.length === 0}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label={t("requestForm.originProvince")}>
                     <SelectValue placeholder={isLoadingProvinces ? t("requestForm.loading") : t("requestForm.selectProvince")} />
                   </SelectTrigger>
                   <SelectContent>
                     {provinceOptions.map((province) => (
-                      <SelectItem key={province.id} value={province.id.toString()}>
-                        {province.name}
+                      <SelectItem key={province.geoname_id} value={province.source_id.toString()}>
+                        {province.name_fa}
                       </SelectItem>
                     ))}
                     {provinceOptions.length === 0 && !isLoadingProvinces && (
@@ -1237,42 +1136,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
                     <p className={helperTextClass}>{t("requestForm.provinceEnough")}</p>
                     <Select
-                      value={formData.originCounty}
-                      onValueChange={(value) => {
-                        setFormData({
-                          ...formData,
-                          originCounty: value,
-                          originCity: "",
-                        });
-                      }}
-                      disabled={!formData.originProvince || isLoadingOriginCounties}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            !formData.originProvince
-                              ? t("requestForm.selectProvinceFirst")
-                              : isLoadingOriginCounties
-                                ? t("requestForm.loading")
-                                : t("requestForm.selectCountyOptional")
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {originCountyOptions.map((county) => (
-                          <SelectItem key={county.id} value={county.id.toString()}>
-                            {county.name}
-                          </SelectItem>
-                        ))}
-                        {originCountyOptions.length === 0 && formData.originProvince && !isLoadingOriginCounties && (
-                          <SelectItem value="no-origin-county" disabled>
-                            {t("requestForm.noCounty")}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-
-                    <Select
                       value={formData.originCity}
                       onValueChange={(value) => {
                         setFormData({
@@ -1280,13 +1143,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                           originCity: value,
                         });
                       }}
-                      disabled={!formData.originCounty || isLoadingOriginCities}
+                      disabled={!formData.originProvince || isLoadingOriginCities}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger aria-label={t("requestForm.originCity")}>
                         <SelectValue
                           placeholder={
-                            !formData.originCounty
-                              ? t("requestForm.selectCountyFirst")
+                            !formData.originProvince
+                              ? t("requestForm.selectProvinceFirst")
                               : isLoadingOriginCities
                                 ? t("requestForm.loading")
                                 : t("requestForm.selectCityOptional")
@@ -1295,11 +1158,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       </SelectTrigger>
                       <SelectContent>
                         {originCityOptions.map((city) => (
-                          <SelectItem key={city.id} value={city.id.toString()}>
-                            {city.name}
+                          <SelectItem key={city.geoname_id} value={city.source_id.toString()}>
+                            {city.name_fa}
                           </SelectItem>
                         ))}
-                        {originCityOptions.length === 0 && formData.originCounty && !isLoadingOriginCities && (
+                        {originCityOptions.length === 0 && formData.originProvince && !isLoadingOriginCities && (
                           <SelectItem value="no-origin-city" disabled>
                             {t("requestForm.noCity")}
                           </SelectItem>
@@ -1342,13 +1205,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   }}
                   disabled={isLoadingProvinces && provinceOptions.length === 0}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label={t("requestForm.destinationProvince")}>
                     <SelectValue placeholder={isLoadingProvinces ? t("requestForm.loading") : t("requestForm.selectProvince")} />
                   </SelectTrigger>
                   <SelectContent>
                     {provinceOptions.map((province) => (
-                      <SelectItem key={province.id} value={province.id.toString()}>
-                        {province.name}
+                      <SelectItem key={province.geoname_id} value={province.source_id.toString()}>
+                        {province.name_fa}
                       </SelectItem>
                     ))}
                     {provinceOptions.length === 0 && !isLoadingProvinces && (
@@ -1375,42 +1238,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
                     <p className={helperTextClass}>{t("requestForm.provinceEnough")}</p>
                     <Select
-                      value={formData.destinationCounty}
-                      onValueChange={(value) => {
-                        setFormData({
-                          ...formData,
-                          destinationCounty: value,
-                          destinationCity: "",
-                        });
-                      }}
-                      disabled={!formData.destinationProvince || isLoadingDestinationCounties}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            !formData.destinationProvince
-                              ? t("requestForm.selectProvinceFirst")
-                              : isLoadingDestinationCounties
-                                ? t("requestForm.loading")
-                                : t("requestForm.selectCountyOptional")
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {destinationCountyOptions.map((county) => (
-                          <SelectItem key={county.id} value={county.id.toString()}>
-                            {county.name}
-                          </SelectItem>
-                        ))}
-                        {destinationCountyOptions.length === 0 && formData.destinationProvince && !isLoadingDestinationCounties && (
-                          <SelectItem value="no-destination-county" disabled>
-                            {t("requestForm.noCounty")}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-
-                    <Select
                       value={formData.destinationCity}
                       onValueChange={(value) => {
                         setFormData({
@@ -1418,13 +1245,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                           destinationCity: value,
                         });
                       }}
-                      disabled={!formData.destinationCounty || isLoadingDestinationCities}
+                      disabled={!formData.destinationProvince || isLoadingDestinationCities}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger aria-label={t("requestForm.destinationCity")}>
                         <SelectValue
                           placeholder={
-                            !formData.destinationCounty
-                              ? t("requestForm.selectCountyFirst")
+                            !formData.destinationProvince
+                              ? t("requestForm.selectProvinceFirst")
                               : isLoadingDestinationCities
                                 ? t("requestForm.loading")
                                 : t("requestForm.selectCityOptional")
@@ -1433,11 +1260,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       </SelectTrigger>
                       <SelectContent>
                         {destinationCityOptions.map((city) => (
-                          <SelectItem key={city.id} value={city.id.toString()}>
-                            {city.name}
+                          <SelectItem key={city.geoname_id} value={city.source_id.toString()}>
+                            {city.name_fa}
                           </SelectItem>
                         ))}
-                        {destinationCityOptions.length === 0 && formData.destinationCounty && !isLoadingDestinationCities && (
+                        {destinationCityOptions.length === 0 && formData.destinationProvince && !isLoadingDestinationCities && (
                           <SelectItem value="no-destination-city" disabled>
                             {t("requestForm.noCity")}
                           </SelectItem>
@@ -1905,14 +1732,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <p className="text-sm font-medium">{t("requestForm.availabilityWindow")}</p>
             <p className={helperTextClass}>{t("requestForm.availabilityWindowHelp")}</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2"><Label htmlFor="pickupDate">{t("requestForm.availabilityFrom")}</Label><Input id="pickupDate" type="date" value={formData.pickupDate} onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })} /></div>
-            <div className="space-y-2"><Label htmlFor="deliveryDate">{t("requestForm.availabilityTo")}</Label><Input id="deliveryDate" type="date" value={formData.deliveryDate} onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })} /></div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2"><Label htmlFor="pickupDate">{t("requestForm.availabilityFrom")}</Label><LocalizedDateInput id="pickupDate" aria-label={t("requestForm.availabilityFrom")} value={formData.pickupDate} onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })} /></div>
+            <div className="space-y-2"><Label htmlFor="deliveryDate">{t("requestForm.availabilityTo")}</Label><LocalizedDateInput id="deliveryDate" aria-label={t("requestForm.availabilityTo")} value={formData.deliveryDate} onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <JalaliDateInput id="pickupDateJalali" label={t("requestForm.availabilityFromJalali")} selectLabel={t("requestForm.selectJalaliDate")} nextMonthLabel={t("requestForm.nextMonth")} previousMonthLabel={t("requestForm.previousMonth")} clearLabel={t("requestForm.clearDate")} value={formData.pickupDate} onChange={(pickupDate) => setFormData({ ...formData, pickupDate })} />
-            <JalaliDateInput id="deliveryDateJalali" label={t("requestForm.availabilityToJalali")} selectLabel={t("requestForm.selectJalaliDate")} nextMonthLabel={t("requestForm.nextMonth")} previousMonthLabel={t("requestForm.previousMonth")} clearLabel={t("requestForm.clearDate")} value={formData.deliveryDate} onChange={(deliveryDate) => setFormData({ ...formData, deliveryDate })} />
-          </div>
+          <p className={helperTextClass}>هر بازه یک تاریخ واحد دارد؛ کلید شمسی/میلادی فقط شیوهٔ نمایش و انتخاب را عوض می‌کند.</p>
         </div>
 
         {/* Submit Button */}

@@ -665,6 +665,16 @@ def update_point(row, payload, user):
             city.id if city else None,
             key,
         )
+    if "point_type_public_id" in payload:
+        point_type = None
+        if payload.get("point_type_public_id"):
+            point_type = db.session.scalar(select(LogisticsPointType).where(
+                LogisticsPointType.public_id == payload["point_type_public_id"],
+                LogisticsPointType.is_active.is_(True),
+            ))
+            if point_type is None:
+                raise OperationalError("NOT_FOUND", "Logistics point type not found.", 404)
+        row.logistics_point_type_id = point_type.id if point_type else None
     for field, limit in (("fa_name", 160), ("en_name", 160), ("short_address", 500), ("description", 4000)):
         if field in payload:
             setattr(
@@ -672,6 +682,10 @@ def update_point(row, payload, user):
                 field,
                 _text(payload, field, limit, required=field == "fa_name"),
             )
+    if "latitude" in payload:
+        row.latitude = _coordinate(payload, "latitude", Decimal("-90"), Decimal("90"))
+    if "longitude" in payload:
+        row.longitude = _coordinate(payload, "longitude", Decimal("-180"), Decimal("180"))
     row.normalized_name = normalize_name(row.fa_name)
     row.updated_by = user["id"]
     row.updated_at = utcnow()

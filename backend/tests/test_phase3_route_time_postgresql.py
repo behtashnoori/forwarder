@@ -47,7 +47,7 @@ def test_postgresql18_route_time_upgrade_history_tenant_concurrency_and_safe_rol
         for user in (admin,expert):db.session.add(OperationalMembership(organization_id=org.id,user_id=user.id,permissions=["operational_shipment.read","route_leg.manage"]))
         shipment=OperationalShipment(organization_id=org.id,source_type="direct",customer_id=customer.id,lifecycle_status="planned",created_by_user_id=expert.id,primary_responsible_expert_id=expert.id)
         db.session.add(shipment);db.session.flush()
-        plan=RoutePlan(operational_shipment_id=shipment.id,revision_number=1,status="draft",is_active=False,created_by_user_id=expert.id)
+        plan=RoutePlan(operational_shipment_id=shipment.id,revision_number=1,status="active",is_active=True,created_by_user_id=expert.id)
         db.session.add(plan);db.session.flush()
         origin_location=CanonicalLocation(source_type="province",source_id=origin_id,location_type="province",display_name="خورگوس آزمایشی",country_code="KZ",verification_state="verified")
         destination_location=CanonicalLocation(source_type="province",source_id=destination_id,location_type="province",display_name="آکتائو آزمایشی",country_code="KZ",verification_state="verified")
@@ -84,6 +84,7 @@ def test_postgresql18_route_time_upgrade_history_tenant_concurrency_and_safe_rol
         second,_=svc.save(admin_user,second_values,str(uuid4()),reference_id);db.session.commit()
         current=svc.plan_read(ids["shipment"],ids["plan"],expert_user)["items"][0]
         assert current["selected"]["reference"]["version"]==1 and current["applicable"]["version"]==2
+        assert current["can_select"] is False and "قبلاً تثبیت شده" in current["selection_refusal_reason"]
         assert db.session.get(Basis,selection_id).reference_version_id==first_id
         second_id=second.id
     assert legacy()==before

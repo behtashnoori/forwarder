@@ -60,7 +60,7 @@ describe("explicit route reference basis",()=>{
     const selected={public_id:"selection-1",selection_revision:1,reference_at:leg.reference_at,recorded_at:version.recorded_at,actor_user_id:1,reference:version};
     api.get.mockResolvedValue(response({...leg,selected,selection_matches_leg:true,history:[selected],applicable:{...version,public_id:"version-2",version:2,movement_min_minutes:1500}}));
     render(<RouteReferenceTimes shipmentId="shipment" plans={plans}/>);
-    expect(await screen.findByText("مبنای ثبت‌شده برنامه · نسخه مرجع 1")).toBeInTheDocument();
+    expect(await screen.findByText("مبنای تثبیت‌شده برنامه · نسخه مرجع 1")).toBeInTheDocument();
     expect(screen.getByText("مرجع قابل استفاده · نسخه 2")).toBeInTheDocument();
     expect(api.select).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button",{name:"ثبت این نسخه برای برنامه"}));
@@ -71,6 +71,17 @@ describe("explicit route reference basis",()=>{
     expect(await screen.findByText("مبنای این برنامه فقط خواندنی است.")).toBeInTheDocument();
     expect(screen.queryByRole("button",{name:"ثبت این نسخه برای برنامه"})).not.toBeInTheDocument();
     expect(screen.queryByRole("button",{name:"ثبت نسخه تازه"})).not.toBeInTheDocument();
+  });
+  it("pins the first basis on an active unstarted plan and explains the resulting lock",async()=>{
+    const activePlans=[{id:1,revision_number:1,status:"active"}];
+    const selected={public_id:"selection-active",selection_revision:1,reference_at:leg.reference_at,recorded_at:version.recorded_at,actor_user_id:1,reference:version};
+    api.get.mockResolvedValueOnce({data:{...response(leg).data,plan_status:"active"}})
+      .mockResolvedValue({data:{...response({...leg,selected,selection_matches_leg:true,history:[selected],can_select:false,selection_refusal_reason:"مبنای این بخش در برنامه فعال قبلاً تثبیت شده است و از اینجا بازنویسی نمی‌شود."}).data,plan_status:"active"}});
+    render(<RouteReferenceTimes shipmentId="shipment" plans={activePlans}/>);
+    fireEvent.click(await screen.findByRole("button",{name:"ثبت این نسخه برای برنامه"}));
+    expect(await screen.findByRole("status")).toHaveTextContent("با موفقیت");
+    expect(await screen.findByText(/قبلاً تثبیت شده است/)).toBeInTheDocument();
+    expect(screen.getByText("مبنای تثبیت‌شده برنامه · نسخه مرجع 1")).toBeInTheDocument();
   });
   it("discards a delayed result after switching plans",async()=>{
     let finish!:(value:ReturnType<typeof response>)=>void;

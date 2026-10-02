@@ -45,7 +45,12 @@ function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | nul
     setBusy(true);setError("");
     try{
       if(reference)await reviseRouteTime(reference.public_id,{...durations,expected_version:reference.latest_version},command.current.key);
-      else await createRouteTime({...durations,origin:origin!,destination:destination!,transport_mode:mode},command.current.key);
+      else await createRouteTime({
+        ...durations,
+        origin:{country_id:origin!.country_id,source_type:origin!.source_type,source_id:origin!.source_id},
+        destination:{country_id:destination!.country_id,source_type:destination!.source_type,source_id:destination!.source_id},
+        transport_mode:mode,
+      },command.current.key);
       saved();
     }catch(caught){setError(caught instanceof ApiError && caught.status===409?"اطلاعات تغییر کرده است؛ فرم را ببندید و فهرست را تازه کنید.":caught instanceof Error?caught.message:"ثبت مرجع ممکن نشد.");}
     finally{setBusy(false);}

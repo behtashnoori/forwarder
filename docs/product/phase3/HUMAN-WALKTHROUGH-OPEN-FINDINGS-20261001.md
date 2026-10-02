@@ -253,3 +253,54 @@ DEPLOYMENT_PERFORMED=NO; RELEASE_CREATED=NO;
 HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS; RELEASE_READY=NO.
 
 **PASS — HUMAN WALKTHROUGH OPEN FINDINGS CONSOLIDATED AND QUALIFIED**
+
+## Second consolidated correction batch — 2026-10-02
+
+### Product Authority and journey impact
+
+The Product Owner's supplied “FORWARDER — HUMAN WALKTHROUGH SECOND CONSOLIDATED
+UX / FLOW CORRECTION” authorizes the 19 corrections below. Rigor B and Sol apply.
+The frozen LPAF v2.7 baseline, schema head `20261015_org_shipment_stages`,
+canonical geography SOR, Route Reference versioning, occurrence semantics,
+ETA_RULESET_V2, tenant boundaries, permissions, closure immutability and the
+PDA-08 historical-document repair clarification remain authoritative.
+
+The batch affects FWD-J01/J03/J04/J05/J06/J08/J09 and FWD-IPJ-01/02/03/04.
+Customer Request, Direct Operation, Route Reference, guided execution, Admin
+configuration, stages, delivery, closure and ETA therefore require focused
+regression. No new SOR, workflow, RBAC, GIS, localization or migration is
+authorized. The preserved CLOSED Shipment, second open Shipment, approved
+Organization Location, Route Reference v1 and existing Customer Request count
+are protected evidence and may only be inspected read-only during this mission.
+
+### Second-batch finding register
+
+Evidence root: `D:\1-webapp\forwarder-dev\human-walkthrough-second-evidence`.
+Statuses remain qualification-pending until the hash-bound PostgreSQL 18 and
+browser rows are completed on a clean candidate.
+
+| ID | Severity | Root cause | Correction | Tests | Status |
+|---|---|---|---|---|---|
+| HW_CUSTOMER_GEO_001 | HIGH | Customer Request used the legacy Province → County → City loaders, while qualified surfaces use canonical Country/Admin1/City identities. The County dependency also cleared canonical city results. | Domestic Request now reads canonical Iran Admin1 and cities directly, keeps city optional, and stores the same Province/City row identities used by Direct Operation and Route Reference. | `LocationForm.destination`; PG canonical geography; disposable Customer browser submission and Expert detail. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_ROUTE_BASIS_001 | HIGH | Route basis selection rejected every non-draft plan, although the visible compatible reference and an active, unstarted, unpinned leg were otherwise valid. | The owner with `route_leg.manage` may make the first explicit selection on an active current plan while the leg is planned/ready and has no actual times. Existing active pins, started/completed legs, historical plans and closed/cancelled Shipments remain immutable. | `test_phase3_route_time`; active-plan component/browser proof; PG Route Reference and 900 km ETA chain. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_ROUTE_BASIS_002 | MEDIUM | The refresh label implied a write and generic conflict handling hid the refusal reason. | Refresh now only re-reads references; explicit pin reports success, and backend refusal text is shown verbatim with a shared `selection_refusal_reason` response contract. | `RouteReferenceTimes`; OpenAPI recursive allowlist; P310 browser success/refusal. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_GUIDANCE_003 | HIGH | UI copy made missing transport execution appear to be a prerequisite for route occurrence, while the authoritative occurrence command requires the route milestone and permission, not an ExecutionUnit. | Occurrence semantics are unchanged. Guidance now states that movement can be recorded independently; execution assignment remains recommended for complete vehicle tracking. | Organization stages browser: missing execution, coherent readiness/attention/next action, successful departure and arrival. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_DATE_PICKER_001 | HIGH | The shared control still exposed a technical local datetime string and Customer Request rendered independent Gregorian and Jalali fields. | One controlled picker now selects year/month/day and minute, toggles Jalali/Gregorian over one local wall-clock value, and continues through the existing local → UTC converter. Customer dates use the same date-only control. | `LocalizedDateTimeInput`; Customer/Direct/Route and operational-stage browser toggles; timezone converter regressions. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_DIRECT_OP_REVIEW_001 | HIGH | Review rendered only source, customer and a partial cargo line. | Review now includes customer, source, canonical origin/destination labels, localized mode, dual-calendar departure/arrival, cargo quantity and localized unit before creation. | `NewOperation`; disposable Direct Operation browser review. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_UOM_001 | MEDIUM | Persian selectors appended persisted technical symbols such as `(pcs)` to the primary localized label. | Persian operational choices show the localized UOM name; technical codes remain stored and available in details/English where appropriate. | Request cargo and Shipment cargo component regressions; quantity presentation assertions. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_DOC_ADMIN_001 | MEDIUM | Organization policy projection exposed the legacy English title but omitted canonical `name_fa`/`name_en`. | Policy rows render canonical Persian name first and English name as secondary detail. | Organization policy service/component tests; HW-GEO Admin browser. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_DOC_ADMIN_002 | POLISH | Every row presented an equally prominent save action regardless of changes. | Each row tracks its saved requirement level, enables/emphasizes save only while dirty, and shows concise saved feedback. | `OrganizationDocumentPolicyTab`; Admin browser unchanged-row assertion. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_STAGE_ADMIN_001 | POLISH | Persian explanatory copy retained the English word `Delivery`. | Copy uses the semantic Persian phrase `ثبت تحویل`. | Component/browser text regression. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_STAGE_ADMIN_002 | MEDIUM | Collapsed versions exposed only technical version/effective-time detail. | Summary now shows active stage count, required count and current status without opening the version. | Stage component and disposable Organization stages browser. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_CLOSURE_ADMIN_001 | MEDIUM | Blocking and warning-only criteria were rendered as one flat list. | Editor and history render separate required-closing conditions and nonblocking warnings. | Closure component and Organization stages browser. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_CLOSURE_ADMIN_002 | POLISH | Identical scope text was repeated per criterion. | Unique scopes are summarized once per policy version. | Closure component/browser summary assertion. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_CLOSURE_ADMIN_003 | MEDIUM | Collapsed versions did not summarize blockers and warnings. | Summary shows mandatory count, warning count, scope and active status. | Closure component and browser policy publication. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_CLOSURE_ADMIN_004 | POLISH | New-policy action exposed the implementation label `V1`. | Action now says `تعریف نسخه جدید قواعد`. | Closure component/browser. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_CLOSURE_ADMIN_005 | MEDIUM | The UI did not explain why criterion classification cannot be toggled. | Copy states that Product governs blocker/warning classification while Admin publishes allowed versions and effective times. | Closure component/browser copy assertion. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_CLOSURE_ADMIN_006 | MEDIUM | Effective-from inherited the technical datetime entry experience. | Closure policy uses the shared dual-calendar minute picker without timestamp-semantic changes. | Closure component and shared-picker regressions. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_LOCATION_ADMIN_001 | POLISH | Admin actions used catalog-internal terms such as `غنی‌سازی` and `مدیر کیفیت کاتالوگ`. | User-facing language now says `تکمیل اطلاعات` and identifies the Organization Admin role. | Logistics network component and HW-GEO browser. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_LOCATION_ADMIN_002 | HIGH | The Admin update allowlist and modal omitted already-modeled type, description and coordinates. | Existing optional type, address, description, latitude and longitude are editable with current validation; immutable Location code and geography identity remain read-only. | Logistics service/component tests; PG Expert → Admin lifecycle; HW-GEO browser enrichment. | IMPLEMENTED — QUALIFICATION PENDING |
+
+Second-batch accounting: HIGH 6, MEDIUM 8, POLISH 5. At implementation review,
+all 19 are corrected and no deferred Product behavior is known; final RESOLVED
+status depends on the clean-candidate evidence recorded below.

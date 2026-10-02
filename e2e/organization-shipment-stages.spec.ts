@@ -55,22 +55,31 @@ test("Organization Admin configures projectless stages and Expert closes only af
   await admin.getByRole("tab", { name: "مراحل محموله", exact: true }).click();
   await expect(admin.getByText("هنوز نسخه فعالی برای مراحل محموله تعریف نشده است.")).toBeVisible();
   await admin.getByRole("button", { name: "تعریف نسخه تازه مراحل" }).click();
-  await admin.getByLabel("شروع اعتبار (زمان محلی)").fill(local(new Date(Date.now() - 60_000)));
+  await admin.getByLabel("شروع اعتبار (زمان محلی)").fill(local(new Date(Date.now() - 60_000)), { force: true });
   const stageConfigured = admin.waitForResponse(response => response.url().endsWith("/shipment-stage-configuration/versions") && response.request().method() === "POST");
   await admin.getByRole("button", { name: "انتشار نسخه مراحل" }).click();
   expect((await stageConfigured).status()).toBe(201);
-  await expect(admin.getByText(/نسخه 1/)).toBeVisible();
+  await expect(admin.getByText(/نسخه 1 · ۵ مرحله · ۵ الزامی · فعال/)).toBeVisible();
   await admin.screenshot({ path: testInfo.outputPath("organization-stage-configuration.png"), fullPage: true });
 
   await admin.getByRole("tab", { name: "قواعد بستن پرونده", exact: true }).click();
-  await admin.getByRole("button", { name: "تعریف نسخه V1 قواعد" }).click();
-  await admin.getByLabel("شروع اعتبار (زمان محلی)").fill(local(new Date(Date.now() - 60_000)));
+  await admin.getByRole("button", { name: "تعریف نسخه جدید قواعد" }).click();
+  await expect(admin.getByRole("heading", { name: "شرایط لازم برای بستن" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "هشدارهای غیرمسدودکننده" })).toBeVisible();
+  await expect(admin.getByText(/طبقه‌بندی هر معیار را محصول تعیین می‌کند/)).toBeVisible();
+  await admin.getByLabel("شروع اعتبار (زمان محلی)").fill(local(new Date(Date.now() - 60_000)), { force: true });
   const policyConfigured = admin.waitForResponse(response => response.url().endsWith("/closure-policy/versions") && response.request().method() === "POST");
   await admin.getByRole("button", { name: "ثبت نسخه قواعد" }).click();
   expect((await policyConfigured).status()).toBe(201);
-  await expect(admin.getByText(/نسخه 1/)).toBeVisible();
+  await expect(admin.getByText(/نسخه 1 · ۴ شرط الزامی · ۶ هشدار · همه حمل‌ها · فعال/)).toBeVisible();
 
   await login(expert, "restricted");
+  await expect(expert.getByRole("tab", { name: "مراحل محموله", exact: true })).toHaveCount(0);
+  const expertToken = await expert.evaluate(() => localStorage.getItem("expert_token"));
+  const deniedPolicy = await expert.request.post("/api/admin/shipment-stage-configuration/versions", {
+    headers: { Authorization: `Bearer ${expertToken}`, "Idempotency-Key": crypto.randomUUID() }, data: {},
+  });
+  expect(deniedPolicy.status()).toBe(403);
   await expert.goto(`/operations/shipments/${fixture.organization_stage_shipment}`);
   await openShipmentSection(expert, "closure", fixture.organization_stage_shipment);
   let closure = expert.getByRole("region", { name: "بررسی بستن پرونده" });
@@ -82,7 +91,13 @@ test("Organization Admin configures projectless stages and Expert closes only af
   const stages = expert.getByRole("region", { name: "مراحل عملیاتی محموله" });
   await expect(stages.getByText("این زنجیره به پروژه وابسته نیست.", { exact: false })).toBeVisible();
   await expect(stages.locator("ol > li")).toHaveCount(5);
-  await stages.getByLabel("زمان رخداد مرحله").fill(local(new Date()));
+  const stageTime=stages.getByLabel("زمان رخداد مرحله");
+  const stagePicker=stageTime.locator("xpath=..");
+  await stagePicker.getByRole("button").first().click();
+  await stagePicker.getByRole("button", { name: "میلادی", exact: true }).click();
+  await expect(stagePicker.getByRole("button").first()).toContainText("میلادی");
+  await stagePicker.getByRole("button", { name: "شمسی", exact: true }).click();
+  await stageTime.fill(local(new Date()), { force: true });
   for (let index = 0; index < 5; index += 1) {
     const start = stages.locator("button:enabled", { hasText: "شروع مرحله" }).first();
     const started = expert.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/events"));
@@ -101,7 +116,7 @@ test("Organization Admin configures projectless stages and Expert closes only af
   await delivery.getByRole("button", { name: /تحویل تازه برای/ }).click();
   await delivery.getByLabel("مقدار تحویل", { exact: true }).fill("95");
   await selectDestination(delivery);
-  await delivery.getByLabel("زمان وقوع تحویل").fill(local(new Date()));
+  await delivery.getByLabel("زمان وقوع تحویل").fill(local(new Date()), { force: true });
   await delivery.getByLabel("تحویل نهایی محموله").check();
   const delivered = expert.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/deliveries"));
   await delivery.getByRole("button", { name: "ثبت تحویل", exact: true }).click();

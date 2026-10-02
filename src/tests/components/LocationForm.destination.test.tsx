@@ -19,7 +19,8 @@ vi.mock("@/components/RequestConfirmation", () => ({
 vi.mock("@/lib/api", async () => ({
   ...await vi.importActual<typeof import("@/lib/api")>("@/lib/api"),
   fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(), fetchTransportMethodOptions: vi.fn(), fetchRequestCargoOptions: vi.fn(),
-  fetchProvinces: vi.fn(), fetchIranPorts: vi.fn(), fetchBorderCustoms: vi.fn(),
+  fetchProvinces: vi.fn(), fetchCounties:vi.fn(), fetchCities:vi.fn(), fetchIranPorts: vi.fn(), fetchBorderCustoms: vi.fn(),
+  fetchCanonicalCountries:vi.fn(), fetchCanonicalAdmin1:vi.fn(), fetchCanonicalCities:vi.fn(),
   submitShipmentRequest: vi.fn(),
 }));
 vi.mock("@/lib/customerPortalApi", async () => ({
@@ -39,6 +40,17 @@ beforeEach(() => {
     { id: 1, name: "Iran", name_en: "Iran", code: "IR" },
     { id: 2, name: "Turkey", name_en: "Turkey", code: "TR" },
   ]);
+  vi.mocked(api.fetchCanonicalCountries).mockResolvedValue({items:[{id:1,code:"IR",name_fa:"ایران",name_en:"Iran"}]});
+  vi.mocked(api.fetchCanonicalAdmin1).mockResolvedValue({items:[
+    {source_id:101,geoname_id:418862,code:"04",name_fa:"اصفهان",name_en:"Isfahan"},
+    {source_id:102,geoname_id:131222,code:"11",name_fa:"هرمزگان",name_en:"Hormozgan"},
+    {source_id:103,geoname_id:110791,code:"26",name_fa:"تهران",name_en:"Tehran"},
+  ]});
+  vi.mocked(api.fetchCanonicalCities).mockImplementation(async admin=>({items:
+    admin===418862?[{source_id:201,geoname_id:418863,name_fa:"اصفهان",name_en:"Isfahan",latitude:"32",longitude:"51"}]:
+    admin===131222?[{source_id:202,geoname_id:141681,name_fa:"بندرعباس",name_en:"Bandar Abbas",latitude:"27",longitude:"56"}]:
+    [{source_id:203,geoname_id:112931,name_fa:"تهران",name_en:"Tehran",latitude:"35",longitude:"51"}]
+  }));
   vi.mocked(api.fetchInternationalCityPage).mockImplementation(async (id) => ({
     items: [{ id: id === 1 ? 11 : 22, name: id === 1 ? "Tehran" : "Istanbul", name_en: id === 1 ? "Tehran" : "Istanbul", un_locode: id === 1 ? "IRTHR" : "TRIST", city_type: "city", is_major_port: false, is_major_airport: false }],
     offset: 0, limit: 50, has_more: false,
@@ -100,6 +112,33 @@ async function submit(countryId: number, cityId: number) {
 }
 
 describe("public destination business flow", () => {
+  it("uses canonical Admin1 to City identity for a domestic customer request without a County dependency", async()=>{
+    const select=async(label:string,option:string)=>{
+      const user=userEvent.setup();
+      await user.click(screen.getByLabelText(label));
+      await user.click(await screen.findByRole("option",{name:new RegExp(`^${option}`)}));
+    };
+    vi.mocked(api.fetchTransportMethodOptions).mockResolvedValue({
+      international_methods:[],domestic_methods:[{id:1,name:"road",name_fa:"جاده‌ای",is_active:true}],
+      preference_options:[{value:"customer_choice",label:"انتخاب مشتری",description:""}],
+    });
+    render(<MemoryRouter><LocationForm shippingType="domestic" onBack={vi.fn()}/></MemoryRouter>);
+    await waitFor(()=>expect(api.fetchCanonicalAdmin1).toHaveBeenCalledWith("IR"));
+    await select("requestForm.originProvince","اصفهان");
+    await userEvent.click(screen.getByRole("button",{name:/requestForm.showOriginDetails/}));
+    await waitFor(()=>expect(api.fetchCanonicalCities).toHaveBeenCalledWith(418862));
+    await select("requestForm.originCity","اصفهان");
+    await select("requestForm.destinationProvince","هرمزگان");
+    await userEvent.click(screen.getByRole("button",{name:/requestForm.showDestinationDetails/}));
+    await waitFor(()=>expect(api.fetchCanonicalCities).toHaveBeenCalledWith(131222));
+    await select("requestForm.destinationCity","بندرعباس");
+    expect(api.fetchCounties).not.toHaveBeenCalled();
+    expect(api.fetchCities).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("requestForm.originProvince")).toHaveTextContent("اصفهان");
+    expect(screen.getByLabelText("requestForm.originCity")).toHaveTextContent("اصفهان");
+    expect(screen.getByLabelText("requestForm.destinationProvince")).toHaveTextContent("هرمزگان");
+    expect(screen.getByLabelText("requestForm.destinationCity")).toHaveTextContent("بندرعباس");
+  });
   it("contains transport choices locally at mobile width and preserves RTL without global overflow hiding", async () => {
     vi.mocked(api.fetchTransportMethodOptions).mockResolvedValue({
       international_methods: [{ id: 9, name: "road", name_fa: "حمل زمینی", description: "A deliberately long method description used to exercise wrapping", is_active: true }],

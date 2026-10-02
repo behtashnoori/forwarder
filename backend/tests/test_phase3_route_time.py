@@ -158,10 +158,42 @@ def test_selection_replay_and_published_plan_cannot_be_rebound(operational_app):
         current=db.session.get(RoutePlan,plan);current.status="active";db.session.commit()
         with pytest.raises(operations.OperationalError) as denied:
             select(app,shipment,plan,leg,version,revision=1)
-        assert denied.value.code=="ROUTE_PLAN_NOT_DRAFT"
+        assert denied.value.code=="ACTIVE_ROUTE_BASIS_ALREADY_PINNED"
         db.session.rollback()
         view=svc.plan_read(shipment,plan,_user(app))["items"][0]
         assert not view["can_select"] and view["selected"]["reference"]["version"]==1
+
+
+def test_active_unstarted_leg_can_pin_its_first_basis_but_cannot_rebind(operational_app):
+    app = operational_app
+    with app.app_context():
+        version, _ = save(app, payload(app, planned_distance_km="900"))
+        shipment, plan, leg = draft(app)
+        active_plan = db.session.get(RoutePlan, plan)
+        existing = RoutePlan.query.filter_by(
+            operational_shipment_id=active_plan.operational_shipment_id,
+            is_active=True,
+        ).one()
+        existing.status = "superseded"
+        existing.is_active = False
+        db.session.flush()
+        active_plan.status = "active"
+        active_plan.is_active = True
+        db.session.commit()
+
+        before = svc.plan_read(shipment, plan, _user(app))["items"][0]
+        assert before["can_select"] is True
+        assert before["selection_refusal_reason"] is None
+        selected, created = select(app, shipment, plan, leg, version)
+        assert created is True
+        assert selected.reference_version_id == version.id
+
+        after = svc.plan_read(shipment, plan, _user(app))["items"][0]
+        assert after["can_select"] is False
+        assert "قبلاً تثبیت شده" in after["selection_refusal_reason"]
+        with pytest.raises(operations.OperationalError) as denied:
+            select(app, shipment, plan, leg, version, revision=1)
+        assert denied.value.code == "ACTIVE_ROUTE_BASIS_ALREADY_PINNED"
 
 
 def test_explicit_zero_stop_is_distinct_from_undefined_movement(operational_app):

@@ -28,6 +28,7 @@ import {
 import { useI18n } from "@/i18n";
 import { localDateTimeInputToUtc } from "@/lib/localDateTime";
 import { formatUnitSymbol } from "@/lib/formatQuantity";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 type Source = "direct" | "accepted_quote";
 type Side = {
@@ -375,6 +376,15 @@ export default function NewOperation() {
   const location = (side: Side): OperationalLocationRef | null =>
     (side.canonical ? {source_type:side.canonical.source_type,source_id:side.canonical.source_id} : null) || (side.locationMode === "facility" && side.logisticsPointId
       ? {source_type:"logistics_point",source_id:side.logisticsPointId} : null);
+  const sideLabel = (side: Side) => {
+    if (side.locationMode === "facility" && side.logisticsPointId)
+      return logisticsPoints.find(point => point.public_id === side.logisticsPointId)?.fa_name || "مکان سازمان انتخاب‌شده";
+    return side.canonical?.display_label || ({
+      province: "استان انتخاب‌شده", city: "شهر انتخاب‌شده", international_city: "نقطه بین‌المللی انتخاب‌شده",
+      iran_port: "بندر انتخاب‌شده", customs_office: "گمرک انتخاب‌شده", country: "کشور انتخاب‌شده",
+      logistics_point: "مکان سازمان انتخاب‌شده",
+    }[side.canonical?.source_type || "city"]);
+  };
   const validate = () => {
     const next: Partial<Record<FieldError, string>> = {};
     if (source === "direct" && !customerId)
@@ -965,8 +975,7 @@ export default function NewOperation() {
                   </option>
                   {cargoOptions.uoms.map((option) => (
                     <option key={option.public_id} value={option.public_id}>
-                      {option.name}
-                      {option.symbol ? ` (${option.symbol})` : ""}
+                      {direction === "rtl" ? option.name || formatUnitSymbol(option.symbol, "fa-IR") : option.name}
                     </option>
                   ))}
                 </select>
@@ -983,30 +992,32 @@ export default function NewOperation() {
             <CardTitle>{t("operations.review")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>
-              {t("operations.source")}:{" "}
+            <dl className="grid gap-3 sm:grid-cols-2">
+            <div><dt className="text-sm text-slate-500">{t("operations.source")}</dt><dd className="font-medium">
               {source === "direct"
                 ? t("operations.source.direct")
                 : t("operations.source.quote")}
-            </p>
+            </dd></div>
             {source === "direct" && (
-              <p>
-                {t("operations.customer")}:{" "}
+              <div><dt className="text-sm text-slate-500">{t("operations.customer")}</dt><dd className="font-medium">
                 {customers.find(
                   (customer) => String(customer.id) === customerId,
                 )?.label || "—"}
-              </p>
+              </dd></div>
             )}
+            <div><dt className="text-sm text-slate-500">مبدأ</dt><dd className="font-medium">{sideLabel(origin)}</dd></div>
+            <div><dt className="text-sm text-slate-500">مقصد</dt><dd className="font-medium">{sideLabel(destination)}</dd></div>
+            <div><dt className="text-sm text-slate-500">روش حمل</dt><dd className="font-medium">{transportLabel(mode)}</dd></div>
+            <div><dt className="text-sm text-slate-500">حرکت برنامه‌ریزی‌شده</dt><dd className="font-medium">{localDateTimeInputToUtc(departure)?formatDualCalendarInstant(localDateTimeInputToUtc(departure)!,"fa-IR"):"—"}</dd></div>
+            <div><dt className="text-sm text-slate-500">رسیدن برنامه‌ریزی‌شده</dt><dd className="font-medium">{localDateTimeInputToUtc(arrival)?formatDualCalendarInstant(localDateTimeInputToUtc(arrival)!,"fa-IR"):"—"}</dd></div>
             {selectedCargo && (
-              <p role="status">
-                {direction === "rtl" ? "کالا" : "Cargo"}: {selectedCargo.code} —{" "}
+              <div role="status"><dt className="text-sm text-slate-500">{direction === "rtl" ? "کالا و مقدار" : "Cargo and quantity"}</dt><dd className="font-medium">{selectedCargo.code} —{" "}
                 {selectedCargo.name} ·{" "}
-                {cargoQuantity || "—"}
-              </p>
+                {cargoQuantity || "—"} {formatUnitSymbol(cargoOptions.uoms.find(item=>item.public_id===cargoUomId)?.symbol||"","fa-IR")}
+              </dd></div>
             )}
             {selectedRequestCargo && (
-              <p role="status">
-                منبع کالا: درخواست پذیرفته‌شده، قلم{" "}
+              <div role="status" className="sm:col-span-2"><dt className="text-sm text-slate-500">کالا و مقدار منبع</dt><dd className="font-medium">درخواست پذیرفته‌شده، قلم{" "}
                 {selectedRequestCargo.position} · درخواست‌شده{" "}
                 {Number(selectedRequestCargo.quantity).toLocaleString("fa-IR")}{" "}
                 {selectedRequestCargo.uom_name ||
@@ -1014,8 +1025,9 @@ export default function NewOperation() {
                 · برنامه {Number(cargoQuantity || 0).toLocaleString("fa-IR")}{" "}
                 {selectedRequestCargo.uom_name ||
                   formatUnitSymbol(selectedRequestCargo.uom_symbol || "", direction === "rtl" ? "fa-IR" : "en-US")}
-              </p>
+              </dd></div>
             )}
+            </dl>
           </CardContent>
         </Card>
         {error && (

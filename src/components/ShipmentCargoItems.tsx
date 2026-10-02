@@ -684,7 +684,7 @@ export default function ShipmentCargoItems({
                   <option value="">واحد اندازه‌گیری</option>
                   {options.uoms.map((option) => (
                     <option key={option.public_id} value={option.public_id}>
-                      {option.name} ({option.symbol})
+                      {option.name}
                     </option>
                   ))}
                 </select>
@@ -760,7 +760,7 @@ export default function ShipmentCargoItems({
                   <option value="">واحد وزن</option>
                   {weightUoms.map((option) => (
                     <option key={option.public_id} value={option.public_id}>
-                      {option.name} ({option.symbol})
+                      {option.name}
                     </option>
                   ))}
                 </select>
@@ -789,7 +789,7 @@ export default function ShipmentCargoItems({
                   <option value="">واحد حجم</option>
                   {volumeUoms.map((option) => (
                     <option key={option.public_id} value={option.public_id}>
-                      {option.name} ({option.symbol})
+                      {option.name}
                     </option>
                   ))}
                 </select>

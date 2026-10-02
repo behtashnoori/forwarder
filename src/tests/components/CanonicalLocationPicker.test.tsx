@@ -42,10 +42,10 @@ describe("canonical location picker", () => {
   it("walks the governed hierarchy and emits structured city and organization identities", async () => {
     const onChange = vi.fn();
     await chooseCity(onChange);
-    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "city", source_id: 20 }));
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "city", source_id: 20, display_label:"اصفهان" }));
     await screen.findByRole("option", { name: "مکان سازمان — انبار مشتری · در انتظار بررسی" });
     fireEvent.change(screen.getByLabelText("مبدأ مکان سازمان"), { target: { value: "point-1" } });
-    expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "logistics_point", source_id: "point-1" });
+    expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "logistics_point", source_id: "point-1", display_label:"انبار مشتری" });
   });
 
   it("creates a minimally named expert location and makes it immediately usable", async () => {
@@ -58,7 +58,7 @@ describe("canonical location picker", () => {
       name: "انبار مشتری", city_geoname_id: 418863, point_type_public_id: null,
       address: null, description: null,
     }));
-    expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "logistics_point", source_id: "point-1" });
+    expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "logistics_point", source_id: "point-1", display_label:"انبار مشتری" });
   });
   it("offers remaining cities and de-duplicates stable identities across pages",async()=>{
     const first={source_id:20,geoname_id:418863,name_fa:"اصفهان",name_en:"Isfahan",latitude:"32",longitude:"51"};

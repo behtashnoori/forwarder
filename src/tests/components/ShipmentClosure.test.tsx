@@ -80,7 +80,7 @@ describe("explicit completed-only closure",()=>{
     render(<ClosurePolicyTab/>);
     expect(await screen.findByText(/قواعد هنوز تعریف نشده است/)).toBeInTheDocument();
     expect(api.save).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button",{name:"تعریف نسخه V1 قواعد"}));
+    fireEvent.click(screen.getByRole("button",{name:"تعریف نسخه جدید قواعد"}));
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("شروع اعتبار (زمان محلی)"),{target:{value:"2030-01-01T09:00"}});
     fireEvent.click(screen.getByRole("button",{name:"ثبت نسخه قواعد"}));
