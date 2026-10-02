@@ -83,7 +83,7 @@ test("P3-10 normal Admin reference → Expert pinned basis → future version an
   if(!(await basisDetails.evaluate(node=>(node as HTMLDetailsElement).open)))await basisSummary.click();
   await basisDetails.getByRole("button",{name:"بررسی دوباره مراجع",exact:true}).click();
   await expert.getByRole("button",{name:"ثبت این نسخه برای برنامه",exact:true}).click();
-  await expect(expert.getByRole("status")).toContainText("با موفقیت");
+  await expect(basisDetails.getByText("نسخه مرجع با موفقیت برای این بخش مسیر تثبیت شد.",{exact:true})).toBeVisible();
   await expect(expert.getByText(/قبلاً تثبیت شده است/)).toBeVisible();
   await expect(expert.getByRole("heading",{name:"مبنای تثبیت‌شده برنامه · نسخه مرجع 1",exact:true})).toBeVisible();
   const list=await admin.request.get("/api/organization/route-reference-times",{headers:await headers(admin)});
