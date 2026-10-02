@@ -10,6 +10,7 @@ from sqlalchemy.engine import make_url
 from backend import create_app
 from backend.extensions import db
 from backend.migration_runtime import alembic_config
+from backend.logistics_network_models import LogisticsPointType
 from backend.models import Country, City, Province, ExpertUser
 from backend.operational_models import OperationalMembership, OperationalShipment, RouteLeg
 from backend.services import logistics_network_service as geo, operational_service as ops
@@ -29,7 +30,7 @@ def test_canonical_search_parentage_pagination_and_location_review_preserve_usag
     engine = sa.create_engine(URL)
     with engine.connect() as connection:
         assert 180000 <= int(connection.execute(sa.text("SHOW server_version_num")).scalar_one()) < 190000
-    command.upgrade(alembic_config(URL), "20261015_org_shipment_stages")
+    command.upgrade(alembic_config(URL), "20261016_active_route_basis")
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": URL, "SECRET_KEY": "owned-hw"}, skip_startup=True)
     with app.app_context():
         ctx = _seed_runtime(app)
@@ -39,6 +40,14 @@ def test_canonical_search_parentage_pagination_and_location_review_preserve_usag
         shipment = OperationalShipment.query.filter_by(public_id=ctx["shipment"]).one()
         admin = ExpertUser(username="hw-admin", full_name="HW Admin", password_hash="unused", role="admin", authority="ORGANIZATION_ADMIN", is_active=True)
         db.session.add(admin); db.session.flush()
+        db.session.add(LogisticsPointType(
+            immutable_code="HW_SYNTHETIC",
+            fa_name="نوع نقطه آزمایشی",
+            en_name="Synthetic point type",
+            display_order=1,
+            created_by=admin.id,
+            updated_by=admin.id,
+        ))
         db.session.add(OperationalMembership(user_id=admin.id, organization_id=shipment.organization_id, permissions=["logistics_point.read", "logistics_point.manage"]))
         db.session.commit()
         owner, reviewer = {"id": ctx["owner"]}, {"id": admin.id, "role": "admin"}

@@ -52,7 +52,7 @@ try {
   $dirty = [bool](git status --porcelain)
   New-Item -ItemType Directory -Path $runtime, $EvidenceDirectory -Force | Out-Null
   $head = (python -m scripts.browser_migration_contract repository-head).Trim()
-  if ($head -ne '20261015_org_shipment_stages') { throw "Unexpected migration head: $head" }
+  if ($head -ne '20261016_active_route_basis') { throw "Unexpected migration head: $head" }
   if (Get-NetTCPConnection -LocalPort $pgPort -State Listen -ErrorAction SilentlyContinue) {
     throw "Owned PostgreSQL port $pgPort is already in use"
   }

@@ -338,5 +338,5 @@ Product Owner's explicit clarification; the default workspace is read-only.
 Local datetime controls still represent device-local wall clock values converted
 by the existing helper to UTC Instants. No timezone, enum, temporal storage,
 aggregate ownership, permission, schema, or migration contract changes.
-The sole migration head remains `20261015_org_shipment_stages`; rollback is a
+The sole migration head is `20261016_active_route_basis`; rollback is a
 source rollback with no data reversal. Architecture deviation: NONE.

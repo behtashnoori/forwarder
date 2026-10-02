@@ -210,7 +210,7 @@ try {
     }
   }
   $schemaHead = (python -m scripts.browser_migration_contract repository-head).Trim()
-  if ($LASTEXITCODE -ne 0 -or $schemaHead -ne '20261015_org_shipment_stages') {
+  if ($LASTEXITCODE -ne 0 -or $schemaHead -ne '20261016_active_route_basis') {
     throw "Unexpected migration head: $schemaHead"
   }
   foreach ($tool in @('initdb.exe', 'pg_ctl.exe', 'createdb.exe')) {

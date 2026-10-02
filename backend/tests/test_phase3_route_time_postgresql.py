@@ -17,7 +17,7 @@ from backend.services import operational_service as base, route_time_service as 
 
 URL=os.environ.get("P3_ROUTE_TIME_POSTGRES_URL", "")
 PREVIOUS="20261008_phase3_cargo_delivery"
-HEAD="20261015_org_shipment_stages"
+HEAD="20261016_active_route_basis"
 pytestmark=pytest.mark.skipif(not URL,reason="requires explicit P3_ROUTE_TIME_POSTGRES_URL")
 
 
@@ -98,6 +98,9 @@ def test_postgresql18_route_time_upgrade_history_tenant_concurrency_and_safe_rol
     with pytest.raises(sa.exc.DBAPIError),engine.begin() as connection:
         connection.execute(sa.text("""INSERT INTO organization_route_time_version(public_id,organization_id,reference_id,version,movement_min_minutes,movement_max_minutes,effective_from,actor_user_id,recorded_at)
             VALUES(:public,:foreign,:reference,3,20,30,:effective,:actor,now())"""),{"public":str(uuid4()),"foreign":ids["foreign"],"reference":reference_db_id,"effective":now+timedelta(days=2),"actor":ids["admin"]})
+    with pytest.raises(sa.exc.DBAPIError, match="Active route basis is already pinned"),engine.begin() as connection:
+        connection.execute(sa.text("""INSERT INTO route_leg_time_basis(public_id,organization_id,operational_shipment_id,route_plan_id,route_leg_id,reference_version_id,selection_revision,leg_basis,reference_at,actor_user_id,recorded_at)
+            VALUES(:public,:org,:shipment,:plan,:leg,:version,2,'{}',:at,:actor,now())"""),{"public":str(uuid4()),"org":ids["org"],"shipment":ids["shipment_id"],"plan":ids["plan"],"leg":ids["leg"],"version":second_id,"at":now+timedelta(days=10),"actor":ids["expert"]})
     with pytest.raises(sa.exc.DBAPIError),engine.begin() as connection:
         connection.execute(sa.text("""INSERT INTO route_leg_time_basis(public_id,organization_id,operational_shipment_id,route_plan_id,route_leg_id,reference_version_id,selection_revision,leg_basis,reference_at,actor_user_id,recorded_at)
             VALUES(:public,:foreign,:shipment,:plan,:leg,:version,2,'{}',:at,:actor,now())"""),{"public":str(uuid4()),"foreign":ids["foreign"],"shipment":ids["shipment_id"],"plan":ids["plan"],"leg":ids["leg"],"version":second_id,"at":now+timedelta(days=10),"actor":ids["expert"]})

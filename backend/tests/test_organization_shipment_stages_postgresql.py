@@ -27,7 +27,7 @@ from backend.operational_models import OperationalAudit, RouteLeg, RouteCargoDes
 
 
 URL = os.environ.get("ORG_SHIPMENT_STAGES_POSTGRES_URL", "")
-HEAD = "20261015_org_shipment_stages"
+HEAD = "20261016_active_route_basis"
 pytestmark = pytest.mark.skipif(not URL, reason="requires explicit owned ORG_SHIPMENT_STAGES_POSTGRES_URL")
 
 
