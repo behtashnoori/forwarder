@@ -31,6 +31,7 @@ import {
   fetchCountries,
   fetchTransportMethodOptions,
   fetchRequestCargoOptions,
+  countryMatchesSearch,
   isInternationalRouteComplete,
 } from "@/lib/api";
 import { submitShipmentRequestForCurrentCustomer } from "@/lib/customerPortalApi";
@@ -651,6 +652,14 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const countryOptions = useMemo(
     () => [...countries].sort((a, b) => a.name.localeCompare(b.name)),
     [countries],
+  );
+  const selectedOriginCountry = useMemo(
+    () => countryOptions.find((country) => country.id.toString() === formData.originCountry),
+    [countryOptions, formData.originCountry],
+  );
+  const selectedDestinationCountry = useMemo(
+    () => countryOptions.find((country) => country.id.toString() === formData.destCountry),
+    [countryOptions, formData.destCountry],
   );
   const isIranDestination = useMemo(
     () => countries.find((country) => country.id.toString() === formData.destCountry)?.code === "IR",
@@ -1313,9 +1322,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </SelectTrigger>
                   <SelectContent>
                     {countryOptions.filter((country) => {
-                      const query = countrySearch.origin.trim().toLocaleLowerCase();
-                      return !query || country.id.toString() === formData.originCountry
-                        || [country.name, country.name_en, country.code].some((value) => value.toLocaleLowerCase().includes(query));
+                      return country.id.toString() === formData.originCountry
+                        || countryMatchesSearch(country, countrySearch.origin);
                     }).map((country) => (
                       <SelectItem key={country.id} value={country.id.toString()}>
                         {country.name}
@@ -1338,6 +1346,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   countryId={formData.originCountry}
                   locale={language}
                   side="origin"
+                  coverageAvailable={selectedOriginCountry?.international_locations_available}
                   selected={originInternationalCities.find((city) => city.id.toString() === formData.originCityInternational) ?? null}
                   onChange={(city) => {
                     setOriginInternationalCities(city ? [city] : []);
@@ -1407,9 +1416,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </SelectTrigger>
                   <SelectContent>
                     {countryOptions.filter((country) => {
-                      const query = countrySearch.destination.trim().toLocaleLowerCase();
-                      return !query || country.id.toString() === formData.destCountry
-                        || [country.name, country.name_en, country.code].some((value) => value.toLocaleLowerCase().includes(query));
+                      return country.id.toString() === formData.destCountry
+                        || countryMatchesSearch(country, countrySearch.destination);
                     }).map((country) => (
                       <SelectItem key={country.id} value={country.id.toString()}>
                         {country.name}
@@ -1434,6 +1442,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       countryId={formData.destCountry}
                       locale={language}
                       side="destination"
+                      coverageAvailable={selectedDestinationCountry?.international_locations_available}
                       selected={destinationInternationalCities.find((city) => city.id.toString() === formData.destCityInternational) ?? null}
                       onChange={(city) => {
                         setDestinationInternationalCities(city ? [city] : []);

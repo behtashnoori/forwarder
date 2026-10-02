@@ -68,7 +68,25 @@ it("distinguishes lookup failure from an empty search and supports retry", async
   await screen.findByRole("alert");
   expect(screen.queryByText("No locations match this search.")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-  await screen.findByText("No locations match this search.");
+  await screen.findByText(/country is valid and remains selected/i);
+});
+
+it("retains a valid country and explains unavailable deeper coverage without a request", () => {
+  render(
+    <InternationalLocationSelector
+      countryId="33"
+      coverageAvailable={false}
+      locale="en"
+      side="destination"
+      selected={null}
+      onChange={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByText(/country is valid and remains selected/i)).toBeInTheDocument();
+  expect(screen.getByLabelText("Search destination location")).toBeDisabled();
+  expect(screen.getByLabelText("Select destination location")).toBeDisabled();
+  expect(fetchInternationalCityPage).not.toHaveBeenCalled();
 });
 
 it("discards a response from a prior country and marks fallback Persian labels honestly", async () => {

@@ -449,6 +449,27 @@ const customersResponse = await axios.get('/api/crm/customers');
 
 ## Changelog
 
+### HW_GEO_008 country-selection contract — 2026-10-02
+
+- `GET /api/countries`: public/customer-safe projection of every active row in
+  the canonical `Country` SOR. Items expose only `id`, `code`, localized names,
+  fallback status and `international_locations_available`. The availability
+  flag describes deeper `InternationalCity` coverage and never filters country
+  eligibility. The endpoint is an unpaged complete catalog; normal consumers
+  provide client-side Persian/English/ISO search and retain the selected identity.
+- `GET /api/geography/countries` and authenticated
+  `GET /api/internal/geography/countries` retain their existing safe shapes and
+  return the same eligible active country identities. Their
+  `geography_supported` flag continues to describe canonical Admin1/City depth.
+- Loading and error states remain distinct from a confirmed lack of deeper
+  geography. An active country without deeper coverage stays selected, while
+  the existing Request requirement for a governed international location before
+  submission remains unchanged.
+
+This entry supersedes only the earlier statement below that the public Request
+selector was unchanged. No endpoint exposes tenant configuration, provenance or
+administrative identity.
+
 ### Human Walkthrough read contracts — 2026-10-01
 
 - `GET /api/internal/geography/countries`: authenticated shared active Country

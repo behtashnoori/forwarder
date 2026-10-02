@@ -2,7 +2,7 @@
 import traceback
 
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import func, or_, text
+from sqlalchemy import func, or_, select, text
 
 from backend.extensions import db
 from backend.international_geography_catalog import CATALOG_DATASET_ID
@@ -131,21 +131,23 @@ def list_cities():
 
 @location_bp.get("/countries")
 def list_countries():
-    """Return countries with an active public-form international location.
+    """Return the complete active public country catalog.
 
-    The public international request form continues from a country selector to
-    an ``InternationalCity`` selector.  Do not expose an active country here
-    when that continuation would be an empty, non-operational dead end.
-    Global and organization logistics points are deliberately not counted:
-    they are not selectable by this public request workflow.
+    Country eligibility is owned by the active ``Country`` source of truth.
+    Deeper ``InternationalCity`` coverage is reported separately and never
+    filters the eligible country identities.
     """
     countries = (
-        Country.query.filter(
-            Country.is_active.is_(True),
-            Country.cities.any(InternationalCity.is_active.is_(True)),
-        )
+        Country.query.filter(Country.is_active.is_(True))
         .order_by(Country.name_fa, Country.name_en, Country.code, Country.id)
         .all()
+    )
+    countries_with_locations = set(
+        db.session.scalars(
+            select(InternationalCity.country_id)
+            .where(InternationalCity.is_active.is_(True))
+            .distinct()
+        ).all()
     )
     return jsonify(
         [
@@ -154,6 +156,9 @@ def list_countries():
                 "name": country.name_fa,
                 "name_en": country.name_en,
                 "code": country.code,
+                "international_locations_available": (
+                    country.id in countries_with_locations
+                ),
                 "name_fa_is_fallback": bool(
                     country.dataset_id == CATALOG_DATASET_ID
                     and country.name_fa == country.name_en

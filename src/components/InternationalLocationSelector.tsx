@@ -16,6 +16,7 @@ export function InternationalLocationSelector({
   selected,
   onChange,
   fieldError,
+  coverageAvailable,
 }: {
   countryId: string;
   locale: "fa" | "en";
@@ -23,6 +24,7 @@ export function InternationalLocationSelector({
   selected: InternationalCity | null;
   onChange: (city: InternationalCity | null) => void;
   fieldError?: string;
+  coverageAvailable?: boolean;
 }) {
   const fa = locale === "fa";
   const subject = fa
@@ -37,11 +39,13 @@ export function InternationalLocationSelector({
   const [retry, setRetry] = useState(0);
   const [items, setItems] = useState<InternationalCity[]>([]);
   const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(Boolean(countryId));
+  const [loading, setLoading] = useState(
+    Boolean(countryId) && coverageAvailable !== false,
+  );
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (!countryId) {
+    if (!countryId || coverageAvailable === false) {
       setItems([]);
       setHasMore(false);
       setLoading(false);
@@ -70,10 +74,10 @@ export function InternationalLocationSelector({
       active = false;
       window.clearTimeout(timer);
     };
-  }, [countryId, offset, query, retry]);
+  }, [countryId, coverageAvailable, offset, query, retry]);
 
   const beginRequest = () => {
-    setLoading(Boolean(countryId));
+    setLoading(Boolean(countryId) && coverageAvailable !== false);
     setFailed(false);
     setHasMore(false);
     setItems([]);
@@ -93,7 +97,7 @@ export function InternationalLocationSelector({
         placeholder={fa ? "نام، نام منبع یا کد UN/LOCODE" : "Name or UN/LOCODE"}
         value={query}
         maxLength={160}
-        disabled={!countryId}
+        disabled={!countryId || coverageAvailable === false}
         onChange={(event) => {
           beginRequest();
           setOffset(0);
@@ -109,7 +113,7 @@ export function InternationalLocationSelector({
         aria-label={selectionLabel}
         aria-invalid={Boolean(fieldError)}
         className="min-h-11 w-full min-w-0 rounded border bg-background px-3"
-        disabled={!countryId || loading}
+        disabled={!countryId || coverageAvailable === false || loading}
         value={selected?.id ?? ""}
         onChange={(event) =>
           onChange(
@@ -156,9 +160,22 @@ export function InternationalLocationSelector({
           </Button>
         </div>
       )}
-      {countryId && !loading && !failed && items.length === 0 && (
+      {countryId && coverageAvailable === false && (
+        <p role="status" className="rounded bg-amber-50 p-2 text-sm text-amber-900">
+          {fa
+            ? "کشور معتبر و انتخاب‌شده است؛ مکان مرجع عمیق‌تری برای این کشور موجود نیست."
+            : "The country is valid and remains selected; no deeper governed location is available for this country."}
+        </p>
+      )}
+      {countryId && coverageAvailable !== false && !loading && !failed && items.length === 0 && (
         <p role="status">
-          {fa ? "مکانی برای این جست‌وجو یافت نشد." : "No locations match this search."}
+          {query.trim()
+            ? fa
+              ? "مکانی برای این جست‌وجو یافت نشد."
+              : "No locations match this search."
+            : fa
+              ? "کشور معتبر و انتخاب‌شده است؛ مکان مرجع عمیق‌تری برای این کشور موجود نیست."
+              : "The country is valid and remains selected; no deeper governed location is available for this country."}
         </p>
       )}
       <div className="flex flex-wrap gap-2">

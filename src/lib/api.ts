@@ -19,8 +19,38 @@ export interface Country {
   name: string;
   name_en: string;
   code: string;
+  international_locations_available?: boolean;
   name_fa_is_fallback?: boolean;
 }
+
+type CountrySearchRecord = {
+  id: number;
+  code?: string | null;
+  name?: string | null;
+  name_fa?: string | null;
+  name_en?: string | null;
+};
+
+export const normalizeCountrySearch = (value: string): string =>
+  value
+    .toLocaleLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[\s‌]/g, "");
+
+export const countryMatchesSearch = (
+  country: CountrySearchRecord,
+  query: string,
+): boolean => {
+  const term = normalizeCountrySearch(query.trim());
+  return (
+    !term ||
+    [country.name, country.name_fa, country.name_en, country.code].some(
+      (value) => normalizeCountrySearch(value || "").includes(term),
+    )
+  );
+};
 
 export interface InternationalCity {
   id: number;

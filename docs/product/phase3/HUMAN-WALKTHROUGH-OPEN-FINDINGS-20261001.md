@@ -357,3 +357,67 @@ Second-batch final accounting: HIGH 6/6 RESOLVED, MEDIUM 8/8 RESOLVED,
 POLISH 5/5 RESOLVED, remaining 0, deferred nonblocking items 0. Production was
 not accessed or mutated; no deployment or release was performed. Controlled
 integration and preserved-runtime verification follow this register commit.
+
+## HW_GEO_008 — recurring country-selection inconsistency
+
+### Mission / Product Authority Record — 2026-10-02
+
+Entry canonical SHA `5dd91d231f9bcc3d9b5099b1dcf84029f651cda6`, branch
+`integration/golden-controlled`, remote divergence `0/0`, clean checkout and
+unique Alembic head `20261017_document_type_ownership`. LPAF v2.7 is the active,
+frozen and canonical baseline. Rigor B and Sol routing apply because the defect
+is customer-facing, recurrent and shared by several selectors. Stages M0–M6,
+controlled integration and local walkthrough runtime refresh are in scope; no
+release or production authority is granted.
+
+- `AUTHORIZED_PRODUCT_CHANGES`: make every existing general-purpose country
+  selector expose the complete active canonical Country SOR through its normal
+  search/browse interaction; distinguish country eligibility from available
+  deeper geography; explain unavailable depth without invalidating the selected
+  country; add system-wide regression protection.
+- `DELEGATED_TECHNICAL_CHOICES`: reuse existing public/authenticated projections,
+  adapters and components; preserve safe public fields; select focused contract,
+  consumer and browser tests; use owned disposable PostgreSQL 18 and browsers.
+- `PROTECTED_OUT_OF_SCOPE_BEHAVIOR`: domestic Iran scope; existing Request
+  requirement for a governed international location before submission; all
+  Request, Quote, Shipment, route, transport, tenant, permission, geography,
+  document, ETA, stage and closure semantics; canonical identities and history;
+  preserved walkthrough rows, sequences and uploaded file `1133.pdf`.
+- `DECISIONS_NEEDED`: none within the explicit mission. Stop for a missing
+  canonical source, incompatible Product rule, dirty/divergent integration or
+  preservation mismatch.
+- `APPROVING_OWNER_OR_AUTHORITY`: Product Owner issuing the HW_GEO_008 mission.
+- `APPROVAL_REFERENCE`: supplied “FORWARDER — ELIMINATE RECURRING
+  COUNTRY-SELECTION INCONSISTENCY”, finding HW_GEO_008, §§1–13.
+
+`JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY`: FWD-J01, FWD-J02 and FWD-J04,
+with focused impact on FWD-IPJ-01. Anonymous intake, authenticated Customer
+Request, route authoring/actual selectors and representative canonical
+Expert/Admin selectors require re-qualification. The Human Product Walkthrough
+remains `IN_PROGRESS`; `RELEASE_READY=NO`.
+
+Country is Platform/Shared Reference data. The existing active `Country` table
+is the SOR. `InternationalCity`, Admin1, City, LogisticsPoint and Route Reference
+coverage are downstream depth/usage facts and cannot redefine country
+eligibility. The public projection may expose only id, code, localized names,
+fallback status and the non-sensitive depth-availability flag. No migration,
+catalog import, SOR, service or architecture boundary change is expected.
+
+### Original-state evidence and finding register
+
+Both `/` anonymous intake and `/customer/requests/new` authenticated intake use
+`LocationForm`. Its international origin and destination called legacy
+`GET /api/countries`, whose query required an active `InternationalCity`. In the
+preserved runtime this returned 12 unique countries while public canonical
+`GET /api/geography/countries` returned 249 unique active countries: 237 were
+missing, with no extras or duplicates. FR, BR, ZA and AU reproduced the gap;
+IR, CN, TR, TM, RU, JP, KR, IN and DE were present. Search and scrolling could
+not recover identities absent from the response.
+
+| ID | Severity | Root cause | Required correction | Qualification | Status |
+|---|---|---|---|---|---|
+| HW_GEO_008 | HIGH | The Customer Request plus route authoring/actual consumers retained the legacy `/api/countries` projection, which silently coupled country eligibility to active `InternationalCity` coverage. Prior HW-GEO browser proof exercised canonical Direct Operation, Route Reference, Delivery and Admin surfaces but never the Customer International Request country controls or the legacy projection. | Align every general-purpose country consumer with the active Country SOR, retain safe public/authenticated boundaries, disclose missing deeper coverage and promote this escaped class into source/API, consumer and browser regression guards. | Independent PostgreSQL SOR comparison; public/authenticated HTTP contracts; consumer inventory guard; Customer/representative browser journeys; preserved-runtime read-only proof. | DIAGNOSED — IMPLEMENTATION PENDING |
+
+LPAF reference impact is `NONE`: the frozen framework is unchanged. Project
+reference impact is `UPDATE_REQUIRED`: this finding register, API country
+contract and affected journey evidence must record the final candidate.

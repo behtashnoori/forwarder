@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   ApiError, activateRoutePlan, addRouteCheckpoint, addRouteLeg, createRoutePlan,
   assignRouteCargoDestination,
-  fetchCountries, fetchProvinces, listLogisticsPoints,
+  countryMatchesSearch, fetchCountries, fetchProvinces, listLogisticsPoints,
   listShipmentCargoItems, searchIranDestinations, updateRouteCheckpoint, updateRouteLeg, validateRoutePlan,
   type Country, type InternationalCity, type IranDestinationOption, type LogisticsPointView,
   type OperationalLocationRef, type Province, type RouteCheckpoint, type RouteLeg,
@@ -59,6 +59,7 @@ export function RouteLocationPicker({ id, label, value, onChange, catalog, searc
   const [cities, setCities] = useState<InternationalCity[]>([]);
   const [countryQuery, setCountryQuery] = useState("");
   const [query, setQuery] = useState("");
+  const selectedCountry = catalog.countries.find((row) => String(row.id) === country);
   const key = value ? `${value.source_type}:${value.source_id}` : "";
   const options = [
     ...catalog.provinces.map((row) => ({ key: `province:${row.id}`, label: row.name, group: "استان" })),
@@ -71,8 +72,8 @@ export function RouteLocationPicker({ id, label, value, onChange, catalog, searc
     <label className="block text-sm font-medium" htmlFor={id}>{label}</label>
     <div className="flex min-w-0 flex-col gap-2 sm:flex-row"><Input aria-label={`${label} جست‌وجوی مکان ایران`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="جست‌وجوی شهر، بندر یا گمرک" /><Button type="button" variant="outline" aria-label={`${label} جست‌وجو`} onClick={() => searchIran(query)}>جست‌وجو</Button></div>
     <Input aria-label={`${label} جست‌وجوی کشور`} value={countryQuery} onChange={(event) => setCountryQuery(event.target.value)} placeholder="جست‌وجوی کشور" />
-    <select className={selectClass} aria-label={`${label} کشور شهر بین‌المللی`} value={country} onChange={(event) => { setCountry(event.target.value); setCities([]); }}><option value="">کشور برای شهر بین‌المللی</option>{catalog.countries.filter((row) => { const needle = countryQuery.trim().toLocaleLowerCase(); return !needle || String(row.id) === country || [row.name, row.name_en, row.code].some((item) => item.toLocaleLowerCase().includes(needle)); }).map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
-    <InternationalLocationSelector key={`${id}-${country}`} countryId={country} locale="fa" side={id.includes("origin") ? "origin" : id.includes("destination") ? "destination" : "location"} selected={cities.find((city) => key === `international_city:${city.id}`) ?? null} onChange={(city) => { setCities(city ? [city] : []); onChange(city ? { source_type: "international_city", source_id: city.id } : null); }} />
+    <select className={selectClass} aria-label={`${label} کشور شهر بین‌المللی`} value={country} onChange={(event) => { setCountry(event.target.value); setCities([]); }}><option value="">کشور برای شهر بین‌المللی</option>{catalog.countries.filter((row) => String(row.id) === country || countryMatchesSearch(row, countryQuery)).map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
+    <InternationalLocationSelector key={`${id}-${country}`} countryId={country} coverageAvailable={selectedCountry?.international_locations_available} locale="fa" side={id.includes("origin") ? "origin" : id.includes("destination") ? "destination" : "location"} selected={cities.find((city) => key === `international_city:${city.id}`) ?? null} onChange={(city) => { setCities(city ? [city] : []); onChange(city ? { source_type: "international_city", source_id: city.id } : null); }} />
     <select id={id} className={selectClass} value={key} onChange={(event) => { const selected = event.target.value; const split = selected.indexOf(":"); onChange(split < 0 ? null : { source_type: selected.slice(0, split) as OperationalLocationRef["source_type"], source_id: selected.startsWith("logistics_point:") ? selected.slice(split + 1) : Number(selected.slice(split + 1)) }); }}>
       <option value="">انتخاب مکان معتبر</option>
       {options.map((row) => <option key={row.key} value={row.key}>{row.group} · {row.label}</option>)}

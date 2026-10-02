@@ -37,8 +37,9 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.fetchCountries).mockResolvedValue([
-    { id: 1, name: "Iran", name_en: "Iran", code: "IR" },
-    { id: 2, name: "Turkey", name_en: "Turkey", code: "TR" },
+    { id: 1, name: "Iran", name_en: "Iran", code: "IR", international_locations_available: true },
+    { id: 2, name: "Turkey", name_en: "Turkey", code: "TR", international_locations_available: true },
+    { id: 3, name: "France", name_en: "France", code: "FR", international_locations_available: false },
   ]);
   vi.mocked(api.fetchPublicCanonicalCountries).mockResolvedValue({items:[{id:1,code:"IR",name_fa:"ایران",name_en:"Iran"}]});
   vi.mocked(api.fetchPublicCanonicalAdmin1).mockResolvedValue({items:[
@@ -112,6 +113,25 @@ async function submit(countryId: number, cityId: number) {
 }
 
 describe("public destination business flow", () => {
+  it("searches the complete country catalog and retains a country without deeper coverage", async () => {
+    render(<MemoryRouter><LocationForm shippingType="international" onBack={vi.fn()} /></MemoryRouter>);
+    await waitFor(() => expect(api.fetchCountries).toHaveBeenCalledTimes(1));
+
+    const search = screen.getByLabelText("Search origin country");
+    await userEvent.type(search, "fr");
+    await choose(0, "France");
+    expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("France");
+    expect(screen.getByText(/country is valid and remains selected/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("combobox")[1]).toBeDisabled();
+    expect(api.fetchInternationalCityPage).not.toHaveBeenCalledWith(3, "", 0);
+
+    await userEvent.clear(search);
+    await userEvent.click(screen.getAllByRole("combobox")[0]);
+    expect(await screen.findByRole("option", { name: /^Iran/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^Turkey/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^France/ })).toBeInTheDocument();
+  });
+
   it("uses canonical Admin1 to City identity for a domestic customer request without a County dependency", async()=>{
     const select=async(label:string,option:string)=>{
       const user=userEvent.setup();

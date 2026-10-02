@@ -125,7 +125,11 @@ def test_public_country_selector_only_exposes_countries_with_active_internationa
     response = client.get("/api/countries")
 
     assert response.status_code == 200
-    assert {row["code"] for row in response.get_json()} == {"RDY"}
+    countries = {row["code"]: row for row in response.get_json()}
+    assert set(countries) == {"RDY", "NCT", "ICH"}
+    assert countries["RDY"]["international_locations_available"] is True
+    assert countries["NCT"]["international_locations_available"] is False
+    assert countries["ICH"]["international_locations_available"] is False
 
 
 def test_city_destination_persists_structured_fields(app, client):

@@ -338,5 +338,27 @@ Product Owner's explicit clarification; the default workspace is read-only.
 Local datetime controls still represent device-local wall clock values converted
 by the existing helper to UTC Instants. No timezone, enum, temporal storage,
 aggregate ownership, permission, schema, or migration contract changes.
-The sole migration head is `20261016_active_route_basis`; rollback is a
+The sole migration head is `20261017_document_type_ownership`; rollback is a
 source rollback with no data reversal. Architecture deviation: NONE.
+
+## HW_GEO_008 country eligibility contract — 2026-10-02
+
+`Country` remains the single Platform/Shared Reference SOR. Every
+general-purpose country selector reads the complete active identity set through
+an existing public-safe, authenticated or Admin projection. `InternationalCity`,
+Admin1, City, LogisticsPoint and Route Reference coverage are downstream depth
+or usage facts; none may silently filter country eligibility. Projection-specific
+depth flags remain explicit and do not promise transport service availability.
+
+Anonymous and authenticated Customer Request use the same public-safe country
+projection. Expert route authoring/actual route consumers use the same eligible
+identities, while Direct Operation, Delivery, Route Reference and Organization
+Location continue through the existing authenticated canonical picker. Domestic
+Request remains intentionally fixed to Iran. Admin country maintenance continues
+to expose inactive rows under its existing authorization and is not a normal
+Product selector.
+
+No new SOR, geography service, dataset, permission, tenant boundary, write path,
+Request requirement or migration is introduced. Rollback is source-only. The
+sole migration head remains `20261017_document_type_ownership`; architecture
+deviation is `NONE`.
