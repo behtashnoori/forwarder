@@ -226,6 +226,7 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await expert.getByLabel("نام کاربری").fill("shared_transport_e2e_restricted");
     await expert.getByLabel("رمز عبور").fill(expertPassword!);
     await expert.getByRole("dialog").getByRole("button", { name: "ورود", exact: true }).click();
+    await expect(expert).not.toHaveURL(/\/$/);
     await expert.goto(`/expert/requests/${created.request_public_id}`);
     await expect(expert.getByText(created.tracking_code, { exact: true })).toBeVisible();
     await expect(expert.getByText(/اصفهان/).first()).toBeVisible();
