@@ -202,13 +202,13 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     } else {
       await expect(page.getByText("در حال تخصیص", { exact: true })).toBeVisible();
     }
-    await expect(page.getByText(created.tracking_code, { exact: true })).toBeVisible();
+    await expect(page.getByText(created.tracking_code, { exact: true }).first()).toBeVisible();
     await expect(page.getByText("محموله قطعات آزمون سخت‌سازی")).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("customer-request-confirmation.png"), fullPage: true });
 
     await page.getByRole("button", { name: "مشاهده جزئیات" }).click();
     await expect(page).toHaveURL(new RegExp(`/customer/requests/${created.request_public_id}$`));
-    await expect(page.getByText(created.tracking_code, { exact: true })).toBeVisible();
+    await expect(page.getByText(created.tracking_code, { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "کارشناس مسئول درخواست" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "مسیر / مبدا و مقصد" })).toBeVisible();
     await expect(page.getByText("خودم روش حمل را انتخاب می‌کنم", { exact: true })).toBeVisible();
