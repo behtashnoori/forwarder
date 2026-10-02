@@ -37,7 +37,7 @@ test("shared canonical geography and inline Expert location → Admin review at 
   await directTime.getByRole("button",{name:"میلادی",exact:true}).click();
   await expect(directTime.getByRole("button").first()).toContainText("میلادی");
   await directTime.getByRole("button",{name:"شمسی",exact:true}).click();
-  const directReview=expert.getByRole("heading",{name:/مرور|Review/}).locator("xpath=../..");
+  const directReview=expert.getByRole("heading",{name:/بازبینی|مرور|Review/}).locator("xpath=../..");
   await expect(directReview).toContainText("اصفهان");
   await expect(directReview).toContainText("بندرعباس");
   const picker=expert.getByRole("group",{name:"مبدأ",exact:true});
