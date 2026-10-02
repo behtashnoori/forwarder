@@ -363,8 +363,10 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     assert detail_data["route"]["canonical_ids"] == {
         "origin_country_id": None,
         "origin_international_city_id": None,
+        "origin_city_id": None,
         "dest_country_id": None,
         "dest_international_city_id": None,
+        "dest_city_id": None,
     }
     endpoint_keys = {
         "province",

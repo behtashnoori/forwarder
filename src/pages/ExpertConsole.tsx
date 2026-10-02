@@ -311,8 +311,8 @@ const ExpertConsole = () => {
     }
 
     return {
-      origin: origin || t("expert.unknownOrigin"),
-      destination: destination || t("expert.unknownDestination"),
+      origin: [origin || t("expert.unknownOrigin"), route.origin.selection_label].filter(Boolean).join(" — "),
+      destination: [destination || t("expert.unknownDestination"), route.destination.selection_label].filter(Boolean).join(" — "),
     };
   };
 

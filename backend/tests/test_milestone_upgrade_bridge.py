@@ -10,7 +10,7 @@ from backend import milestone_upgrade_bridge as bridge
 
 def test_linear_head_and_backfill_ancestry():
     script = ScriptDirectory.from_config(alembic_config("sqlite://"))
-    assert script.get_heads() == ["20261016_active_route_basis"]
+    assert script.get_heads() == ["20261017_document_type_ownership"]
     assert bridge._contains(script, "head", bridge.BACKFILL)
     assert not bridge._contains(script, bridge.PREDECESSOR, bridge.BACKFILL)
 

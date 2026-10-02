@@ -26,7 +26,7 @@ from backend.services import route_orchestration_service as routes
 POSTGRES_URL = os.environ.get("P3_BRANCHED_ROUTE_POSTGRES_URL", "")
 PREVIOUS = "20261001_phase3_cargo_lineage"
 SLICE_HEAD = "20261002_phase3_branched_route"
-REPOSITORY_HEAD = "20261016_active_route_basis"
+REPOSITORY_HEAD = "20261017_document_type_ownership"
 
 pytestmark = pytest.mark.skipif(
     not POSTGRES_URL,

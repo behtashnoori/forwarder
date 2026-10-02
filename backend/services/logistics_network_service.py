@@ -7,7 +7,7 @@ import unicodedata
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
-from sqlalchemy import Text, cast, func, or_, select
+from sqlalchemy import Text, case, cast, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
@@ -616,28 +616,47 @@ def canonical_admin1(args):
 
 
 def canonical_cities(args):
+    country_code = str(args.get("country_code", "")).strip().upper()
+    raw_admin_identity = args.get("admin1_geoname_id")
     try:
-        admin_identity = int(args.get("admin1_geoname_id"))
+        admin_identity = int(raw_admin_identity) if raw_admin_identity not in (None, "") else None
         offset = int(args.get("offset", 0))
-        if not 0 <= offset <= 1000000:
+        limit = int(args.get("limit", 200))
+        if not 0 <= offset <= 1000000 or not 1 <= limit <= 200:
             raise ValueError()
     except (TypeError, ValueError) as exc:
-        raise OperationalError("VALIDATION_FAILED", "Valid admin1_geoname_id and offset are required.") from exc
+        raise OperationalError("VALIDATION_FAILED", "Valid location paging parameters are required.") from exc
+    if admin_identity is None and len(country_code) != 2:
+        raise OperationalError("VALIDATION_FAILED", "country_code or admin1_geoname_id is required.")
     term = str(args.get("q", "")).strip()[:160]
     q = select(City).join(Province, City.province_id == Province.id).join(Country, City.country_id == Country.id).where(
-        Province.geoname_id == admin_identity, Province.dataset_id == GEONAMES_DATASET_ID,
+        Province.dataset_id == GEONAMES_DATASET_ID,
         Province.is_active.is_(True), Country.is_active.is_(True), City.country_id == Province.country_id,
         City.dataset_id == GEONAMES_DATASET_ID, City.is_active.is_(True))
+    if admin_identity is not None:
+        q = q.where(Province.geoname_id == admin_identity)
+    else:
+        q = q.where(Country.code == country_code)
     if term:
         q = q.where(or_(*(geo.searchable(field).like(geo.pattern(term), escape="!")
                          for field in (City.name_fa, City.name_en, City.code, cast(City.aliases, Text)))))
-        q = q.order_by((geo.searchable(City.name_fa) == geo.normalize(term)).desc(),
-                       (geo.searchable(City.name_en) == geo.normalize(term)).desc())
-    rows = db.session.scalars(q.order_by(City.name_fa, City.geoname_id).offset(offset).limit(201)).all()
+        normalized = geo.normalize(term)
+        exact_rank = case(
+            (geo.searchable(City.name_fa) == normalized, 0),
+            (geo.searchable(City.name_en) == normalized, 0),
+            (geo.searchable(City.code) == normalized, 0),
+            else_=1,
+        )
+        q = q.order_by(exact_rank)
+    rows = db.session.scalars(q.order_by(City.name_fa, City.geoname_id).offset(offset).limit(limit + 1)).all()
     return {"items": [{"source_id": row.id, "geoname_id": row.geoname_id,
                         "name_fa": geo.name_fa(row), "name_en": row.name_en,
-                        "latitude": str(row.latitude), "longitude": str(row.longitude)} for row in rows[:200]],
-            "has_more": len(rows) > 200, "offset": offset}
+                        "province": {"source_id": row.province.id,
+                                     "geoname_id": row.province.geoname_id,
+                                     "name_fa": geo.name_fa(row.province),
+                                     "name_en": row.province.name_en},
+                        "latitude": str(row.latitude), "longitude": str(row.longitude)} for row in rows[:limit]],
+            "has_more": len(rows) > limit, "offset": offset, "limit": limit}
 
 
 def update_point(row, payload, user):

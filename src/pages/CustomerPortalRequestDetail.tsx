@@ -489,10 +489,12 @@ export default function CustomerPortalRequestDetail() {
                 <CardContent>
                   <dl className="grid gap-3 sm:grid-cols-2">
                     <DetailField label={t("common.origin")}>
-                      {endpointLabel(data.route?.origin)}
+                      <span>{endpointLabel(data.route?.origin)}</span>
+                      {data.route?.origin?.selection_label && <span className="mt-1 block text-xs font-normal text-muted-foreground">{data.route.origin.selection_label}</span>}
                     </DetailField>
                     <DetailField label={t("common.destination")}>
-                      {endpointLabel(data.route?.destination)}
+                      <span>{endpointLabel(data.route?.destination)}</span>
+                      {data.route?.destination?.selection_label && <span className="mt-1 block text-xs font-normal text-muted-foreground">{data.route.destination.selection_label}</span>}
                     </DetailField>
                     {data.route?.iran_destination && (
                       <DetailField label={t("customer.iranDestination")}>

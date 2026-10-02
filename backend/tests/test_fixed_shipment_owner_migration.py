@@ -9,7 +9,7 @@ from backend.operational_models import OperationalShipment
 
 
 MIGRATION_REVISION = "20260926_fixed_shipment_responsible_expert"
-REPOSITORY_HEAD = "20261016_active_route_basis"
+REPOSITORY_HEAD = "20261017_document_type_ownership"
 PREVIOUS = "20260925_quote_communication"
 MIGRATION = (
     Path(__file__).parents[1]

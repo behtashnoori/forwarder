@@ -44,6 +44,7 @@ from backend.services.facility_endpoint_resolver import resolve_facility_endpoin
 from backend.services.request_transport_projection import (
     project_existing_request_transport,
 )
+from backend.services.route_payload_service import build_route_payload
 
 TRANSPORT_MODES = {
     "road",
@@ -354,6 +355,7 @@ def accepted_quote_selector(
     for quote in rows:
         request_row = db.session.get(ShipmentRequest, quote.shipment_request_id)
         customer = db.session.get(Customer, request_row.customer_id)
+        request_route = build_route_payload(request_row)
         items.append(
             {
                 "id": quote.id,
@@ -369,6 +371,13 @@ def accepted_quote_selector(
                     if value
                 )
                 or None,
+                "request_location_state": request_route["location_state"],
+                "requires_location_resolution": request_route["location_state"] == "customer_declared",
+                "location_resolution_message": (
+                    "محل اعلام‌شده مشتری باید پیش از برنامه‌ریزی به نقاط عملیاتی دقیق متصل شود."
+                    if request_route["location_state"] == "customer_declared"
+                    else None
+                ),
                 "quote_label": f"{quote.amount} {quote.currency}",
                 "accepted_at": quote.responded_at.isoformat()
                 if quote.responded_at

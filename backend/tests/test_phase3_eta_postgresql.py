@@ -25,7 +25,7 @@ from backend.tests.test_operational_vertical_slice import _auth
 
 URL = os.environ.get("P3_ETA_POSTGRES_URL", "")
 PREVIOUS = "20261011_phase3_owner_transfer"
-HEAD = "20261016_active_route_basis"
+HEAD = "20261017_document_type_ownership"
 pytestmark = pytest.mark.skipif(not URL, reason="requires explicit owned P3_ETA_POSTGRES_URL")
 
 

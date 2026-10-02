@@ -146,6 +146,10 @@ export interface CustomerRequestRouteEndpoint {
   country?: string | null;
   international_city?: string | null;
   address?: string | null;
+  selection_kind?: string | null;
+  selection_label?: string | null;
+  reference_type?: string | null;
+  resolution_state?: string | null;
 }
 
 export const fetchCustomerSession = () => customerRequest<CustomerSession>("/api/customer/session");

@@ -667,6 +667,11 @@ export default function NewOperation() {
                 required
                 fieldError={fieldErrors.quote}
               />
+              {selectedQuote?.requires_location_resolution && (
+                <p role="alert" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+                  {selectedQuote.location_resolution_message || "محل اعلام‌شده مشتری باید پیش از برنامه‌ریزی به نقاط عملیاتی دقیق متصل شود."}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

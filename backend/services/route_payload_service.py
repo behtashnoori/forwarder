@@ -27,6 +27,65 @@ def _empty_endpoint() -> dict[str, Any]:
     }
 
 
+def _international_endpoint(req: ShipmentRequest, side: str) -> dict[str, Any]:
+    country_id = getattr(req, f"{side}_country_id")
+    city_id = getattr(req, f"{side}_city_id")
+    point_id = getattr(req, f"{side}_international_city_id")
+    country_snapshot = getattr(req, f"{side}_country")
+    place_snapshot = getattr(req, f"{side}_city_international")
+    address = getattr(req, f"{side}_address_international")
+    country = db.session.get(Country, country_id) if country_id else None
+    city = db.session.get(City, city_id) if city_id else None
+    point = db.session.get(InternationalCity, point_id) if point_id else None
+    endpoint = _empty_endpoint()
+    endpoint.update({
+        "country": (country.name_fa if country else None) or country_snapshot or UNKNOWN,
+        "international_city": (
+            presented_name_fa(city) if city else
+            (point.name_fa if point else None) or place_snapshot or UNKNOWN
+        ),
+        "address": address,
+        "selection_kind": None,
+        "selection_label": None,
+        "reference_type": None,
+        "source_id": None,
+        "resolution_state": None,
+    })
+    if city and country and city.country_id == country.id:
+        endpoint.update({
+            "city": presented_name_fa(city),
+            "selection_kind": "canonical_city",
+            "selection_label": "مکان مرجع انتخاب‌شده",
+            "reference_type": "city",
+            "source_id": city.id,
+            "resolution_state": "reference_selected",
+        })
+    elif point and country and point.country_id == country.id:
+        is_physical = point.city_type in {"airport", "port"}
+        endpoint.update({
+            "selection_kind": "physical_reference" if is_physical else "legacy_reference",
+            "selection_label": "مکان مرجع انتخاب‌شده" if is_physical else "مرجع تاریخی ثبت‌شده",
+            "reference_type": point.city_type,
+            "source_id": point.id,
+            "resolution_state": "reference_selected" if is_physical else "legacy_reference",
+        })
+    elif country_id and place_snapshot:
+        endpoint.update({
+            "selection_kind": "declared",
+            "selection_label": "محل اعلام‌شده مشتری؛ هنوز به مکان مرجع متصل نیست",
+            "reference_type": None,
+            "source_id": None,
+            "resolution_state": "requires_expert_review",
+        })
+    else:
+        endpoint.update({
+            "selection_kind": "legacy_unstructured",
+            "selection_label": "اطلاعات تاریخی درخواست",
+            "resolution_state": "legacy_incomplete",
+        })
+    return endpoint
+
+
 def build_iran_destination_payload(req: ShipmentRequest) -> dict[str, Any] | None:
     """Resolve the structured in-Iran destination point, or None when absent."""
     if not req.iran_dest_type:
@@ -58,20 +117,8 @@ def build_route_payload(req: ShipmentRequest) -> dict[str, Any]:
     destination = _empty_endpoint()
 
     if req.shipping_type == "international":
-        origin_country = db.session.get(Country, req.origin_country_id) if req.origin_country_id else None
-        origin_city = db.session.get(InternationalCity, req.origin_international_city_id) if req.origin_international_city_id else None
-        dest_country = db.session.get(Country, req.dest_country_id) if req.dest_country_id else None
-        dest_city = db.session.get(InternationalCity, req.dest_international_city_id) if req.dest_international_city_id else None
-        origin.update({
-            "country": (origin_country.name_fa if origin_country else None) or req.origin_country or UNKNOWN,
-            "international_city": (origin_city.name_fa if origin_city else None) or req.origin_city_international or UNKNOWN,
-            "address": req.origin_address_international,
-        })
-        destination.update({
-            "country": (dest_country.name_fa if dest_country else None) or req.dest_country or UNKNOWN,
-            "international_city": (dest_city.name_fa if dest_city else None) or req.dest_city_international or UNKNOWN,
-            "address": req.dest_address_international,
-        })
+        origin = _international_endpoint(req, "origin")
+        destination = _international_endpoint(req, "dest")
     else:
         origin_province = db.session.get(Province, req.origin_province_id) if req.origin_province_id else None
         origin_county = db.session.get(County, req.origin_county_id) if req.origin_county_id else None
@@ -96,8 +143,10 @@ def build_route_payload(req: ShipmentRequest) -> dict[str, Any]:
         "canonical_ids": {
             "origin_country_id": req.origin_country_id,
             "origin_international_city_id": req.origin_international_city_id,
+            "origin_city_id": req.origin_city_id,
             "dest_country_id": req.dest_country_id,
             "dest_international_city_id": req.dest_international_city_id,
+            "dest_city_id": req.dest_city_id,
         },
         "origin": origin,
         "destination": destination,
@@ -107,6 +156,15 @@ def build_route_payload(req: ShipmentRequest) -> dict[str, Any]:
 
 def _location_state(req: ShipmentRequest) -> str:
     if req.shipping_type != "international":
+        return "canonical"
+    origin_endpoint = _international_endpoint(req, "origin")
+    destination_endpoint = _international_endpoint(req, "dest")
+    states = {origin_endpoint["resolution_state"], destination_endpoint["resolution_state"]}
+    if "requires_expert_review" in states:
+        return "customer_declared"
+    if states == {"reference_selected"}:
+        return "canonical"
+    if "legacy_reference" in states and states <= {"reference_selected", "legacy_reference"}:
         return "canonical"
     origin_country = db.session.get(Country, req.origin_country_id) if req.origin_country_id else None
     dest_country = db.session.get(Country, req.dest_country_id) if req.dest_country_id else None

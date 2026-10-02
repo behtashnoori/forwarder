@@ -113,6 +113,10 @@ interface RequestDetail {
       country?: string | null;
       international_city?: string | null;
       address?: string | null;
+      selection_kind?: string | null;
+      selection_label?: string | null;
+      reference_type?: string | null;
+      resolution_state?: string | null;
     };
     destination?: {
       province?: string | null;
@@ -121,6 +125,10 @@ interface RequestDetail {
       country?: string | null;
       international_city?: string | null;
       address?: string | null;
+      selection_kind?: string | null;
+      selection_label?: string | null;
+      reference_type?: string | null;
+      resolution_state?: string | null;
     };
     iran_destination?: {
       type?: string | null;
@@ -528,6 +536,10 @@ const RequestDetail = () => {
               <InfoRow
                 label={t("requestDetail.cityPort")}
                 value={displayValue(location.international_city, missingValue)}
+              />
+              <InfoRow
+                label="وضعیت محل درخواست"
+                value={displayValue(location.selection_label, missingValue)}
               />
               {location.address ? (
                 <InfoRow

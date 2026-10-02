@@ -30,7 +30,7 @@ def test_canonical_search_parentage_pagination_and_location_review_preserve_usag
     engine = sa.create_engine(URL)
     with engine.connect() as connection:
         assert 180000 <= int(connection.execute(sa.text("SHOW server_version_num")).scalar_one()) < 190000
-    command.upgrade(alembic_config(URL), "20261016_active_route_basis")
+    command.upgrade(alembic_config(URL), "20261017_document_type_ownership")
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": URL, "SECRET_KEY": "owned-hw"}, skip_startup=True)
     with app.app_context():
         ctx = _seed_runtime(app)

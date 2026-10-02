@@ -20,7 +20,7 @@ vi.mock("@/lib/api", async () => ({
   ...await vi.importActual<typeof import("@/lib/api")>("@/lib/api"),
   fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(), fetchTransportMethodOptions: vi.fn(), fetchRequestCargoOptions: vi.fn(),
   fetchProvinces: vi.fn(), fetchCounties:vi.fn(), fetchCities:vi.fn(), fetchIranPorts: vi.fn(), fetchBorderCustoms: vi.fn(),
-  fetchPublicCanonicalCountries:vi.fn(), fetchPublicCanonicalAdmin1:vi.fn(), fetchPublicCanonicalCities:vi.fn(),
+  fetchPublicCanonicalCountries:vi.fn(), fetchPublicCanonicalAdmin1:vi.fn(), fetchPublicCanonicalCities:vi.fn(), fetchPublicCanonicalCitiesByCountry:vi.fn(),
   submitShipmentRequest: vi.fn(),
 }));
 vi.mock("@/lib/customerPortalApi", async () => ({
@@ -51,6 +51,11 @@ beforeEach(() => {
     admin===418862?[{source_id:201,geoname_id:418863,name_fa:"اصفهان",name_en:"Isfahan",latitude:"32",longitude:"51"}]:
     admin===131222?[{source_id:202,geoname_id:141681,name_fa:"بندرعباس",name_en:"Bandar Abbas",latitude:"27",longitude:"56"}]:
     [{source_id:203,geoname_id:112931,name_fa:"تهران",name_en:"Tehran",latitude:"35",longitude:"51"}]
+  }));
+  vi.mocked(api.fetchPublicCanonicalCitiesByCountry).mockImplementation(async code=>({items:
+    code==="IR"?[{source_id:201,geoname_id:112931,name_fa:"Tehran",name_en:"Tehran",latitude:"35",longitude:"51"}]:
+    code==="TR"?[{source_id:202,geoname_id:745044,name_fa:"Istanbul",name_en:"Istanbul",latitude:"41",longitude:"29"}]:[],
+    offset:0,limit:50,has_more:false,
   }));
   vi.mocked(api.fetchInternationalCityPage).mockImplementation(async (id) => ({
     items: [{ id: id === 1 ? 11 : 22, name: id === 1 ? "Tehran" : "Istanbul", name_en: id === 1 ? "Tehran" : "Istanbul", un_locode: id === 1 ? "IRTHR" : "TRIST", city_type: "city", is_major_port: false, is_major_airport: false }],
@@ -102,8 +107,8 @@ async function submit(countryId: number, cityId: number) {
   await userEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
   await waitFor(() => expect(api.submitShipmentRequest).toHaveBeenCalledTimes(1));
   const payload = vi.mocked(api.submitShipmentRequest).mock.calls[0][0];
-  expect(payload).toMatchObject({ origin_country_id: 2, origin_international_city_id: 22,
-    dest_country_id: countryId, dest_international_city_id: cityId, contact_phone: "09123456789", cargo_items: [] });
+  expect(payload).toMatchObject({ origin_country_id: 2, origin_location: {kind:"canonical_city",source_id:202},
+    dest_country_id: countryId, destination_location: {kind:"canonical_city",source_id:cityId}, contact_phone: "09123456789", cargo_items: [] });
   expect(Object.keys(payload).filter(key => key.startsWith("iran_"))).toEqual([]);
   expect(api.fetchIranPorts).not.toHaveBeenCalled();
   expect(api.fetchBorderCustoms).not.toHaveBeenCalled();
@@ -121,9 +126,9 @@ describe("public destination business flow", () => {
     await userEvent.type(search, "fr");
     await choose(0, "France");
     expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("France");
-    expect(screen.getByText(/country is valid and remains selected/i)).toBeInTheDocument();
-    expect(screen.getAllByRole("combobox")[1]).toBeDisabled();
-    expect(api.fetchInternationalCityPage).not.toHaveBeenCalledWith(3, "", 0);
+    expect(await screen.findByText(/No deeper reference data is available/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("combobox")[1]).not.toBeDisabled();
+    expect(api.fetchPublicCanonicalCitiesByCountry).toHaveBeenCalledWith("FR", "", 0, 50);
 
     await userEvent.clear(search);
     await userEvent.click(screen.getAllByRole("combobox")[0]);
@@ -193,13 +198,13 @@ describe("public destination business flow", () => {
     expect(screen.queryByText("first transport mode")).not.toBeInTheDocument();
   });
 
-  it.each([["Iran", "Tehran", 1, 11], ["Turkey", "Istanbul", 2, 22]] as const)(
-    "%s uses country and InternationalCity without the obsolete step", async (country, city, countryId, cityId) => {
+  it.each([["Iran", "Tehran", 1, 201], ["Turkey", "Istanbul", 2, 202]] as const)(
+    "%s uses country and canonical City without the obsolete step", async (country, city, countryId, cityId) => {
       await start();
       await destination(country, city);
       await submit(countryId, cityId);
     });
-  it.each([["Iran", "Tehran", "Turkey", "Istanbul", 2, 22], ["Turkey", "Istanbul", "Iran", "Tehran", 1, 11]] as const)(
+  it.each([["Iran", "Tehran", "Turkey", "Istanbul", 2, 202], ["Turkey", "Istanbul", "Iran", "Tehran", 1, 201]] as const)(
     "resets and reloads destination from %s (%s)", async (first, firstCity, next, nextCity, id, cityId) => {
       await start();
       await destination(first, firstCity);
@@ -210,7 +215,7 @@ describe("public destination business flow", () => {
       expect(api.submitShipmentRequest).not.toHaveBeenCalled();
       await waitFor(() => expect(screen.getAllByRole("combobox")[3]).not.toBeDisabled());
       await choose(3, nextCity);
-      expect(api.fetchInternationalCityPage).toHaveBeenCalledWith(id, "", 0);
+      expect(api.fetchPublicCanonicalCitiesByCountry).toHaveBeenCalledWith(id === 1 ? "IR" : "TR", "", 0, 50);
       await submit(id, cityId);
     });
 

@@ -14,7 +14,10 @@ from backend.models import (
     CustomerGamification,
     CustomerWorkflowStep,
     CargoType,
+    City,
     Country,
+    InternationalCity,
+    Province,
     RequestCargoItem,
     ShipmentRequest,
     ShipmentRequestLog,
@@ -28,6 +31,7 @@ from backend.request_transport_catalog import (
     catalog_name_key,
 )
 from backend.services.location_resolver import LocationResolutionError, resolve_location
+from backend.services.geography_presentation import name_fa as presented_name_fa
 
 INTERNATIONAL_METHOD_NAMES = ["sea freight", "air freight", "land transport", "rail transport"]
 DOMESTIC_METHOD_NAMES = ["road transport", "rail transport", "air transport"]
@@ -543,7 +547,115 @@ def _required_ref_id(payload: dict[str, Any], key: str) -> int:
         raise ShipmentValidationError(f"{key} is required.", code="LOCATION_MAPPING_REQUIRED") from None
 
 
-def _normalize_international_locations(payload: dict[str, Any]) -> dict[str, Any]:
+def _declared_place(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ShipmentValidationError(
+            "نام شهر یا محل موردنظر را بنویسید.", code="DECLARED_PLACE_REQUIRED"
+        )
+    value = value.strip()
+    if not value:
+        raise ShipmentValidationError(
+            "نام شهر یا محل موردنظر را بنویسید.", code="DECLARED_PLACE_REQUIRED"
+        )
+    if len(value) > 100 or any(ord(character) < 32 and character not in "\t\n\r" for character in value):
+        raise ShipmentValidationError(
+            "نام شهر یا محل موردنظر نامعتبر است.", code="DECLARED_PLACE_INVALID"
+        )
+    return value
+
+
+def _active_country(value: Any, field: str) -> Country:
+    try:
+        identity = parse_required_int(value)
+    except (TypeError, ValueError):
+        raise ShipmentValidationError(f"{field} is required.", code="LOCATION_MAPPING_REQUIRED") from None
+    country = db.session.get(Country, identity)
+    if country is None or not country.is_active:
+        raise ShipmentValidationError("کشور انتخاب‌شده معتبر نیست.", code="LOCATION_NOT_ELIGIBLE")
+    return country
+
+
+def _normalize_customer_endpoint(value: Any, country: Country, side: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ShipmentValidationError(
+            "شهر، نقطه مرجع یا محل اعلام‌شده را مشخص کنید.", code="REQUEST_LOCATION_REQUIRED"
+        )
+    kind = str(value.get("kind") or "").strip()
+    result = {
+        f"{side}_province_id": None,
+        f"{side}_county_id": None,
+        f"{side}_city_id": None,
+        f"{side}_international_city_id": None,
+        f"{side}_city_international": None,
+    }
+    if kind == "canonical_city":
+        try:
+            source_id = parse_required_int(value.get("source_id"))
+        except (TypeError, ValueError):
+            raise ShipmentValidationError("شهر انتخاب‌شده معتبر نیست.", code="LOCATION_MAPPING_REQUIRED") from None
+        city = db.session.get(City, source_id)
+        province = db.session.get(Province, city.province_id) if city and city.province_id else None
+        if (
+            city is None
+            or not city.is_active
+            or city.country_id != country.id
+            or province is None
+            or not province.is_active
+            or province.country_id != country.id
+        ):
+            raise ShipmentValidationError(
+                "شهر انتخاب‌شده با کشور سازگار نیست.", code="LOCATION_COUNTRY_MISMATCH"
+            )
+        result.update({
+            f"{side}_province_id": province.id,
+            f"{side}_county_id": city.county_id,
+            f"{side}_city_id": city.id,
+            f"{side}_city_international": presented_name_fa(city),
+        })
+        return result
+    if kind == "physical_reference":
+        try:
+            source_id = parse_required_int(value.get("source_id"))
+        except (TypeError, ValueError):
+            raise ShipmentValidationError("نقطه مرجع انتخاب‌شده معتبر نیست.", code="LOCATION_MAPPING_REQUIRED") from None
+        point = db.session.get(InternationalCity, source_id)
+        if point is None or not point.is_active or point.country_id != country.id:
+            raise ShipmentValidationError(
+                "نقطه مرجع انتخاب‌شده با کشور سازگار نیست.", code="LOCATION_COUNTRY_MISMATCH"
+            )
+        if point.city_type not in {"airport", "port"}:
+            raise ShipmentValidationError(
+                "نوع نقطه مرجع برای این انتخاب معتبر نیست.", code="LOCATION_TYPE_MISMATCH"
+            )
+        result.update({
+            f"{side}_international_city_id": point.id,
+            f"{side}_city_international": point.name_fa or point.name_en,
+        })
+        return result
+    if kind == "declared":
+        result[f"{side}_city_international"] = _declared_place(value.get("description"))
+        return result
+    raise ShipmentValidationError("نوع محل درخواست‌شده معتبر نیست.", code="LOCATION_TYPE_MISMATCH")
+
+
+def _normalize_customer_request_locations(payload: dict[str, Any]) -> dict[str, Any]:
+    origin_country = _active_country(payload.get("origin_country_id"), "origin_country_id")
+    dest_country = _active_country(payload.get("dest_country_id"), "dest_country_id")
+    result = {
+        "origin_country_id": origin_country.id,
+        "origin_country": origin_country.name_fa or origin_country.name_en,
+        "origin_address_international": _optional_text(payload.get("origin_address_international")),
+        "dest_country_id": dest_country.id,
+        "dest_country": dest_country.name_fa or dest_country.name_en,
+        "dest_address_international": _optional_text(payload.get("dest_address_international")),
+        **{key: None for key in IRAN_DEST_KEYS},
+    }
+    result.update(_normalize_customer_endpoint(payload.get("origin_location"), origin_country, "origin"))
+    result.update(_normalize_customer_endpoint(payload.get("destination_location"), dest_country, "dest"))
+    return result
+
+
+def _normalize_legacy_canonical_international_locations(payload: dict[str, Any]) -> dict[str, Any]:
     """Normalize new international writes from canonical IDs only."""
     origin_country_id = _required_ref_id(payload, "origin_country_id")
     dest_country_id = _required_ref_id(payload, "dest_country_id")
@@ -652,6 +764,23 @@ def _normalize_international_locations(payload: dict[str, Any]) -> dict[str, Any
         result["dest_international_city_id"] = city_id
         result["dest_city_international"] = city.display_label
     return result
+
+
+def _normalize_international_locations(payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize the explicit Customer Request location contract or N-1 IDs."""
+    origin_location = payload.get("origin_location")
+    destination_location = payload.get("destination_location")
+    explicit_origin = isinstance(origin_location, dict) and "kind" in origin_location
+    explicit_destination = (
+        isinstance(destination_location, dict) and "kind" in destination_location
+    )
+    if explicit_origin or explicit_destination:
+        if not explicit_origin or not explicit_destination:
+            raise ShipmentValidationError(
+                "مبدا و مقصد باید با قرارداد یکسان ارسال شوند.", code="REQUEST_LOCATION_REQUIRED"
+            )
+        return _normalize_customer_request_locations(payload)
+    return _normalize_legacy_canonical_international_locations(payload)
 
 
 def _canonical_reference(value: dict[str, Any], public_types: bool = False) -> dict[str, Any]:
@@ -808,6 +937,9 @@ def build_shipment_request_data(
             "origin_province_id": normalized.get("origin_province_id"),
             "origin_county_id": normalized.get("origin_county_id"),
             "origin_city_id": normalized.get("origin_city_id"),
+            "dest_province_id": normalized.get("dest_province_id"),
+            "dest_county_id": normalized.get("dest_county_id"),
+            "dest_city_id": normalized.get("dest_city_id"),
         })
 
     return shipment_request_data

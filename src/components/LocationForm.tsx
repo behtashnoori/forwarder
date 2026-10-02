@@ -12,10 +12,12 @@ import RequestConfirmation from "./RequestConfirmation";
 import { LocalizedDateInput } from "./LocalizedDateTimeInput";
 import RequestCargoEditor from "./RequestCargoEditor";
 import { type RequestCargoDraft, validateRequestCargoDrafts } from "./requestCargoDraft";
-import { InternationalLocationSelector } from "./InternationalLocationSelector";
+import {
+  CustomerRequestLocationSelector,
+  type CustomerRequestLocationSelection,
+} from "./CustomerRequestLocationSelector";
 import {
   Country,
-  InternationalCity,
   TransportMethod,
   TransportMethodOptions,
   ShipmentRequestPayload,
@@ -32,7 +34,6 @@ import {
   fetchTransportMethodOptions,
   fetchRequestCargoOptions,
   countryMatchesSearch,
-  isInternationalRouteComplete,
 } from "@/lib/api";
 import { submitShipmentRequestForCurrentCustomer } from "@/lib/customerPortalApi";
 import { useI18n } from "@/i18n";
@@ -393,8 +394,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [destinationCities, setDestinationCities] = useState<CanonicalCity[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
   const [countrySearch, setCountrySearch] = useState({ origin: "", destination: "" });
-  const [originInternationalCities, setOriginInternationalCities] = useState<InternationalCity[]>([]);
-  const [destinationInternationalCities, setDestinationInternationalCities] = useState<InternationalCity[]>([]);
+  const [originRequestLocation, setOriginRequestLocation] = useState<CustomerRequestLocationSelection | null>(null);
+  const [destinationRequestLocation, setDestinationRequestLocation] = useState<CustomerRequestLocationSelection | null>(null);
   const [transportMethodOptions, setTransportMethodOptions] = useState<TransportMethodOptions | null>(null);
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [isLoadingOriginCities, setIsLoadingOriginCities] = useState(false);
@@ -661,18 +662,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     () => countryOptions.find((country) => country.id.toString() === formData.destCountry),
     [countryOptions, formData.destCountry],
   );
-  const isIranDestination = useMemo(
-    () => countries.find((country) => country.id.toString() === formData.destCountry)?.code === "IR",
-    [countries, formData.destCountry],
-  );
-  const originInternationalCityOptions = useMemo(
-    () => [...originInternationalCities].sort((a, b) => a.name.localeCompare(b.name)),
-    [originInternationalCities],
-  );
-  const destinationInternationalCityOptions = useMemo(
-    () => [...destinationInternationalCities].sort((a, b) => a.name.localeCompare(b.name)),
-    [destinationInternationalCities],
-  );
 
   /** Resolved origin/destination labels for confirmation page (avoids undefined when formData only has IDs). */
   const confirmationLocationDisplay = useMemo(() => {
@@ -687,14 +676,18 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       };
     }
     const oCountry = countryOptions.find((c) => c.id.toString() === formData.originCountry);
-    const oCity = originInternationalCityOptions.find((c) => c.id.toString() === formData.originCityInternational);
     const dCountry = countryOptions.find((c) => c.id.toString() === formData.destCountry);
-    const dCity = destinationInternationalCityOptions.find((c) => c.id.toString() === formData.destCityInternational);
+    const kindLabel = (selection: CustomerRequestLocationSelection | null) => {
+      if (!selection) return null;
+      if (selection.referenceType === "declared") return `${selection.label} — محل اعلام‌شده مشتری؛ نیازمند بررسی کارشناس`;
+      if (selection.referenceType === "city") return `${selection.label} — مکان مرجع انتخاب‌شده: شهر`;
+      return `${selection.label} — مکان مرجع انتخاب‌شده: ${selection.referenceType === "airport" ? "فرودگاه" : "بندر"}`;
+    };
 
     return {
-      origin: [oCity?.name, oCountry?.name].filter(Boolean).join("، ") || "—",
+      origin: [kindLabel(originRequestLocation), oCountry?.name].filter(Boolean).join("، ") || "—",
       destination:
-        [dCity?.name, dCountry?.name].filter(Boolean).join("، ")
+        [kindLabel(destinationRequestLocation), dCountry?.name].filter(Boolean).join("، ")
         || "—",
     };
   }, [
@@ -704,15 +697,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     formData.destinationProvince,
     formData.destinationCity,
     formData.originCountry,
-    formData.originCityInternational,
     formData.destCountry,
-    formData.destCityInternational,
     provinceOptions,
     originCityOptions,
     destinationCityOptions,
     countryOptions,
-    originInternationalCityOptions,
-    destinationInternationalCityOptions,
+    originRequestLocation,
+    destinationRequestLocation,
   ]);
 
   const handleSubmit = async () => {
@@ -740,13 +731,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         errorMessage = t("requestForm.validation.domesticRouteRequired");
       }
     } else if (shippingType === "international") {
-      if (!isInternationalRouteComplete({
-        originCountry: formData.originCountry,
-        originCity: formData.originCityInternational,
-        destinationCountry: formData.destCountry,
-        destinationCity: formData.destCityInternational,
-        isIranDestination,
-      })) {
+      if (!formData.originCountry || !originRequestLocation || !formData.destCountry || !destinationRequestLocation) {
         isValid = false;
         errorMessage = t("requestForm.validation.internationalRouteRequired");
       }
@@ -816,10 +801,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.dest_city_id = formData.destinationCity ? Number(formData.destinationCity) : null;
       } else {
         payload.origin_country_id = Number(formData.originCountry);
-        payload.origin_international_city_id = Number(formData.originCityInternational);
+        payload.origin_location = originRequestLocation!.write;
         payload.origin_address_international = formData.originAddressInternational;
         payload.dest_country_id = Number(formData.destCountry);
-        payload.dest_international_city_id = Number(formData.destCityInternational);
+        payload.destination_location = destinationRequestLocation!.write;
         payload.dest_address_international = formData.destAddressInternational;
       }
 
@@ -928,9 +913,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     setSubmittedTrackingCode(null);
     setSubmittedCustomerWorkspacePath(null);
     setSubmittedAssignedExpert(null);
-    // Reset international cities arrays
-    setOriginInternationalCities([]);
-    setDestinationInternationalCities([]);
+    setOriginRequestLocation(null);
+    setDestinationRequestLocation(null);
   };
 
   const returnToLanding = () => {
@@ -1313,7 +1297,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       originCountry: value,
                       originCityInternational: "",
                     });
-                    setOriginInternationalCities([]);
+                    setOriginRequestLocation(null);
                   }}
                   disabled={isLoadingCountries && countryOptions.length === 0}
                 >
@@ -1341,17 +1325,14 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   {t("requestForm.originCityPort")}
                   <RequiredAsterisk />
                 </Label>
-                <InternationalLocationSelector
+                <CustomerRequestLocationSelector
                   key={`origin-${formData.originCountry}`}
                   countryId={formData.originCountry}
+                  countryCode={selectedOriginCountry?.code}
                   locale={language}
                   side="origin"
-                  coverageAvailable={selectedOriginCountry?.international_locations_available}
-                  selected={originInternationalCities.find((city) => city.id.toString() === formData.originCityInternational) ?? null}
-                  onChange={(city) => {
-                    setOriginInternationalCities(city ? [city] : []);
-                    setFormData((value) => ({ ...value, originCityInternational: city ? String(city.id) : "" }));
-                  }}
+                  value={originRequestLocation}
+                  onChange={setOriginRequestLocation}
                 />
 
                 <div className="space-y-2">
@@ -1407,7 +1388,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       destCountry: value,
                       destCityInternational: "",
                     });
-                    setDestinationInternationalCities([]);
+                    setDestinationRequestLocation(null);
                   }}
                   disabled={isLoadingCountries && countryOptions.length === 0}
                 >
@@ -1437,17 +1418,14 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       {t("requestForm.destinationCityPort")}
                       <RequiredAsterisk />
                     </Label>
-                    <InternationalLocationSelector
+                    <CustomerRequestLocationSelector
                       key={`destination-${formData.destCountry}`}
                       countryId={formData.destCountry}
+                      countryCode={selectedDestinationCountry?.code}
                       locale={language}
                       side="destination"
-                      coverageAvailable={selectedDestinationCountry?.international_locations_available}
-                      selected={destinationInternationalCities.find((city) => city.id.toString() === formData.destCityInternational) ?? null}
-                      onChange={(city) => {
-                        setDestinationInternationalCities(city ? [city] : []);
-                        setFormData((value) => ({ ...value, destCityInternational: city ? String(city.id) : "" }));
-                      }}
+                      value={destinationRequestLocation}
+                      onChange={setDestinationRequestLocation}
                     />
                   </>
                 )}

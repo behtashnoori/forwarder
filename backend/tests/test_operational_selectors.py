@@ -9,7 +9,7 @@ from sqlalchemy.engine import make_url
 from backend import create_app
 from backend.auth import auth_manager
 from backend.extensions import db
-from backend.models import Customer, ExpertQuote, ExpertUser, Province, ShipmentRequest
+from backend.models import Country, Customer, ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.operational_models import (
     OperationalMembership,
     OperationalOrganization,
@@ -308,7 +308,12 @@ def test_accepted_quote_selector_permissions_eligibility_and_create_consistency(
         "quote_label",
         "accepted_at",
         "cargo_items",
+        "request_location_state",
+        "requires_location_resolution",
+        "location_resolution_message",
     }
+    assert item["requires_location_resolution"] is False
+    assert item["location_resolution_message"] is None
     assert item["cargo_items"] == []
     if permission_user == "quote":
         with selector_app.app_context():
@@ -338,6 +343,74 @@ def test_accepted_quote_selector_permissions_eligibility_and_create_consistency(
             headers=_headers(selector_app, "quote"),
         )
         assert after.json["items"] == []
+
+
+def test_declared_request_is_flagged_and_cannot_supply_operational_endpoints(selector_app):
+    with selector_app.app_context():
+        ids = selector_app.config["selector_ids"]
+        iran = Country(code="IR", name_en="Iran", name_fa="ایران", is_active=True)
+        brazil = Country(code="BR", name_en="Brazil", name_fa="برزیل", is_active=True)
+        db.session.add_all([iran, brazil])
+        db.session.flush()
+        request_row = ShipmentRequest(
+            shipping_type="international",
+            tracking_code="REQ-DECLARED",
+            contact_phone="09000000009",
+            customer_id=ids["alpha"],
+            assigned_to=ids["quote"],
+            origin_country_id=iran.id,
+            origin_country="ایران",
+            origin_city_international="Tehran customer warehouse",
+            dest_country_id=brazil.id,
+            dest_country="برزیل",
+            dest_city_international="Santos customer warehouse",
+            status="waiting_for_customer",
+            status_request_status="new",
+            operational_organization_id=ids["org"],
+            ownership_scope="TENANT",
+        )
+        db.session.add(request_row)
+        db.session.flush()
+        now = datetime.now(timezone.utc)
+        quote = ExpertQuote(
+            shipment_request_id=request_row.id,
+            amount=100,
+            currency="IRR",
+            created_by_expert_id=ids["quote"],
+            created_at=now,
+            customer_response="accepted",
+            responded_at=now,
+            operational_organization_id=ids["org"],
+        )
+        db.session.add(quote)
+        db.session.commit()
+        quote_id = quote.id
+
+    client = selector_app.test_client()
+    response = client.get(
+        "/api/operations/selectors/accepted-quotes?q=DECLARED",
+        headers=_headers(selector_app, "quote"),
+    )
+    assert response.status_code == 200
+    item = response.json["items"][0]
+    assert item["request_location_state"] == "customer_declared"
+    assert item["requires_location_resolution"] is True
+    assert "نقاط عملیاتی دقیق" in item["location_resolution_message"]
+
+    with selector_app.app_context():
+        with pytest.raises(operational_service.OperationalError) as exc:
+            operational_service.create_from_accepted_quote(
+                {
+                    "accepted_quote_id": quote_id,
+                    "planned_departure": now.isoformat(),
+                    "planned_arrival": (now + timedelta(hours=1)).isoformat(),
+                    "transport_mode": "road",
+                },
+                {"id": ids["quote"]},
+                "declared-request-requires-route",
+            )
+        assert exc.value.code == "LOCATION_MAPPING_REQUIRED"
+        assert db.session.query(OperationalShipment).filter_by(accepted_quote_id=quote_id).count() == 0
 
 
 def test_direct_permission_does_not_grant_quote_selector_and_membership_is_exact(

@@ -187,6 +187,8 @@ export interface ShipmentRequestPayload {
   origin_international_city_id?: number;
   dest_country_id?: number;
   dest_international_city_id?: number;
+  origin_location?: CustomerRequestLocationWrite;
+  destination_location?: CustomerRequestLocationWrite;
   origin_country?: string;
   origin_city_international?: string;
   origin_address_international?: string;
@@ -220,6 +222,11 @@ export interface ShipmentRequestPayload {
   pickup_date?: string;
   delivery_date?: string;
 }
+
+export type CustomerRequestLocationWrite =
+  | { kind: "canonical_city"; source_id: number }
+  | { kind: "physical_reference"; source_id: number }
+  | { kind: "declared"; description: string };
 
 export interface IranDestinationSelection {
   type: "port" | "customs" | "city";
@@ -1353,6 +1360,10 @@ export interface ExpertRequest {
       country?: string | null;
       international_city?: string | null;
       address?: string | null;
+      selection_kind?: string | null;
+      selection_label?: string | null;
+      reference_type?: string | null;
+      resolution_state?: string | null;
     };
     destination: {
       province: string | null;
@@ -1361,6 +1372,10 @@ export interface ExpertRequest {
       country?: string | null;
       international_city?: string | null;
       address?: string | null;
+      selection_kind?: string | null;
+      selection_label?: string | null;
+      reference_type?: string | null;
+      resolution_state?: string | null;
     };
     iran_destination?: {
       type?: string | null;
@@ -1822,6 +1837,9 @@ export interface OperationalQuoteSelector {
   quote_label: string;
   accepted_at: string | null;
   cargo_items: OperationalQuoteCargoSelector[];
+  request_location_state?: string;
+  requires_location_resolution?: boolean;
+  location_resolution_message?: string | null;
 }
 export interface IranDestinationOption {
   identity: { type: "city" | "port" | "customs" | "international_city"; id: number };
@@ -4287,13 +4305,14 @@ export const reviewLogisticsPoint = (item: LogisticsPointView, action: "approve"
   });
 export interface CanonicalCountry { id:number; code:string; name_fa:string; name_en:string; geography_supported?:boolean }
 export interface CanonicalAdmin1 { source_id:number; geoname_id:number; code:string; name_fa:string; name_en:string }
-export interface CanonicalCity { source_id:number; geoname_id:number; name_fa:string; name_en:string; latitude:string; longitude:string }
+export interface CanonicalCity { source_id:number; geoname_id:number; name_fa:string; name_en:string; latitude:string; longitude:string; province?: {source_id:number;geoname_id:number;name_fa:string;name_en:string} }
 export const fetchCanonicalCountries = (q = "") => request<{items:CanonicalCountry[]}>(withQuery("/api/internal/geography/countries", {q}));
 export const fetchCanonicalAdmin1 = (countryCode:string, q = "") => request<{items:CanonicalAdmin1[]}>(withQuery("/api/internal/geography/admin1", {country_code:countryCode,q}));
 export const fetchCanonicalCities = (admin1GeonameId:number, q = "", offset = 0) => request<{items:CanonicalCity[];has_more?:boolean}>(withQuery("/api/internal/geography/cities", {admin1_geoname_id:admin1GeonameId,q,offset}));
 export const fetchPublicCanonicalCountries = (q = "") => request<{items:CanonicalCountry[]}>(withQuery("/api/geography/countries", {q}));
 export const fetchPublicCanonicalAdmin1 = (countryCode:string, q = "") => request<{items:CanonicalAdmin1[]}>(withQuery("/api/geography/admin1", {country_code:countryCode,q}));
 export const fetchPublicCanonicalCities = (admin1GeonameId:number, q = "", offset = 0) => request<{items:CanonicalCity[];has_more?:boolean}>(withQuery("/api/geography/cities", {admin1_geoname_id:admin1GeonameId,q,offset}));
+export const fetchPublicCanonicalCitiesByCountry = (countryCode:string, q = "", offset = 0, limit = 50) => request<{items:CanonicalCity[];has_more?:boolean;offset:number;limit:number}>(withQuery("/api/geography/cities", {country_code:countryCode,q,offset,limit}));
 export const updateLogisticsPoint = (
   id: string,
   payload: Record<string, unknown>,
