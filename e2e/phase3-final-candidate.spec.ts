@@ -223,7 +223,7 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     const expert=await expertContext.newPage();
     await expert.goto("/");
     await expert.getByRole("button", { name: "ورود به سامانه" }).first().click();
-    await expert.getByLabel("نام کاربری").fill("shared_transport_e2e_restricted");
+    await expert.getByLabel("نام کاربری").fill("workspace_phase1_peer");
     await expert.getByLabel("رمز عبور").fill(expertPassword!);
     await expert.getByRole("dialog").getByRole("button", { name: "ورود", exact: true }).click();
     await expect(expert).not.toHaveURL(/\/$/);
