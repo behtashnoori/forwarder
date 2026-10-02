@@ -155,7 +155,9 @@ test.describe
     await expect(
       page.getByText("موعد یک مرحله عملیاتی گذشته است"),
     ).toBeVisible();
-    await expect(page.getByText(/منبع: رکورد عملیاتی/)).toBeVisible();
+    await expect(page.getByRole("link").filter({
+      hasText: "موعد یک مرحله عملیاتی گذشته است",
+    }).getByText(/منبع: رکورد عملیاتی/)).toBeVisible();
     await expect(
       page.getByText("آخرین به‌روزرسانی:", { exact: false }),
     ).toBeVisible();
