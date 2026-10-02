@@ -88,7 +88,7 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await chooseSelect(page, 0, 0);
     await chooseSelect(page, 1, 1);
     await page.getByLabel("شماره تماس").fill("09128888888");
-    await page.getByRole("combobox").nth(3).click();
+    await page.getByLabel("روش حمل برای مسیر داخلی", { exact: true }).click();
     await page.getByRole("option", { name: /حمل ترکیبی/ }).click();
     await page.getByRole("button", { name: "ثبت درخواست حمل" }).click();
     await expect(page.getByText("حمل ترکیبی", { exact: true })).toBeVisible();
@@ -149,8 +149,8 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await chooseNamed(page, "شهر مقصد", "بندرعباس");
     await page.getByLabel("شماره تماس").fill(phone);
     await expect(page.getByText("نحوه انتخاب روش حمل")).toBeVisible();
-    await expect(page.getByRole("combobox").nth(2)).toContainText("خودم روش حمل را انتخاب می‌کنم");
-    await page.getByRole("combobox").nth(3).click();
+    await expect(page.getByLabel("نحوه انتخاب روش حمل", { exact: true })).toContainText("خودم روش حمل را انتخاب می‌کنم");
+    await page.getByLabel("روش حمل برای مسیر داخلی", { exact: true }).click();
     await page.getByRole("option", { name: /حمل ترکیبی/ }).click();
 
     await page.getByRole("button", { name: /مشخصات کالا/ }).click();

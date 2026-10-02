@@ -1563,7 +1563,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 });
               }}
             >
-              <SelectTrigger className="min-w-0 overflow-hidden">
+              <SelectTrigger aria-label={t("requestForm.transportPreference")} className="min-w-0 overflow-hidden">
                 <SelectValue placeholder={t("requestForm.transportPreferencePlaceholder")} />
               </SelectTrigger>
               <SelectContent className="max-w-[calc(100vw-2rem)] sm:w-[var(--radix-select-trigger-width)]">
@@ -1606,7 +1606,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       });
                     }}
                   >
-                    <SelectTrigger className="min-w-0 overflow-hidden">
+                    <SelectTrigger aria-label={t("requestForm.internationalMethod")} className="min-w-0 overflow-hidden">
                       <SelectValue placeholder={t("requestForm.selectInternationalMethod")} />
                     </SelectTrigger>
                     <SelectContent className="max-w-[calc(100vw-2rem)] sm:w-[var(--radix-select-trigger-width)]">
@@ -1640,7 +1640,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       });
                     }}
                   >
-                    <SelectTrigger className="min-w-0 overflow-hidden">
+                    <SelectTrigger aria-label={t("requestForm.domesticMethod")} className="min-w-0 overflow-hidden">
                       <SelectValue placeholder={t("requestForm.selectDomesticMethod")} />
                     </SelectTrigger>
                     <SelectContent className="max-w-[calc(100vw-2rem)] sm:w-[var(--radix-select-trigger-width)]">
