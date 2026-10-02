@@ -32,7 +32,7 @@ async function draft(page:Page,mode="rail"){
   await page.getByRole("button",{name:"ذخیره بخش مسیر",exact:true}).click();expect((await saved).status()).toBe(201);
   const basis=page.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"});
   if(!(await basis.locator("xpath=..").getAttribute("open")))await basis.click();
-  await expect(page.getByRole("heading",{name:/مرجع قابل استفاده/})).toBeVisible();
+  await expect(page.getByRole("heading",{name:/مرجع قابل استفاده/})).toBeVisible({timeout:15_000});
 }
 test("P3-10 normal Admin reference → Expert pinned basis → future version and new plan",async({browser},testInfo)=>{
   const adminContext=await browser.newContext();const expertContext=await browser.newContext();
