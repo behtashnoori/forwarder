@@ -209,6 +209,7 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await page.getByRole("button", { name: "مشاهده جزئیات" }).click();
     await expect(page).toHaveURL(new RegExp(`/customer/requests/${created.request_public_id}$`));
     await expect(page.getByText(created.tracking_code, { exact: true }).first()).toBeVisible();
+    await page.getByText("جزئیات درخواست", { exact: true }).first().click();
     await expect(page.getByRole("heading", { name: "کارشناس مسئول درخواست" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "مسیر / مبدا و مقصد" })).toBeVisible();
     await expect(page.getByText("خودم روش حمل را انتخاب می‌کنم", { exact: true })).toBeVisible();
