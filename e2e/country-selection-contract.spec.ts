@@ -120,7 +120,7 @@ test.describe.serial("HW_GEO_008 country selection contract", () => {
     await page.getByLabel("انتخاب مکان مقصد").selectOption(String(turkeyLocations[0].id));
     await page.getByLabel("شماره تماس").fill("09126666666");
     await page.getByLabel("نحوه انتخاب روش حمل", { exact: true }).click();
-    await page.getByRole("option", { name: "انتخاب روش مناسب را به فورواردر می‌سپارم", exact: true }).click();
+    await page.getByRole("option", { name: /انتخاب روش مناسب را به فورواردر می‌سپارم/ }).click();
     await page.getByRole("button", { name: "ثبت درخواست حمل" }).click();
     await expect(page.getByText(iran.name, { exact: false }).first()).toBeVisible();
     await expect(page.getByText(turkey.name, { exact: false }).first()).toBeVisible();
