@@ -18,6 +18,7 @@ from backend.services import delivery_service as deliveries, reported_fact_servi
 from backend.services.case_document_service import customer_download_name
 from backend.services.customer_entitlement_service import authorized_customer_ids
 from backend.services.document_context_service import customer_context_predicate
+from backend.services.geography_presentation import name_fa as presented_name_fa
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime as iso
 from backend.services.operational_service import OperationalError
 
@@ -116,12 +117,15 @@ def _geography(location_id, point_id, organization_id):
         # Never serialize private facility names, addresses or raw route snapshots.
         for model, identity in ((City, point.city_id), (Province, point.province_id), (Country, point.country_id)):
             row = db.session.get(model, identity) if identity else None
-            if row: return row.name_fa
+            if row:
+                return presented_name_fa(row) if isinstance(row, (City, Province)) else row.name_fa
         return None
     canonical = db.session.get(CanonicalLocation, location_id)
     model = PUBLIC_GEOGRAPHY.get(canonical.source_type) if canonical else None
     row = db.session.get(model, canonical.source_id) if model else None
-    return row.name_fa if row else None
+    if row is None:
+        return None
+    return presented_name_fa(row) if isinstance(row, (City, Province)) else row.name_fa
 
 
 def _routes(shipment, cargo):

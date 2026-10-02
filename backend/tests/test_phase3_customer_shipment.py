@@ -8,8 +8,8 @@ import pytest
 from sqlalchemy import select
 from backend.extensions import db
 from backend.cargo_models import ShipmentCargoItem as Cargo
-from backend.models import Customer, CustomerGamification, CaseDocumentFile
-from backend.operational_models import OperationalOrganization, OperationalShipment, RouteCargoDestination, RouteLeg, RouteStageExecution
+from backend.models import Customer, CustomerGamification, CaseDocumentFile, Province
+from backend.operational_models import CanonicalLocation, OperationalOrganization, OperationalShipment, RouteCargoDestination, RouteLeg, RouteStageExecution
 from backend.services import customer_entitlement_service as grants, customer_shipment_service as service
 from backend.services import reported_fact_service as reports, delivery_service as deliveries
 from backend.tests.test_operational_vertical_slice import _auth, _user, operational_app
@@ -179,6 +179,10 @@ def test_route_ancestry_unknown_quantities_and_private_snapshots(operational_app
         ctx = setup(app); a = account(app, ctx)
         cargo = Cargo.query.filter_by(public_id=ctx["cargo"]).one(); cargo.actual_quantity = None; cargo.planned_quantity = None
         first = db.session.get(RouteLeg, ctx["leg"])
+        origin = db.session.get(CanonicalLocation, first.origin_location_id)
+        origin_province = db.session.get(Province, origin.source_id)
+        origin_province.geoname_id = 418862
+        origin_province.name_fa = "أصفهان"
         branch = RouteLeg(route_plan_id=ctx["plan"], sequence_number=3, parent_route_leg_id=first.id,
             origin_location_id=first.destination_location_id, destination_location_id=first.origin_location_id,
             origin_snapshot={"display_name": "PRIVATE-B-ORIGIN"}, destination_snapshot={"display_name": "PRIVATE-B-DESTINATION"}, branch_label="PRIVATE-B-BRANCH", carrier_reference="PRIVATE-CARRIER")
@@ -189,6 +193,7 @@ def test_route_ancestry_unknown_quantities_and_private_snapshots(operational_app
         first.origin_snapshot = {"display_name": "PRIVATE-SHARED-FACILITY"}; db.session.commit()
         value = service.detail(a, ctx["shipment"])
         assert len(value["routes"]) == 1 and len(value["routes"][0]["legs"]) == 2
+        assert value["routes"][0]["legs"][0]["origin"] == "اصفهان"
         assert "PRIVATE" not in json.dumps(value)
         assert value["cargo"][0]["requested"] is value["cargo"][0]["planned"] is value["cargo"][0]["known_actual"] is value["cargo"][0]["remaining"] is None
         RouteCargoDestination.query.filter_by(shipment_cargo_item_id=cargo.id).delete(); db.session.commit()
