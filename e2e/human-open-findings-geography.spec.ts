@@ -65,7 +65,7 @@ test("shared canonical geography and inline Expert location → Admin review at 
   await card.getByRole("button",{name:"تأیید",exact:true}).click();expect((await approved).status()).toBe(200);
   await expect(card).toContainText("تأییدشده");await admin.screenshot({path:info.outputPath("admin-location-review-desktop.png"),fullPage:true});
   await admin.getByRole("tab",{name:"الزامات مستندات",exact:true}).click();
-  for(const name of ["بارنامه","فاکتور","پکینگ لیست","رسید تحویل"])await expect(admin.getByText(name,{exact:true})).toBeVisible();
+  for(const name of ["بارنامه","فاکتور","پکینگ لیست","رسید تحویل"])await expect(admin.getByRole("row").filter({hasText:name}).first()).toBeVisible();
   await expect(admin.getByText("Transport Document",{exact:true})).toBeVisible();
   await expect(admin.getByRole("button",{name:"بدون تغییر"}).first()).toBeDisabled();
   await admin.getByRole("tab",{name:"زمان مرجع مسیر",exact:true}).click();await admin.getByRole("button",{name:"تعریف زمان مرجع تازه"}).click();
