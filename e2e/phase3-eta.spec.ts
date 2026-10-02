@@ -32,6 +32,7 @@ async function open(page: Page, item: Case, customer = false) {
   } else {
     await openShipmentSection(page, "tracking", item.shipment);
   }
+  await page.getByRole("button", {name: "محاسبه و ذخیره برآورد", exact: true}).click();
   const value = await (await response).json() as Snapshot;
   await expect(page.getByRole("region", { name: "زمان تقریبی رسیدن کالا", exact: true })).toContainText("زمان محاسبه:");
   return value;
@@ -47,7 +48,7 @@ async function command(page: Page, path: string, body: unknown) {
 }
 async function refresh(page: Page, item: Case) {
   const response = page.waitForResponse(r => r.url().includes(`/cargo/${item.cargo}/eta/ensure`) && r.status() === 200);
-  await page.getByRole("button", { name: "تازه‌سازی برآورد", exact: true }).click();
+  await page.getByRole("button", { name: "محاسبه و ذخیره برآورد", exact: true }).click();
   return await (await response).json() as Snapshot;
 }
 
@@ -59,7 +60,7 @@ test("P3-11 Expert normal navigation: stop placement, independent unknowns, comp
   const start = await open(page, cases.departure);
   range(start.next, cases.departure.basis, 1, 2); range(start.final, cases.departure.basis, 6, 12);
   const root = page.getByRole("region", { name: "زمان تقریبی رسیدن کالا", exact: true });
-  await expect(root).toContainText("فاصله برنامه‌ریزی‌شده: تعریف نشده");
+  await expect(root).toContainText("فاصله مبنای گزارش پیشرفت: در این برآورد در دسترس نیست");
   await expect(root).toContainText("مدت عملیات پس از رسیدن به مقصد نهایی در آن حساب نمی‌شود");
   await root.screenshot({ path: info.outputPath("expert-arrival-ranges.png") });
   for (const [name, low, high] of [["arrived", 5, 10], ["complete", 2, 3], ["next_departure", 1, 2], ["zero", 1, 2]] as const) {

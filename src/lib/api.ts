@@ -1828,7 +1828,9 @@ export interface OperationalQuoteCargoSelector {
   uom_symbol: string | null;
   operationally_ready: boolean;
 }
+export type RequestedEndpoints = Record<"origin" | "destination", {label: string; reference: (OperationalLocationRef & {country_id: number; display_label: string}) | null; reusable: boolean; province_id: number | null; country_id: number | null}>;
 export interface OperationalQuoteSelector {
+  requested_endpoints?: RequestedEndpoints;
   id: number;
   request_public_id: string;
   request_entity_public_id: string;
@@ -1878,6 +1880,7 @@ export interface OperationalProjection {
     label: string;
     source: string;
     technical_id: string;
+    requested_endpoints?: RequestedEndpoints | null;
     requested_route: { origin?: string | null; destination?: string | null; shipping_type?: string | null } | null;
   };
   overall_state: string;
@@ -1946,8 +1949,8 @@ export interface OperationalShipmentSummary {
   };
   route_leg: {
     id: number;
-    origin: { display_name: string };
-    destination: { display_name: string };
+    origin: { display_name: string; canonical_reference?: OperationalLocationRef };
+    destination: { display_name: string; canonical_reference?: OperationalLocationRef };
     transport_mode: string;
     planned_departure: string;
     planned_arrival: string;
@@ -1964,8 +1967,8 @@ export interface OperationalShipmentSummary {
     }
   >;
   route_summary?: {
-    origin: { display_name: string };
-    destination: { display_name: string };
+    origin: { display_name: string; canonical_reference?: OperationalLocationRef };
+    destination: { display_name: string; canonical_reference?: OperationalLocationRef };
     transport_modes: string[];
     leg_count: number;
   } | null;

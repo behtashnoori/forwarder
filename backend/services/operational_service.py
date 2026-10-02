@@ -356,6 +356,7 @@ def accepted_quote_selector(
         request_row = db.session.get(ShipmentRequest, quote.shipment_request_id)
         customer = db.session.get(Customer, request_row.customer_id)
         request_route = build_route_payload(request_row)
+        from backend.services.request_endpoint_projection import endpoints
         items.append(
             {
                 "id": quote.id,
@@ -372,6 +373,7 @@ def accepted_quote_selector(
                 )
                 or None,
                 "request_location_state": request_route["location_state"],
+                "requested_endpoints": endpoints(request_row),
                 "requires_location_resolution": request_route["location_state"] == "customer_declared",
                 "location_resolution_message": (
                     "محل اعلام‌شده مشتری باید پیش از برنامه‌ریزی به نقاط عملیاتی دقیق متصل شود."

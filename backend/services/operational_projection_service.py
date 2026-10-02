@@ -89,7 +89,7 @@ def _request_route(request_row: ShipmentRequest | None) -> dict | None:
     }
 
 
-def _identity(shipment: OperationalShipment, graph: dict) -> dict:
+def _identity(shipment: OperationalShipment, graph: dict, user: dict) -> dict:
     project = db.session.get(Project, shipment.project_id) if shipment.project_id else None
     request_row = db.session.get(ShipmentRequest, shipment.shipment_request_id) if shipment.shipment_request_id else None
     customer = graph.get("customer")
@@ -102,11 +102,15 @@ def _identity(shipment: OperationalShipment, graph: dict) -> dict:
         label, source = f"عملیات حمل {customer_name}", "CUSTOMER_CONTEXT"
     else:
         label, source = "عملیات حمل مستقیم", "DIRECT_OPERATION"
+    from backend.services.assigned_work_authorization import authorize_work_action
+    from backend.services.request_endpoint_projection import endpoints
+    requested = endpoints(request_row) if request_row and authorize_work_action(user, request_row, "request.read").allowed else None
     return {
         "label": label,
         "source": source,
         "technical_id": shipment.public_id,
         "requested_route": _request_route(request_row),
+        "requested_endpoints": requested,
     }
 
 
@@ -619,7 +623,7 @@ def build(shipment: OperationalShipment, user: dict, *, graph: dict | None = Non
     now = utcnow()
     updated = _aware(shipment.updated_at)
     return {
-        "identity": _identity(shipment, graph),
+        "identity": _identity(shipment, graph, user),
         "overall_state": shipment.lifecycle_status,
         "process_status": guidance["process_status"],
         "operational_route": graph.get("route_summary"),

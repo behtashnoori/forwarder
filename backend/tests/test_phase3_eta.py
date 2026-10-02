@@ -355,7 +355,7 @@ def test_eta_openapi_matches_runtime_and_declares_explicit_ensure():
                for rule in app.url_map.iter_rules() if rule.endpoint.startswith("eta.")}
     documented = {path: {method.upper() for method in spec if method in {"get", "post"}}
                   for path, spec in document["paths"].items() if "/eta/" in path}
-    assert runtime == documented and len(runtime) == 4
+    assert runtime == documented and len(runtime) == 6
     assert all(value == {"POST"} for key, value in runtime.items() if key.endswith("/ensure"))
 
 

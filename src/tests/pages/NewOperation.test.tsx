@@ -704,3 +704,20 @@ describe("Slice 5 governed creation", () => {
     );
   });
 });
+
+it("reuses exact requested city identities outside the first search page for explicit review and submission", async () => {
+  vi.mocked(api.getOperationalContext).mockResolvedValue({data:{organization_id:1,permissions:["operational_shipment.create_from_quote"]}});
+  const quotes=await api.searchAcceptedOperationalQuotes();
+  const endpoint=(id:number,label:string)=>({label,reference:{source_type:"city" as const,source_id:id,country_id:20,display_label:label},reusable:true,province_id:129,country_id:20});
+  quotes.items[0].requested_endpoints={origin:endpoint(2773,"شاوشنگ · ژجیانگ · چین"),destination:endpoint(18252,"بندرعباس · هرمزگان · ایران")};
+  vi.mocked(api.searchAcceptedOperationalQuotes).mockResolvedValue(quotes);
+  vi.mocked(api.createQuoteOperationalShipment).mockResolvedValue({data:{public_id:"created"}} as never);
+  renderPage("/operations/shipments/new?source=accepted_quote&accepted_quote_id=9&request_ref=REQ-9");
+  fireEvent.click(await screen.findByRole("button",{name:"استفاده از محل درخواستی مشتری · Origin"}));
+  fireEvent.click(screen.getByRole("button",{name:"استفاده از محل درخواستی مشتری · Destination"}));
+  expect(screen.getByRole("region",{name:"مقایسه محل درخواستی و برنامه عملیاتی"})).toHaveTextContent("شاوشنگ · ژجیانگ · چین");
+  fireEvent.change(screen.getByLabelText("Planned departure"),{target:{value:"2026-10-03T10:00"}});
+  fireEvent.change(screen.getByLabelText("Planned arrival"),{target:{value:"2026-10-04T10:00"}});
+  fireEvent.click(screen.getByRole("button",{name:"Create operation"}));
+  await waitFor(()=>expect(api.createQuoteOperationalShipment).toHaveBeenCalledWith(expect.objectContaining({origin:{source_type:"city",source_id:2773},destination:{source_type:"city",source_id:18252}}),expect.any(String)));
+});

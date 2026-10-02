@@ -1,3 +1,4 @@
+import RequestedEndpointComparison from "@/components/RequestedEndpointComparison";
 import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -531,9 +532,14 @@ export default function NewOperation() {
         {side.logisticsPointId&&<p role="status">موقعیت جغرافیایی نقطه عملیاتی از داده مرجع سازمان تعیین می‌شود.</p>}
         <Button type="button" variant="outline" onClick={()=>setter({...side,adding:!side.adding})}>{side.adding?"بستن فرم مکان":"افزودن مکان جدید"}</Button>
       </>}
-      {(side.locationMode==="geography"||side.adding)&&<CanonicalLocationPicker key={`${sideName}-${side.locationMode}`} label={label} value={side.canonical} allowAdmin1={side.locationMode==="geography"} allowPhysicalPoints={side.locationMode==="geography"}
+      {(side.locationMode==="geography"||side.adding)&&<details open={!side.canonical}><summary className="cursor-pointer py-2">{side.canonical ? `${side.canonical.display_label || "محل انتخاب‌شده"} · مشاهده یا تغییر` : "انتخاب محل"}</summary><CanonicalLocationPicker key={`${sideName}-${side.locationMode}`} label={label} value={side.canonical} allowAdmin1={side.locationMode==="geography"} allowPhysicalPoints={side.locationMode==="geography"}
         onChange={ref=>setter({...side,canonical:side.locationMode==="facility"&&ref?.source_type!=="logistics_point"?null:ref,logisticsPointId:ref?.source_type==="logistics_point"?String(ref.source_id):""})}
-        onCreated={point=>setLogisticsPoints(rows=>[point,...rows.filter(row=>row.public_id!==point.public_id)])}/>}
+        onCreated={point=>setLogisticsPoints(rows=>[point,...rows.filter(row=>row.public_id!==point.public_id)])}/></details>}
+      {source === "accepted_quote" && selectedQuote?.requested_endpoints?.[sideName]?.reusable && <Button type="button" variant="outline" onClick={() => {
+        const ref = selectedQuote.requested_endpoints?.[sideName]?.reference;
+        if (ref) setter({locationMode: "geography", logisticsPointId: "", canonical: ref, adding: false});
+      }}>استفاده از محل درخواستی مشتری · {label}</Button>}
+      {source === "accepted_quote" && selectedQuote?.requested_endpoints && <p className="text-sm text-slate-600">محل درخواستی مشتری: {selectedQuote.requested_endpoints[sideName].label}</p>}
       <FieldMessage id={`${sideName}-error`} message={fieldErrors[sideName]}/>
     </fieldset>;
   };
@@ -997,7 +1003,9 @@ export default function NewOperation() {
             <CardTitle>{t("operations.review")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="grid gap-3 sm:grid-cols-2">
+            {source === "accepted_quote" && <RequestedEndpointComparison requested={selectedQuote?.requested_endpoints}
+              origin={{label: sideLabel(origin), reference: location(origin)}} destination={{label: sideLabel(destination), reference: location(destination)}} />}
+            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
             <div><dt className="text-sm text-slate-500">{t("operations.source")}</dt><dd className="font-medium">
               {source === "direct"
                 ? t("operations.source.direct")

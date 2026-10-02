@@ -107,3 +107,19 @@ Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979`; [bound evidence](../../opera
 records all required gates, prior attempts and the controlled integration boundary.
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING; INTEGRATED_PRODUCT_JOURNEYS=NOT_RUN;
 HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN; RELEASE_READY=NO.
+
+
+### Consolidated walkthrough presentation clarification (2026-10-02)
+
+Product Owner consolidated mission §6.2–6.3 authorizes separate current internal
+per-leg basis/route facts and Cargo forecast eligibility. `planned_distance`
+retains its structured-progress basis meaning; it is not a Cargo-wide sum.
+Private pinned distance, reference version, route completion and coverage detail
+remain internal. Saved results remain immutable and may be stale.
+
+`GET .../eta/current` reads latest saved result plus current bounded context and
+staleness without writing a snapshot. Opening, focus, history and reading latest
+are read-only. `POST .../eta/ensure` remains the explicit idempotent materialization
+command. UI distinguishes no saved result, loading/error, stale, reused snapshot
+and a new saved calculation. V2 arithmetic, arrival-stop placement, source scope,
+unknown-vs-zero and coverage precedence are unchanged.

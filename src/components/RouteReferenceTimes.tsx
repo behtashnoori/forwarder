@@ -34,7 +34,7 @@ export default function RouteReferenceTimes({shipmentId,plans}:{shipmentId:strin
     finally{setPending(null);}
   };
   return <section dir="rtl" className="space-y-4 p-3 sm:p-4" aria-label="مبنای زمان برنامه مسیر">
-    <p className="text-sm leading-7 text-slate-600">مرجع سازمان، راهنمای برنامه‌ریزی است. انتخاب نسخه برای برنامه صریح است و تغییر مدیر، انتخاب ثبت‌شده را عوض نمی‌کند.</p>
+    <p className="text-sm leading-7 text-slate-600">مرجع سازمان، راهنمای برنامه‌ریزی است. نسخه را برای این برنامه انتخاب کنید؛ ویرایش بعدی مرجع سازمان، این انتخاب را تغییر نمی‌دهد.</p>
     <div className="flex flex-col gap-3 sm:flex-row"><label className="flex-1 space-y-2">برنامه مسیر<select aria-label="برنامه مبنای زمان" className={routeSelectClass} value={selectedId??""} onChange={event=>{setNotice("");setSelectedId(Number(event.target.value));}}>{plans.map(plan=><option key={plan.id} value={plan.id}>نسخه برنامه {plan.revision_number} · {plan.status==="draft"?"پیش‌نویس":plan.status==="active"?"فعال":"سابقه"}</option>)}</select></label><Button variant="outline" disabled={pending!==null} onClick={refresh}>بررسی دوباره مراجع</Button></div>
     {error&&<p role="alert" className="rounded bg-red-50 p-3 text-red-800">{error}</p>}
     {notice&&<p role="status" className="rounded bg-emerald-50 p-3 text-emerald-800">{notice}</p>}

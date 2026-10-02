@@ -1,5 +1,5 @@
 import LocalizedDateTimeInput from "@/components/LocalizedDateTimeInput";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { localDateTimeInputToUtc } from "@/lib/localDateTime";
@@ -16,6 +16,12 @@ export default function OccurrenceTimeAction({ id, action, pending, onSubmit }: 
   onSubmit: (occurredAt: string) => void;
 }) {
   const [value, setValue] = useState(localOccurrenceNow);
+  const previousAction = useRef(action);
+  const submitted = useRef(false);
+  useEffect(() => {
+    if (previousAction.current !== action) { setValue(""); setError(""); previousAction.current = action; }
+    submitted.current = false;
+  }, [action, pending]);
   const [error, setError] = useState("");
   return <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end">
     <div className="min-w-0">
@@ -25,8 +31,10 @@ export default function OccurrenceTimeAction({ id, action, pending, onSubmit }: 
       {error && <p id={`${id}-error`} role="alert" className="text-sm text-red-700">{error}</p>}
     </div>
     <Button className="min-h-11" disabled={pending} onClick={() => {
+      if (pending || submitted.current) return;
       const iso = localDateTimeInputToUtc(value);
       if (!iso) { setError("زمان وقوع معتبر نیست؛ تاریخ و ساعت را بررسی کنید."); return; }
+      submitted.current = true;
       onSubmit(iso);
     }}>{pending ? "در حال ثبت…" : action}</Button>
   </div>;

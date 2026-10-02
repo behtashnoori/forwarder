@@ -490,3 +490,41 @@ Product implementation SHA is `463acbd2754572234b96b41e3848c361c15f8c0a`;
 later candidate commits change only tests and disposable fixtures. Evidence root:
 `D:\1-webapp\forwarder-dev\hw-geo-008-evidence\candidate-3e4adadd`.
 Human Product Walkthrough remains `IN_PROGRESS`; `RELEASE_READY=NO`.
+
+
+## Consolidated remaining findings — 2026-10-02
+
+Authority: [consolidated mission record](HUMAN-WALKTHROUGH-CONSOLIDATED-FINDINGS-AUTHORITY.md).
+Entry candidate `df2cba008fb82117460c0f2f827f4c0939591a7d`. The following
+append-only reconciliation preserves every earlier record and its exact scope.
+Initial unique observations: 14. DOCUMENT_UPLOAD_HELP_COPY aliases HW_DOC_002.
+One additional confirmed occurrence-form defect was discovered (15 total).
+
+| ID | Cause / producer and consumer | Correction / qualification target | Status at implementation |
+|---|---|---|---|
+| HW_ETA_BASIS_PROPAGATION_001 | V2 returns before basis lookup on ambiguous progress; UI calls a structured-progress-only distance generically undefined. Actual Cargo is null, allocation100, equal-time departure/arrival positions; route already completed. | Separate current per-leg pinned basis, route completion, actual/coverage and conflict facts from immutable saved Cargo result. GET current/read refresh never materializes; explicit calculation reports reused/new result. PG E1–E10, frontend and P311 browser. Math and ambiguity rules preserved. | NOT_VERIFIED |
+| HW_GEO_010 | Request City2773 Shaoxing belongs to Zhejiang129; operational City4383 Sanxing belongs to Shanghai149. Equivalent-parent search finds Shaoxing; different parent correctly excludes it. | No missing-city or identity-loss defect. Explicit reuse is tracked under handoff finding. | NOT_A_DEFECT_WITH_EVIDENCE |
+| HW_HANDOFF_LOCATION_VARIANCE_001 | Accepted-Quote selector exposed labels, not reusable canonical endpoints; review and workspace omitted source/plan comparison. | Read-only exact identity projection; explicit reuse independent of search page; authorized source comparison, neutral difference/precision notice. No equality/reason workflow. PG H1/H3 and real browser H1–H5. | NOT_VERIFIED |
+| HW_REQUEST_CUSTOMER_LINK_001 | Header labels optional Request name as customer; linked CRM identity is separate. | Distinct requester and linked Organization Customer labels, explicit absent-name text. Existing link and refresh remain unchanged. | NOT_VERIFIED |
+| HW_QUOTE_DATE_001 | QuoteModal retained native date input; ExpertQuote.valid_until is db.Date. | Shared LocalizedDateInput, optional YYYY-MM-DD unchanged. Frontend/calendar and browser creation/reopen. | NOT_VERIFIED |
+| HW_DOC_TYPE_ADMIN_001 | Inline mixed-direction text ran names together. | Persian primary, separate bidi-isolated English line; Admin browser. | NOT_VERIFIED |
+| HW_DOC_TYPE_EXPERT_001 | Selector rendered only name_fa. | Optional existing name_en/acronym in bidi isolation; no new required metadata. | NOT_VERIFIED |
+| HW_DOC_CONTEXT_001 | SHIPMENT target dropdown repeated its enclosing identity. | Read-only current-Shipment context; exact payload binding; all other selectors retained. | NOT_VERIFIED |
+| HW_DOC_VISIBILITY_001 | Native multi-select did not explain actual eligible recipients or multi-selection. | Explicit eligible-recipient checkboxes and count; INTERNAL default and server entitlements unchanged. PG/browser privacy. | NOT_VERIFIED |
+| HW_DOC_002 (DOCUMENT_UPLOAD_HELP_COPY) | Long help repeated technical explanation. | Short primary copy retains independent upload, exact Request-file version association/review, and separate readiness. | NOT_VERIFIED |
+| HW_GEO_DATA_001 | Shanghai City4384 / GeoNames1796236 exists under Shanghai; English search succeeds, Persian شانگهای fails against source شاڭخەي and aliases. | Stable-ID presentation erratum and search match; no row rewrite/import. PG same-parent/alias checks. | NOT_VERIFIED |
+| HW_REQUEST_LOCATION_SUMMARY_001 | Dense endpoint cards. | Local spacing reduction only; all source fields preserved. | NOT_VERIFIED |
+| HW_ROUTE_BASIS_COPY_001 | Technical sentence about explicit version pin. | Natural description of selecting a version and preserving it after later Admin edits. | NOT_VERIFIED |
+| HW_LOCATION_SELECTION_COLLAPSE_001 | Geography stayed expanded after endpoint selection. | Collapsed selected summary with country/Admin1 context and explicit reopening; state retained. | NOT_VERIFIED |
+| HW_ROUTE_EVENT_TIME_001 (new HIGH) | OccurrenceTimeAction retained time as departure action became arrival; seconds-bearing local default was not parsed by the shared picker. | Successor action clears time, synchronous submission guard, seconds parse correctly. Failing baseline/passing candidate tests. This does not establish how the human events were recorded. | NOT_VERIFIED |
+
+Earlier qualification sampled valid numeric progress, standard minute inputs,
+explicit pinning, distinct selectors and single recipient interactions. It did not
+cover the persisted completed/unknown-Cargo/equal-time combination, successor
+form state, cross-surface exact endpoint reuse, this Quote control, or the new
+custom bilingual labels. Those earlier PASS records remain bounded evidence.
+
+Preserved facts: all three Shipments, both Request histories, four Quotes,
+reference version1 and basis1, allocations, events, closed decision and PDF are
+captured externally in `consolidated-walkthrough-evidence`. No human business
+command is part of qualification. Human walkthrough remains IN_PROGRESS.

@@ -281,8 +281,31 @@ def _calculate(shipment, cargo, *, customer=False, at=None):
         return plan, basis, result, sources
     basis["legs"] = [{"id": leg.id, "version": None if customer else leg.version, "parent": leg.parent_route_leg_id,
         **times.fingerprint(leg)} for leg in legs]
+    # Known route facts are independent of whole-Cargo forecast eligibility.
+    # Never relabel this per-leg distance as a Cargo aggregate or expose private
+    # reference facts to Customer projections.
+    if not customer:
+        context_legs = []
+        for leg in legs:
+            pin = db.session.scalar(select(TimeBasis).where(
+                TimeBasis.organization_id == shipment.organization_id,
+                TimeBasis.route_plan_id == plan.id, TimeBasis.route_leg_id == leg.id,
+            ).order_by(TimeBasis.selection_revision.desc()).limit(1))
+            if pin and pin.leg_basis != times.fingerprint(leg):
+                pin = None
+            ref = db.session.get(TimeVersion, pin.reference_version_id) if pin else None
+            context_legs.append({"leg_id": leg.id, "status": leg.status,
+                "destination": _label(shipment, leg, False),
+                "basis_public_id": pin.public_id if pin else None,
+                "reference_version": ref.version if ref else None,
+                "planned_distance_km": str(ref.planned_distance_km) if ref and ref.planned_distance_km is not None else None})
+        result["route_context"] = {"legs": context_legs,
+            "actual_cargo_known": cargo.actual_quantity is not None,
+            "route_completed": all(leg.status == "completed" for leg in legs)}
     _, whole_units, split, allocation_basis = _participation(cargo, legs)
     basis["participation"] = allocation_basis
+    if not customer:
+        result["route_context"]["coverage_ambiguous"] = split
     try:
         observations, sources, effects = _observations(shipment, cargo, plan, legs, customer, whole_units)
     except base.OperationalError as exc:
@@ -301,6 +324,8 @@ def _calculate(shipment, cargo, *, customer=False, at=None):
     if anchor:
         same_time = [row for row in observations if row["occurred_at"] == anchor["occurred_at"]]
         positions = {row["node"] for row in same_time}
+        if not customer:
+            result["route_context"]["conflicting_positions"] = len(positions) != 1
         if split or anchor["node"] is None or len(positions) != 1 or times.instant(anchor["occurred_at"]) > at:
             reason = "PROGRESS_AMBIGUOUS"
             anchor = None
@@ -473,3 +498,17 @@ def history(shipment_id, cargo_id, *, user=None, account=None, page=1):
                              as_of=None, recorded_at=None, basis_label=None, unquantified_effect=False)
         items.append(value)
     return {"items": items, "page": page, "has_next": len(rows) > 20}
+
+
+def current(shipment_id, cargo_id, *, user=None, account=None):
+    """Pure current-source disclosure plus the last immutable saved estimate."""
+    shipment, cargo = _scope(shipment_id, cargo_id, user=user, account=account)
+    _, basis, result, _ = calculate(shipment, cargo, customer=account is not None)
+    latest = history(shipment_id, cargo_id, user=user, account=account)["items"]
+    snapshot = latest[0] if latest else None
+    stored = db.session.scalar(select(Snapshot).where(Snapshot.cargo_item_id == cargo.id,
+        Snapshot.organization_id == shipment.organization_id,
+        Snapshot.audience == ("CUSTOMER" if account else "INTERNAL"))
+        .order_by(Snapshot.sequence.desc()).limit(1))
+    return {"snapshot": snapshot, "context": result.get("route_context"),
+            "stale": bool(stored and stored.source_fingerprint != _fingerprint(basis))}

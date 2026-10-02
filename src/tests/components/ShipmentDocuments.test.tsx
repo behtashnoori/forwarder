@@ -128,3 +128,24 @@ describe("contextual Shipment documents", () => {
   });
 
 });
+
+it("binds current Shipment without a redundant target and selects multiple eligible recipients", async () => {
+  api.list.mockResolvedValue({data: [], can_manage_documents: true, document_types: [{public_id:"type-cmr", name_fa:"راهنامه", name_en:"CMR", is_active:true}]});
+  api.options.mockResolvedValue({data:{...options,audience:[{id:"a",label:"مشتری اول"},{id:"b",label:"مشتری دوم"}]}});
+  api.upload.mockClear(); api.upload.mockResolvedValue({data:document});
+  render(<ShipmentDocuments shipmentPublicId="shipment-1"/>);
+  await screen.findByLabelText("زمینه بارگذاری سند");
+  expect(screen.queryByLabelText("مورد مرتبط برای سند")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("دسترسی سند بارگذاری‌شده")).toHaveValue("INTERNAL");
+  expect(screen.getByRole("option",{name:/راهنامه.*CMR/})).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("نوع سند"),{target:{value:"type-cmr"}});
+  fireEvent.change(screen.getByLabelText("دسترسی سند بارگذاری‌شده"),{target:{value:"EXPLICIT_SHARED"}});
+  fireEvent.click(screen.getByRole("checkbox",{name:"مشتری اول"}));
+  fireEvent.click(screen.getByRole("checkbox",{name:"مشتری دوم"}));
+  fireEvent.change(screen.getByLabelText("انتخاب فایل سند"),{target:{files:[new File(["%PDF-1.4"],"a.pdf",{type:"application/pdf"})]}});
+  fireEvent.click(screen.getByRole("button",{name:"بارگذاری سند"}));
+  await waitFor(()=>expect(api.upload).toHaveBeenCalledTimes(1));
+  const form=api.upload.mock.calls[0][1] as FormData;
+  expect(form.get("context_target_public_id")).toBe("shipment-1");
+  expect(form.getAll("audience_public_ids")).toEqual(["a","b"]);
+});

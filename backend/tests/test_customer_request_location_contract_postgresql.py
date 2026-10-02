@@ -54,6 +54,16 @@ def test_postgresql18_complete_city_contract_persistence_and_legacy_fixture():
         ])
         db.session.commit()
         expected = [row.id for row in db.session.scalars(sa.select(City).join(Province, City.province_id == Province.id).where(City.country_id == iran.id, City.dataset_id == DATASET_ID, City.is_active.is_(True), Province.is_active.is_(True)).order_by(City.name_fa, City.geoname_id)).all()]
+        # H2 and HW_GEO_DATA_001: exact parents, English alias and Persian erratum.
+        from backend.services.logistics_network_service import canonical_cities
+        shaoxing = City.query.filter_by(geoname_id=1795855).one()
+        sanxing = City.query.filter_by(geoname_id=1796562).one()
+        shanghai = City.query.filter_by(geoname_id=1796236).one()
+        assert shaoxing.province_id != sanxing.province_id
+        assert shaoxing.id in [item["source_id"] for item in canonical_cities({"admin1_geoname_id":shaoxing.province.geoname_id,"q":"Shaoxing"})["items"]]
+        assert canonical_cities({"admin1_geoname_id":sanxing.province.geoname_id,"q":"Shaoxing"})["items"] == []
+        for query in ("Shanghai","شانگهای"):
+            assert shanghai.id in [item["source_id"] for item in canonical_cities({"admin1_geoname_id":shanghai.province.geoname_id,"q":query})["items"]]
         canonical_before = db.session.scalar(sa.select(sa.func.count()).select_from(CanonicalLocation))
         iran_id, brazil_id = iran.id, brazil.id
 

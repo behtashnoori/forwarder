@@ -2,7 +2,7 @@
 from sqlalchemy import func
 
 # Errata are keyed by the upstream stable identity, never by a guessed name.
-PERSIAN_LABELS = {131222: "هرمزگان", 418862: "اصفهان", 418863: "اصفهان"}
+PERSIAN_LABELS = {131222: "هرمزگان", 418862: "اصفهان", 418863: "اصفهان", 1796236: "شانگهای"}
 CHARACTERS = {"أ": "ا", "إ": "ا", "آ": "ا", "ي": "ی", "ى": "ی", "ك": "ک", "\u200c": "", " ": ""}
 
 

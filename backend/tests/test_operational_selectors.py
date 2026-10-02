@@ -308,7 +308,7 @@ def test_accepted_quote_selector_permissions_eligibility_and_create_consistency(
         "quote_label",
         "accepted_at",
         "cargo_items",
-        "request_location_state",
+        "request_location_state", "requested_endpoints",
         "requires_location_resolution",
         "location_resolution_message",
     }

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QuoteModal } from "@/components/QuoteModal";
@@ -51,4 +51,19 @@ describe("QuoteModal supported currencies", () => {
     );
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
+});
+
+it("keeps optional Quote expiry a date across Persian/Gregorian representations", async () => {
+  render(<QuoteModal open onOpenChange={vi.fn()} requestId="12" onSuccess={vi.fn()}/>);
+  expect(screen.getByLabelText("تاریخ اعتبار")).toHaveValue("");
+  fireEvent.change(screen.getByLabelText("مبلغ (الزامی)"),{target:{value:"1500000"}});
+  fireEvent.change(screen.getByLabelText("تاریخ اعتبار"),{target:{value:"2026-10-04"}});
+  fireEvent.click(screen.getByRole("button",{name:/شمسی/}));
+  fireEvent.click(screen.getByRole("button",{name:"میلادی"}));
+  expect(screen.getByLabelText("تاریخ اعتبار")).toHaveValue("2026-10-04");
+  fireEvent.click(screen.getByRole("button",{name:"شمسی"}));
+  fireEvent.change(screen.getByLabelText("تاریخ اعتبار روز"),{target:{value:"13"}});
+  expect(screen.getByLabelText("تاریخ اعتبار")).toHaveValue("2026-10-05");
+  await userEvent.click(screen.getByRole("button",{name:"ارسال پیشنهاد"}));
+  expect(api.submitQuote).toHaveBeenLastCalledWith("12",expect.objectContaining({valid_until:"2026-10-05"}));
 });

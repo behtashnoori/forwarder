@@ -6618,3 +6618,47 @@ paths:
           description: Authorization or sources changed; discard prior result and retry.
         '422':
           description: Unexpected client inputs or invalid history page.
+  /api/customer/shipments/{shipment_id}/cargo/{cargo_id}/eta/current:
+    get:
+      tags: [Operational Shipments]
+      summary: Read last saved ETA and current source context without materialization
+      description: Current tenant and Cargo authorization apply. Customer context excludes private route basis. Stale indicates changed inputs; only explicit POST ensure creates a snapshot.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ShipmentPublicId'
+      - name: cargo_id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Saved snapshot or null, current internal context or null, stale flag; private no-store.
+        '401':
+          description: Authentication required
+        '403':
+          description: Current authority denied
+        '404':
+          description: Cargo unavailable in authorized scope
+  /api/operational-shipments/{shipment_id}/cargo/{cargo_id}/eta/current:
+    get:
+      tags: [Operational Shipments]
+      summary: Read last saved ETA and current source context without materialization
+      description: Current tenant and Cargo authorization apply. Customer context excludes private route basis. Stale indicates changed inputs; only explicit POST ensure creates a snapshot.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ShipmentPublicId'
+      - name: cargo_id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Saved snapshot or null, current internal context or null, stale flag; private no-store.
+        '401':
+          description: Authentication required
+        '403':
+          description: Current authority denied
+        '404':
+          description: Cargo unavailable in authorized scope

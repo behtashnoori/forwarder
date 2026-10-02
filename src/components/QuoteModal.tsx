@@ -1,3 +1,4 @@
+import { LocalizedDateInput } from "@/components/LocalizedDateTimeInput";
 import React, { useState } from "react";
 import {
   Dialog,
@@ -119,7 +120,8 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
           </div>
           <div className="space-y-2">
             <Label htmlFor="quote-valid">تاریخ اعتبار (اختیاری)</Label>
-            <Input
+            <LocalizedDateInput
+              aria-label="تاریخ اعتبار"
               id="quote-valid"
               type="date"
               value={validUntil}

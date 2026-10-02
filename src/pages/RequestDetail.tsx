@@ -521,12 +521,12 @@ const RequestDetail = () => {
         : "bg-blue-50 text-blue-700 border-blue-100";
     const isInternational = request?.route?.shipping_type === "international";
     return (
-      <div className={`rounded-2xl border p-4 ${accent}`}>
-        <div className="mb-4 flex items-center gap-2">
+      <div className={`rounded-xl border p-3 ${accent}`}>
+        <div className="mb-2 flex items-center gap-2">
           <MapPin className="h-5 w-5" />
           <h3 className="font-bold">{title}</h3>
         </div>
-        <div className="space-y-3 text-sm">
+        <div className="space-y-1 text-sm">
           {isInternational ? (
             <>
               <InfoRow
@@ -588,7 +588,7 @@ const RequestDetail = () => {
           : "🏙️";
     return (
       <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-800">
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-2 flex items-center gap-2">
           <MapPin className="h-5 w-5" />
           <h3 className="font-bold">
             {t("requestDetail.iranDestinationTitle")}
@@ -877,8 +877,12 @@ const RequestDetail = () => {
           facts={[
             { label: "کد پیگیری", value: request.tracking_number, ltr: true },
             {
-              label: "مشتری",
-              value: request.customer.full_name || missingValue,
+              label: "درخواست‌دهنده",
+              value: [request.customer.first_name, request.customer.last_name].filter(Boolean).join(" ") || "نام درخواست‌دهنده ثبت نشده",
+            },
+            {
+              label: "مشتری سازمانی مرتبط",
+              value: organizationCustomerState?.customer?.name || "هنوز مرتبط نشده",
             },
             {
               label: "کارشناس",
@@ -1006,9 +1010,9 @@ const RequestDetail = () => {
                   <CardContent className="grid gap-4 sm:grid-cols-2">
                     <InfoPanel
                       icon={User}
-                      label={t("common.customerName")}
+                      label="درخواست‌دهنده"
                       value={displayValue(
-                        request.customer.full_name,
+                        [request.customer.first_name, request.customer.last_name].filter(Boolean).join(" ") || "نام درخواست‌دهنده ثبت نشده",
                         missingValue,
                       )}
                     />

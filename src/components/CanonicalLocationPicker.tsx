@@ -46,7 +46,7 @@ export default function CanonicalLocationPicker({label,value,onChange,allowCreat
     catch{if(version===requestVersion.current)setError("دریافت مکان‌های سازمان ممکن نشد.");}
     finally{if(version===requestVersion.current)setLoading("");}
   };
-  const chooseCity=(identity:string)=>{++requestVersion.current;const row=[...cities,...(city?[city]:[])].find(item=>String(item.geoname_id)===identity);setCity(row);setLocation("");setLocations([]);setQuery("");setAdding(false);setLoading("");onChange(row&&country?{country_id:country.id,source_type:"city",source_id:row.source_id,display_label:row.name_fa}:null);if(row)void loadLocations(row);};
+  const chooseCity=(identity:string)=>{++requestVersion.current;const row=[...cities,...(city?[city]:[])].find(item=>String(item.geoname_id)===identity);setCity(row);setLocation("");setLocations([]);setQuery("");setAdding(false);setLoading("");onChange(row&&country?{country_id:country.id,source_type:"city",source_id:row.source_id,display_label:[row.name_fa,region?.name_fa,country.name_fa].filter(Boolean).join(" · ")}:null);if(row)void loadLocations(row);};
   const searchCities=()=>{if(region)void loadCities(region,cityQuery);};
   const searchLocations=()=>{if(city)void loadLocations(city,query);};
   const chooseLocation=(publicId:string)=>{setLocation(publicId);const row=locations.find(item=>item.public_id===publicId);onChange(row&&country?{country_id:country.id,source_type:"logistics_point",source_id:row.public_id,display_label:row.fa_name}:city&&country?{country_id:country.id,source_type:"city",source_id:city.source_id,display_label:city.name_fa}:null);};

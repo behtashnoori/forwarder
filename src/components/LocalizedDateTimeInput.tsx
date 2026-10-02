@@ -45,13 +45,13 @@ export const jalaliToGregorian = (jy: number, jm: number, jd: number): DateParts
 const jalaliMonthNames = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
 const gregorianMonthNames = ["ژانویه","فوریه","مارس","آوریل","مه","ژوئن","ژوئیه","اوت","سپتامبر","اکتبر","نوامبر","دسامبر"];
 const parseValue = (value: string) => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(value);
   if (!match) return null;
   const parts = { year:Number(match[1]), month:Number(match[2]), day:Number(match[3]),
-    hour:Number(match[4] ?? 0), minute:Number(match[5] ?? 0) };
+    hour:Number(match[4] ?? 0), minute:Number(match[5] ?? 0), second:Number(match[6] ?? 0) };
   const test = new Date(parts.year, parts.month - 1, parts.day);
   return test.getFullYear() === parts.year && test.getMonth() === parts.month - 1
-    && test.getDate() === parts.day && parts.hour < 24 && parts.minute < 60 ? parts : null;
+    && test.getDate() === parts.day && parts.hour < 24 && parts.minute < 60 && parts.second < 60 ? parts : null;
 };
 const jalaliMonthLength = (year:number, month:number) => {
   if (month <= 6) return 31;

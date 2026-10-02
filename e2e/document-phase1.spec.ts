@@ -39,7 +39,7 @@ test("Phase 1 — Admin catalog → owning Expert file → reopen → deactivate
   await expect(catalog.getByText("راهنامه CMR", {exact: true})).toBeVisible();
   await admin.screenshot({path: info.outputPath("admin-catalog.png"), fullPage: true});
   await login(expert, "restricted"); await documents(expert);
-  await expect(expert.getByLabel("نوع سند", {exact: true}).locator(`option[value="${kind.public_id}"]`)).toHaveText("راهنامه CMR");
+  await expect(expert.getByLabel("نوع سند", {exact: true}).locator(`option[value="${kind.public_id}"]`)).toHaveText("راهنامه CMR — \u2066CMR\u2069");
   await expert.getByLabel("نوع سند", {exact: true}).selectOption(kind.public_id);
   await expert.getByLabel("توضیح سند", {exact: true}).fill("یادداشت آزمایشی فاز یک");
   await expert.getByLabel("انتخاب فایل سند", {exact: true}).setInputFiles({name: "cmr-phase1.pdf", mimeType: "application/pdf", buffer: pdf});

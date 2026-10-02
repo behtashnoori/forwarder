@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { request, listShipmentCargoItems } from "@/lib/api";
 import { customerRequest } from "@/lib/customerPortalApi";
@@ -11,6 +11,17 @@ export type EtaSnapshot = {
   basis_label: string | null; unquantified_effect: boolean; planned_distance: string | null;
   authorization_revision?: string;
 };
+type RouteContext = { route_completed: boolean; actual_cargo_known: boolean; coverage_ambiguous: boolean; conflicting_positions?: boolean; legs: Array<{leg_id: number; destination: string; planned_distance_km: string | null; reference_version: number | null}> };
+type Current = {snapshot: EtaSnapshot | null; context: RouteContext | null; stale: boolean; authorization_revision?: string};
+function KnownRoute({value}: {value: RouteContext}) {
+  return <aside className="space-y-2 rounded border bg-blue-50 p-3 text-sm" aria-label="واقعیت مسیر و مبنای انتخاب‌شده">
+    {value.route_completed && <p className="font-semibold">رسیدن در مسیر ثبت شده و مسیر تکمیل شده است؛ این وضعیت، برآورد آینده رسیدن کالا نیست.</p>}
+    {value.legs.map((leg, index) => <p key={leg.leg_id}>بخش {(index + 1).toLocaleString("fa-IR")} · {leg.destination}: {leg.planned_distance_km == null ? "مبنای فاصله انتخاب نشده" : `مبنای این بخش: ${Number(leg.planned_distance_km).toLocaleString("fa-IR")} کیلومتر · نسخه مرجع ${leg.reference_version}`}</p>)}
+    {!value.actual_cargo_known && <p>مقدار واقعی کالا ثبت نشده است؛ مقدار تخصیص جایگزین آن نیست.</p>}
+    {value.coverage_ambiguous && <p>پوشش اجرای کل کالا برای برآورد روشن نیست.</p>}
+    {value.conflicting_positions && <p>در یک زمان وقوع، موقعیت‌های متفاوت ثبت شده‌اند؛ پیشرفت کالا قابل تعیین نیست.</p>}
+  </aside>;
+}
 type History = { items: EtaSnapshot[]; page: number; has_next: boolean; authorization_revision?: string };
 const time = (value: string | null) => formatDualCalendarInstant(value, "fa-IR", { timeStyle: "short" });
 function age(value: string, calculatedAt: string) {
@@ -39,18 +50,20 @@ function Result({ value, historical = false }: { value: EtaSnapshot; historical?
       <p>زمان ثبت گزارش: {time(value.recorded_at)}</p>
       <p>عمر داده: {age(value.as_of, value.calculated_at)}</p>
     </div>}
-    <p className="text-slate-600">فاصله برنامه‌ریزی‌شده: {value.planned_distance == null ? "تعریف نشده" : `${Number(value.planned_distance).toLocaleString("fa-IR", {maximumFractionDigits:3})} کیلومتر`}</p>
+    <p className="text-slate-600">فاصله مبنای گزارش پیشرفت: {value.planned_distance == null ? "در این برآورد در دسترس نیست" : `${Number(value.planned_distance).toLocaleString("fa-IR", {maximumFractionDigits:3})} کیلومتر`}</p>
     <p className="text-xs text-slate-600">زمان محاسبه: {time(value.calculated_at)}</p>
     {value.unquantified_effect && <p className="rounded-lg bg-amber-50 p-3 text-amber-900">مدت اثر عملیاتی ثبت‌شده مشخص نیست و به برآورد اضافه نشده است.</p>}
   </article>;
 }
 
-/** Viewing ETA explicitly ensures the derived estimate; history remains GET-only. */
+/** Viewing/refreshing is read-only. Calculation is a separate explicit command. */
 export default function CargoEta({ shipmentId, cargoId, customer = false }: { shipmentId: string; cargoId: string; customer?: boolean }) {
   const path = `${customer ? "/api/customer/shipments" : "/api/operational-shipments"}/${encodeURIComponent(shipmentId)}/cargo/${encodeURIComponent(cargoId)}/eta`;
   const [refresh, setRefresh] = useState(0);
+  const command = useRef<string | null>(null);
+  const previous = useRef<{path: string; id?: string}>({path});
   const [page, setPage] = useState(0);
-  const [state, setState] = useState<{ path: string; current?: EtaSnapshot; history?: History; loading: boolean; error: string }>({ path, loading: true, error: "" });
+  const [state, setState] = useState<{ path: string; current?: EtaSnapshot; context?: RouteContext | null; stale?: boolean; notice?: string; history?: History; loading: boolean; error: string }>({ path, loading: true, error: "" });
   useEffect(() => {
     let alive = true;
     let generation = 0;
@@ -67,7 +80,10 @@ export default function CargoEta({ shipmentId, cargoId, customer = false }: { sh
       const read = customer ? customerRequest : request;
       try {
         for (let attempt = 0; attempt < 2; attempt += 1) {
-          const value = await read<EtaSnapshot>(`${path}/ensure`, { method: "POST", body: "{}", cache: "no-store", signal: controller.signal });
+          const materialize = command.current === path;
+          command.current = null;
+          const computed = materialize ? await read<EtaSnapshot>(`${path}/ensure`, {method: "POST", body: "{}", cache: "no-store", signal: controller.signal}) : undefined;
+          const value = await read<Current>(`${path}/current`, {cache: "no-store", signal: controller.signal});
           const history = page ? await read<History>(`${path}/history?page=${page}`, { cache: "no-store", signal: controller.signal }) : undefined;
           if (!alive || current !== generation) return;
           if (customer) {
@@ -75,7 +91,9 @@ export default function CargoEta({ shipmentId, cargoId, customer = false }: { sh
             if (!alive || current !== generation) return;
             if (!value.authorization_revision || value.authorization_revision !== auth.authorization_revision || history && history.authorization_revision !== auth.authorization_revision) continue;
           }
-          setState({ path, current: value, history, loading: false, error: "" });
+          const notice = computed ? (previous.current.path === path && previous.current.id === computed.public_id ? "اطلاعات مؤثر تغییر نکرده؛ همان برآورد ذخیره‌شده بازگردانده شد." : "برآورد محاسبه و ذخیره شد.") : "آخرین نتیجه ذخیره‌شده خوانده شد؛ محاسبه جدید انجام نشد.";
+          previous.current = {path, id: value.snapshot?.public_id};
+          setState({ path, current: value.snapshot || undefined, context: value.context, stale: value.stale, notice, history, loading: false, error: "" });
           return;
         }
         throw new Error("دسترسی تغییر کرده است؛ دوباره بخوانید.");
@@ -96,10 +114,14 @@ export default function CargoEta({ shipmentId, cargoId, customer = false }: { sh
   }, [path, customer, page, refresh]);
   const active = state.path === path;
   return <section aria-label="زمان تقریبی رسیدن کالا" className="min-w-0 space-y-3 break-words rounded-xl border p-3" dir="rtl">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">زمان تقریبی رسیدن</h3><Button size="sm" variant="outline" onClick={() => setRefresh(value => value + 1)}>تازه‌سازی برآورد</Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">زمان تقریبی رسیدن</h3><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={state.loading} onClick={() => setRefresh(value => value + 1)}>خواندن آخرین نتیجه</Button><Button size="sm" disabled={state.loading} onClick={() => {command.current = path; setRefresh(value => value + 1);}}>محاسبه و ذخیره برآورد</Button></div></div>
     <p className="text-xs text-slate-600">برآورد عملیاتی است؛ تعهد زمانی یا موقعیت لحظه‌ای نیست.</p>
     <p className="text-xs text-slate-600">زمان رسیدن است؛ مدت عملیات پس از رسیدن به مقصد نهایی در آن حساب نمی‌شود.</p>
-    {!active || state.loading ? <p role="status">در حال دریافت برآورد…</p> : state.error ? <p role="alert">{state.error}</p> : state.current && <Result value={state.current} />}
+    {active && !state.loading && state.context && <KnownRoute value={state.context} />}
+    {active && !state.loading && state.notice && <p role="status" className="text-xs text-slate-600">{state.notice}</p>}
+    {active && !state.loading && state.stale && <p className="text-sm text-amber-800">نتیجه ذخیره‌شده با مبنای فعلی متفاوت است؛ برای نتیجه تازه «محاسبه و ذخیره برآورد» را انتخاب کنید.</p>}
+    {active && !state.loading && !state.error && !state.current && <p>هنوز برآوردی ذخیره نشده است.</p>}
+    {!active || state.loading ? <p role="status">در حال دریافت برآورد…</p> : state.error ? <p role="alert">{state.error}</p> : state.current && <div className="space-y-3"><p className="font-semibold">آخرین برآورد ذخیره‌شده</p><Result value={state.current} /></div>}
     <Button size="sm" variant="ghost" onClick={() => setPage(value => value ? 0 : 1)}>{page ? "بستن تاریخچه برآورد" : "برآوردهای قبلی"}</Button>
     {active && !state.loading && state.history && <div className="space-y-4 border-t pt-3">
       {state.history.items.map(value => <Result key={value.public_id} value={value} historical />)}

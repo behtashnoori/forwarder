@@ -20,7 +20,7 @@ def no_store(response):
     return response
 
 
-def _run(shipment_id, cargo_id, *, customer=False, ensure=False):
+def _run(shipment_id, cargo_id, *, customer=False, ensure=False, current=False):
     user = None if customer else get_current_user()
     account_id = g.current_customer.id if customer else None
     if ensure and (request.get_json(silent=True) not in (None, {})):
@@ -61,6 +61,8 @@ def _run(shipment_id, cargo_id, *, customer=False, ensure=False):
                     if attempt < 2:
                         continue
                     raise OperationalError("ETA_SOURCE_CHANGED", "اطلاعات حمل تغییر کرده است؛ دوباره بخوانید.", 409)
+            elif current:
+                value = service.current(str(shipment_id), str(cargo_id), **kwargs)
             else:
                 value = service.history(str(shipment_id), str(cargo_id), page=request.args.get("page", 1), **kwargs)
             if customer:
@@ -104,3 +106,15 @@ def ensure_customer(shipment_id, cargo_id):
 @require_customer
 def history_customer(shipment_id, cargo_id):
     return _run(shipment_id, cargo_id, customer=True)
+
+
+@eta_bp.get("/api/operational-shipments/<uuid:shipment_id>/cargo/<uuid:cargo_id>/eta/current")
+@require_auth
+def current_internal(shipment_id, cargo_id):
+    return _run(shipment_id, cargo_id, current=True)
+
+
+@eta_bp.get("/api/customer/shipments/<uuid:shipment_id>/cargo/<uuid:cargo_id>/eta/current")
+@require_customer
+def current_customer(shipment_id, cargo_id):
+    return _run(shipment_id, cargo_id, customer=True, current=True)

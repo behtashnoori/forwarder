@@ -638,7 +638,10 @@ def canonical_cities(args):
     else:
         q = q.where(Country.code == country_code)
     if term:
-        q = q.where(or_(*(geo.searchable(field).like(geo.pattern(term), escape="!")
+        display_ids = [identity for identity, label in geo.PERSIAN_LABELS.items()
+                       if geo.normalize(term) in geo.normalize(label)]
+        q = q.where(or_(City.geoname_id.in_(display_ids),
+                         *(geo.searchable(field).like(geo.pattern(term), escape="!")
                          for field in (City.name_fa, City.name_en, City.code, cast(City.aliases, Text)))))
         normalized = geo.normalize(term)
         exact_rank = case(

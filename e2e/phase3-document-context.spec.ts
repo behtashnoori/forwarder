@@ -100,7 +100,7 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
 
   await page.getByLabel("زمینه بارگذاری سند").selectOption("SHIPMENT");
   await page.getByLabel("دسترسی سند بارگذاری‌شده").selectOption("EXPLICIT_SHARED");
-  await page.getByLabel("مخاطبان سند بارگذاری‌شده").selectOption([fixture.p306_account_a]);
+  await page.locator(`input[type="checkbox"][value="${fixture.p306_account_a}"]`).check();
   const shared = await upload(page, "P306 مشترک", "shared-v1.pdf");
   expect(shared.context.visibility).toBe("EXPLICIT_SHARED");
   const ownerToken = await page.evaluate(() => localStorage.getItem("expert_token"));
@@ -140,7 +140,7 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
   const nextArticle = page.getByRole("article").filter({ hasText: "shared-v2.pdf" }).first();
   await nextArticle.locator("summary", { hasText: "اصلاح زمینه یا دسترسی" }).click();
   await nextArticle.getByLabel("دسترسی سند").selectOption("EXPLICIT_SHARED");
-  await nextArticle.getByLabel("مخاطبان سند").selectOption([fixture.p306_account_a]);
+  await nextArticle.locator(`input[type="checkbox"][value="${fixture.p306_account_a}"]`).check();
   await nextArticle.getByRole("button", { name: "ثبت اصلاح با تاریخچه" }).click();
   await expect(nextArticle.getByText(/چه کسانی می‌توانند ببینند؟ مشتریان انتخاب‌شده/)).toBeVisible();
   await a.page.reload();

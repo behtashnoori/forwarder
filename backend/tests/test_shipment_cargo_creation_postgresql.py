@@ -15,6 +15,7 @@ from backend.cargo_models import CargoCatalogItem, ShipmentCargoItem
 from backend.extensions import db
 from backend.migration_runtime import alembic_config, prepare_version_table_for_upgrade
 from backend.models import (
+    City, Country,
     CargoType,
     Customer,
     ExpertQuote,
@@ -83,7 +84,7 @@ def test_postgresql18_atomic_lineage_route_and_concurrent_creation():
                 organization_id=org.id,
                 user_id=expert.id,
                 permissions=[
-                    "operational_shipment.read",
+                    "operational_shipment.read", "request.read",
                     "operational_shipment.create",
                 ],
             )
@@ -140,6 +141,17 @@ def test_postgresql18_atomic_lineage_route_and_concurrent_creation():
         )
         db.session.add(request_row)
         db.session.flush()
+        # Exact Request identity is reused, not looked up by its display name.
+        cn = Country(code="CN",name_fa="چین",name_en="China",is_active=True)
+        db.session.add(cn); db.session.flush()
+        origin.country_id = cn.id
+        requested_city = City(name_fa="شاوشنگ",name_en="Shaoxing",geoname_id=1795855,
+            province_id=origin.id,country_id=cn.id,is_active=True)
+        other_city = City(name_fa="Sanxing",name_en="Sanxing",geoname_id=1796562,
+            province_id=origin.id,country_id=cn.id,is_active=True)
+        db.session.add_all([requested_city,other_city]); db.session.flush()
+        request_row.origin_city_id = requested_city.id
+        request_row.origin_country_id = cn.id
         request_cargo = RequestCargoItem(
             shipment_request_id=request_row.id,
             position=1,
@@ -177,7 +189,10 @@ def test_postgresql18_atomic_lineage_route_and_concurrent_creation():
             "request": request_row.id,
             "request_cargo": request_cargo.public_id,
             "catalog": catalog.public_id,
-            "origin": origin.id,
+            "origin": requested_city.id,
+            "other_city": other_city.id,
+            "customer": customer.id,
+            "org": org.id,
             "destination": destination.id,
         }
 
@@ -186,7 +201,7 @@ def test_postgresql18_atomic_lineage_route_and_concurrent_creation():
         "accepted_quote_id": ids["quote"],
         "planned_departure": departure.isoformat(),
         "planned_arrival": (departure + timedelta(hours=5)).isoformat(),
-        "origin": {"source_type": "province", "source_id": ids["origin"]},
+        "origin": {"source_type": "city", "source_id": ids["origin"]},
         "destination": {
             "source_type": "province",
             "source_id": ids["destination"],
@@ -243,6 +258,27 @@ def test_postgresql18_atomic_lineage_route_and_concurrent_creation():
         assert cargo.actual_quantity is None
         assert cargo.uom.fa_name == "عدد"
         assert mapping.destination_route_leg_id == leg.id
+        from backend.services.request_endpoint_projection import endpoints
+        request_row = db.session.get(ShipmentRequest, ids["request"])
+        assert endpoints(request_row)["origin"]["reference"]["source_id"] == ids["origin"]
+        assert leg.origin_snapshot["canonical_reference"] == {"source_type":"city","source_id":ids["origin"]}
+        from backend.services.operational_projection_service import _identity
+        assert _identity(shipment, {}, {"id":ids["expert"]})["requested_endpoints"]["origin"]["reference"]["source_id"] == ids["origin"]
         assert ShipmentCargoItem.query.count() == 1
         assert RouteCargoDestination.query.count() == 1
+        # A deliberate operational difference remains permitted and does not rewrite demand.
+        second = ShipmentRequest(contact_phone="09120000000",shipping_type="domestic",status="won",
+            status_request_status="new",assigned_to=ids["expert"],customer_id=ids["customer"],
+            ownership_scope="TENANT",operational_organization_id=ids["org"],origin_city_id=ids["origin"])
+        db.session.add(second); db.session.flush()
+        q = ExpertQuote(shipment_request_id=second.id,amount=140000000,currency="IRR",
+            created_by_expert_id=ids["expert"],customer_response="accepted",operational_organization_id=ids["org"])
+        db.session.add(q); db.session.commit()
+        changed = {**payload,"accepted_quote_id":q.id,"origin":{"source_type":"city","source_id":ids["other_city"]}}
+        changed.pop("cargo_items")
+        different, _ = operational_service.create_from_accepted_quote(changed,{"id":ids["expert"]},"explicit-different-origin")
+        different_plan = RoutePlan.query.filter_by(operational_shipment_id=different.id,is_active=True).one()
+        different_leg = RouteLeg.query.filter_by(route_plan_id=different_plan.id).one()
+        assert different_leg.origin_snapshot["canonical_reference"]["source_id"] == ids["other_city"]
+        assert db.session.get(ShipmentRequest,second.id).origin_city_id == ids["origin"]
     engine.dispose()

@@ -30,6 +30,8 @@ pytestmark = pytest.mark.skipif(not URL, reason="requires explicit owned P3_ETA_
 
 
 def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ensure(monkeypatch):
+    fixed_now = datetime(2026, 10, 2, 12, tzinfo=timezone.utc)
+    monkeypatch.setattr(eta, "utcnow", lambda: fixed_now)
     parsed = make_url(URL)
     assert parsed.get_backend_name() == "postgresql" and parsed.host in {"127.0.0.1", "localhost"}
     assert (parsed.database or "").startswith("forwarder_integrated_cert_p3_11_eta_")
@@ -85,12 +87,22 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
     command.downgrade(config, PREVIOUS); command.upgrade(config, HEAD)
     assert source_rows() == migration_before
 
+    # E1: no pin, no progress. Missing progress retains precedence; basis is absent.
+    with app.app_context():
+        draft = db.session.get(RoutePlan, ctx["plan"])
+        draft.status = "active"; draft.is_active = True
+        db.session.flush()
+        shipment, cargo = eta._scope(ctx["shipment"], ctx["cargo"], user={"id":ctx["owner"]})
+        _, _, result, _ = eta.calculate(shipment, cargo)
+        assert result["next"]["reason"] == "PROGRESS_UNDEFINED"
+        assert result["route_context"]["legs"][0]["planned_distance_km"] is None
+        db.session.rollback()
     with app.app_context():
         reference, _ = times.save({"id": ctx["admin"]}, {
             "origin": {"country_id": ctx["country"], "source_type": "province", "source_id": 800001},
             "destination": {"country_id": ctx["country"], "source_type": "province", "source_id": 800002}, "transport_mode": "road",
-            "movement_min_minutes": 60, "movement_max_minutes": 120,
-            "stop_min_minutes": 0, "stop_max_minutes": 0,
+            "movement_min_minutes": 720, "movement_max_minutes": 960,
+            "stop_min_minutes": 60, "stop_max_minutes": 180,
             "planned_distance_km": "900.000",
             "effective_from": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
         }, str(uuid4()))
@@ -107,6 +119,11 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
         plan.status = "active"; plan.is_active = True
         db.session.commit()
         ctx["reference"] = reference.id
+    # E2: a selected 900-km basis without departure/progress is known, not an ETA.
+    with app.app_context():
+        value = eta.current(ctx["shipment"], ctx["cargo"], user={"id":ctx["owner"]})
+        assert value["snapshot"] is None and value["context"]["legs"][0]["planned_distance_km"] == "900.000"
+        assert Snapshot.query.count() == 0
     before = source_rows()
 
     app.config["phase1a"] = {"user": ctx["owner"], "outsider": ctx["outsider"]}
@@ -155,7 +172,11 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
         response = client.post(path + "/ensure", json={}, headers=headers)
         assert response.status_code == 200, response.get_json()
         assert response.get_json()["as_of"] == "2026-09-20T08:00:00+00:00"
+        # E3: approved V2 accepts governed departure for a full remaining movement;
+        # structured distance is not universally mandatory. Do not change the rule.
         assert response.get_json()["next"]["available"]
+        assert response.get_json()["planned_distance"] is None
+        assert response.get_json()["route_context"]["legs"][0]["planned_distance_km"] == "900.000"
         assert client.get(path + "/history", headers=_auth(app, "outsider")).status_code in {403, 404}
     after_report = source_rows()
     with app.test_client() as client:
@@ -179,7 +200,7 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
                  "occurred_at": f"2026-09-20T{hour:02d}:00:00Z"}, {"id": ctx["owner"]}, str(uuid4()))
         current = latest()
         assert current["sequence"] > first["sequence"]
-        assert current["next"]["earliest"] == f"2026-09-20T{hour+1:02d}:00:00+00:00"
+        assert current["next"]["earliest"] == f"2026-09-20T{hour+12:02d}:00:00+00:00"
     assert current["next"] == first["next"] and current["public_id"] != first["public_id"]
     with app.test_client() as client:
         history = client.get(path + "/history", headers=headers).get_json()["items"]
@@ -204,7 +225,7 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
             project_id=current_shipment.project_id, route_stage_execution_id=stage.id, dimension="ACTUAL",
             allocated_quantity=1, created_by=ctx["owner"], updated_by=ctx["owner"]))
         db.session.commit()
-        occurred = datetime.now(timezone.utc).replace(microsecond=0)
+        occurred = datetime(2026, 9, 21, 8, tzinfo=timezone.utc)
         report, _ = reports.create(ctx["shipment"], {"id": ctx["owner"]}, {
             "scope": "EXECUTION_UNIT", "target_public_id": unit.public_id,
             "kind": "PROGRESS", "source": "DRIVER_REPORT", "occurred_at": occurred.isoformat(),
@@ -213,12 +234,13 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
             "impacted_cargo_public_ids": [ctx["cargo"]],
         }, str(uuid4()))
         db.session.commit()
+        ctx.update(unit_public=unit.public_id, stage_public=stage.public_id)
         progress_event_id = report.operational_event_id
         value = eta.ensure_current_eta(ctx["shipment"], ctx["cargo"], user={"id": ctx["owner"]})
         db.session.commit()
         assert value.ruleset == "ETA_RULESET_V2" and value.result["planned_distance"] == "900.000"
-        assert eta.times.instant(value.result["next"]["earliest"]) == occurred + timedelta(minutes=30)
-        assert eta.times.instant(value.result["next"]["latest"]) == occurred + timedelta(minutes=60)
+        assert eta.times.instant(value.result["next"]["earliest"]) == occurred + timedelta(hours=6)
+        assert eta.times.instant(value.result["next"]["latest"]) == occurred + timedelta(hours=8)
         assert db.session.get(OperationalEventRouteProgress, progress_event_id).route_stage_execution_id == stage.id
         unrelated = OperationalEvent(organization_id=ctx["org"], project_id=current_shipment.project_id,
             execution_unit_id=unit.id, event_type="legacy", source="expert", occurred_at=occurred,
@@ -272,4 +294,47 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
         command.downgrade(config, PREVIOUS)
     with engine.connect() as c:
         assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD
+    with app.app_context():
+        # E5/E6: UNKNOWN or partial coverage cannot borrow allocation as whole Cargo.
+        for quantity in (None, 2):
+            cargo = db.session.get(Cargo, ctx["cargo_id"])
+            cargo.actual_quantity = quantity
+            db.session.flush()
+            shipment = db.session.get(OperationalShipment, ctx["shipment_id"])
+            _, _, result, _ = eta.calculate(shipment, cargo)
+            assert result["final"]["reason"] == "PROGRESS_AMBIGUOUS"
+            assert result["route_context"]["legs"][0]["planned_distance_km"] == "900.000"
+            db.session.rollback()
+        # E8: later version changes the catalog, not the selected immutable pin.
+        from backend.route_time_models import OrganizationRouteTime
+        ref_parent = db.session.get(OrganizationRouteTime, reference.reference_id)
+        newer, _ = times.save({"id":ctx["admin"]}, {"expected_version":1,
+            "movement_min_minutes":1,"movement_max_minutes":2,"stop_min_minutes":0,"stop_max_minutes":0,
+            "planned_distance_km":"1800", "effective_from":(datetime.now(timezone.utc)+timedelta(days=1)).isoformat()}, str(uuid4()), ref_parent.public_id)
+        db.session.commit()
+        assert newer.version == 2
+        before_read = Snapshot.query.count()
+        read = eta.current(ctx["shipment"],ctx["cargo"],user={"id":ctx["owner"]})
+        assert read["context"]["legs"][0]["reference_version"] == 1
+        assert read["context"]["legs"][0]["planned_distance_km"] == "900.000"
+        assert Snapshot.query.count() == before_read
+        # E10: bad distance/context and unauthorized access remain rejected.
+        for remaining in ("-1", "900.001"):
+            with pytest.raises(eta.base.OperationalError):
+                reports.create(ctx["shipment"], {"id":ctx["owner"]}, {
+                    "scope":"EXECUTION_UNIT", "target_public_id":ctx["unit_public"],"kind":"PROGRESS",
+                    "source":"DRIVER_REPORT","occurred_at":occurred.isoformat(),
+                    "route_progress":{"stage_execution_public_id":ctx["stage_public"],"distance_remaining_km":remaining},
+                    "impacted_cargo_public_ids":[ctx["cargo"]]},str(uuid4()))
+            db.session.rollback()
+        # E7: later effective final arrival is terminal; its arrival stop is excluded.
+        arrival = Milestone(organization_id=ctx["org"],operational_shipment_id=ctx["shipment_id"],
+            route_plan_id=ctx["plan"],route_leg_id=ctx["leg"],milestone_type="arrival")
+        db.session.add(arrival); db.session.commit()
+        operations.record_event(ctx["shipment_id"],arrival.id,{"occurred_at":"2026-09-22T08:00:00Z"},{"id":ctx["owner"]},str(uuid4()))
+        value = eta.ensure_current_eta(ctx["shipment"],ctx["cargo"],user={"id":ctx["owner"]})
+        db.session.commit()
+        assert value.result["final"]["reason"] == "DESTINATION_REACHED"
+        assert value.result["final"]["earliest"] is None
+        assert value.result["route_context"]["route_completed"]
     engine.dispose()

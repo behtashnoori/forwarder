@@ -57,6 +57,14 @@ const historyActionLabel = (value: string) =>
     AUDIENCE_CHANGED: "اصلاح مخاطبان سند",
   })[value] || "اصلاح زمینه یا دسترسی";
 
+function Recipients({options, value, onChange}: {options: DocumentContextOptions["audience"]; value: string[]; onChange: (value: string[]) => void}) {
+  return <fieldset className="space-y-2 rounded border p-3"><legend className="text-sm">مشتریان مجاز برای اشتراک</legend>
+    <p className="text-xs text-slate-600">فقط حساب‌های انتخاب‌شده این نسخه را می‌بینند. انتخاب چند مشتری ممکن است.</p>
+    {options.length ? options.map(item => <label key={item.id} className="flex items-center gap-2 text-sm"><input type="checkbox" value={item.id} checked={value.includes(item.id)} onChange={event => onChange(event.target.checked ? [...value, item.id] : value.filter(id => id !== item.id))}/>{item.label}</label>) : <p>مخاطب مجازی برای اشتراک در دسترس نیست.</p>}
+    <p className="text-xs">{value.length.toLocaleString("fa-IR")} مشتری انتخاب شده است.</p>
+  </fieldset>;
+}
+
 function ContextEditor({
   row,
   shipmentPublicId,
@@ -136,6 +144,7 @@ function ContextEditor({
             <option value="DELIVERY">تحویل کالا</option>
           </select>
         </label>
+        {type === "SHIPMENT" ? <p className="self-center text-sm">مربوط به همین پرونده حمل</p> : <>
         <label>
           مورد مرتبط
           <select
@@ -151,6 +160,7 @@ function ContextEditor({
             ))}
           </select>
         </label>
+        </>}
         <label>
           چه کسانی می‌توانند ببینند؟
           <select
@@ -176,29 +186,7 @@ function ContextEditor({
           </select>
         </label>
         {visibility === "EXPLICIT_SHARED" && (
-          <label>
-            مخاطبان مشخص
-            <select
-              aria-label="مخاطبان سند"
-              className="mt-1 w-full rounded border p-2"
-              multiple
-              value={audiences}
-              onChange={(event) =>
-                setAudiences(
-                  Array.from(
-                    event.target.selectedOptions,
-                    (item) => item.value,
-                  ),
-                )
-              }
-            >
-              {options.audience.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Recipients options={options.audience} value={audiences} onChange={setAudiences} />
         )}
         <Input
           aria-label="دلیل اصلاح سند"
@@ -410,7 +398,7 @@ export default function ShipmentDocuments({
         )}
         {!readOnly && canManage ? (
           <div className="grid gap-2 rounded border p-3 sm:grid-cols-2">
-            <p className="sm:col-span-2 rounded bg-blue-50 p-3 text-sm">این بارگذاری، سند مستقل محموله است و به‌تنهایی الزام سندی را تکمیل نمی‌کند. برای تأمین یک الزام مشخص، از همان ردیف در «مدارک مورد نیاز» فایل پرونده درخواست را انتخاب کنید. فایل اطلاع‌رسانی نیز تا زمان ارتباط و بررسی، مدرک تأییدشده محسوب نمی‌شود.</p>
+            <p className="sm:col-span-2 rounded bg-blue-50 p-3 text-sm">بارگذاری فایل، الزام سندی را تکمیل نمی‌کند. در «مدارک مورد نیاز»، نسخه مشخص فایل درخواست را مرتبط و بررسی کنید؛ آمادگی مدارک جداگانه ارزیابی می‌شود.</p>
             {!options && (
               <p className="sm:col-span-2 text-sm text-slate-600">
                 گزینه‌های زمینه و دسترسی هنوز آماده نیستند.
@@ -428,7 +416,7 @@ export default function ShipmentDocuments({
               <select aria-label="نوع سند" className="mt-1 min-h-10 w-full rounded border px-2" value={definitionId}
                 onChange={event => { setDefinitionId(event.target.value); setTitle(""); }}>
                 <option value="">انتخاب نوع سند</option>
-                {documentTypes.filter(item => item.is_active).map(item => <option key={item.public_id} value={item.public_id}>{item.name_fa}</option>)}
+                {documentTypes.filter(item => item.is_active).map(item => <option key={item.public_id} value={item.public_id}>{item.name_fa}{item.name_en ? ` — \u2066${item.name_en}\u2069` : ""}</option>)}
               </select>
             </label>
             {!definitionId && <Input
@@ -467,6 +455,7 @@ export default function ShipmentDocuments({
                     <option value="DELIVERY">تحویل کالا</option>
                   </select>
                 </label>
+                {contextType === "SHIPMENT" ? <p className="self-center text-sm">مربوط به همین پرونده حمل</p> : <>
                 <label className="text-sm">
                   مورد مرتبط
                   <select
@@ -482,6 +471,7 @@ export default function ShipmentDocuments({
                     ))}
                   </select>
                 </label>
+                </>}
                 <label className="text-sm">
                   چه کسانی می‌توانند ببینند؟
                   <select
@@ -510,29 +500,7 @@ export default function ShipmentDocuments({
                   </select>
                 </label>
                 {visibility === "EXPLICIT_SHARED" && (
-                  <label className="text-sm">
-                    مخاطبان مشخص
-                    <select
-                      aria-label="مخاطبان سند بارگذاری‌شده"
-                      className="mt-1 w-full rounded border p-2"
-                      multiple
-                      value={audiences}
-                      onChange={(event) =>
-                        setAudiences(
-                          Array.from(
-                            event.target.selectedOptions,
-                            (item) => item.value,
-                          ),
-                        )
-                      }
-                    >
-                      {options.audience.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <Recipients options={options.audience} value={audiences} onChange={setAudiences} />
                 )}
               </>
             )}
