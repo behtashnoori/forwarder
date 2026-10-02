@@ -54,6 +54,18 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
     --ring: 215 85% 35%;
     --input-focus: 0 0% 100%;
 
+    /* Semantic navigation roles. Status and alert colors stay independent. */
+    --nav-surface: 0 0% 100%;
+    --nav-text: 220 20% 25%;
+    --nav-text-muted: 220 12% 38%;
+    --nav-active-surface: 215 85% 35%;
+    --nav-active-text: 0 0% 100%;
+    --nav-hover-surface: 215 60% 95%;
+    --nav-hover-text: 215 75% 28%;
+    --nav-border: 220 15% 84%;
+    --nav-focus-ring: 215 85% 35%;
+    --nav-disabled-text: 220 10% 44%;
+
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(215 85% 35%), hsl(215 75% 55%));
     --gradient-secondary: linear-gradient(135deg, hsl(150 65% 45%), hsl(150 55% 65%));
@@ -130,6 +142,17 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
     --border: 220 15% 25%;
     --input: 220 15% 25%;
     --input-focus: 220 15% 30%;
+
+    --nav-surface: 220 15% 10%;
+    --nav-text: 220 10% 95%;
+    --nav-text-muted: 220 10% 75%;
+    --nav-active-surface: 215 85% 55%;
+    --nav-active-text: 220 15% 8%;
+    --nav-hover-surface: 220 15% 18%;
+    --nav-hover-text: 220 10% 95%;
+    --nav-border: 220 15% 25%;
+    --nav-focus-ring: 215 85% 55%;
+    --nav-disabled-text: 220 10% 65%;
 
     --gradient-primary: linear-gradient(135deg, hsl(215 85% 55%), hsl(215 75% 65%));
     --gradient-secondary: linear-gradient(135deg, hsl(150 65% 55%), hsl(150 55% 75%));
@@ -306,9 +329,47 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
   letter-spacing: 0;
 }
 
-.app-nav a:not([aria-current="page"]),
-.shipment-workspace [aria-label="بخش‌های پرونده حمل"] a:not([aria-current="page"]) {
-  color: hsl(220 10% 42%);
+.navigation-surface {
+  border-color: hsl(var(--nav-border));
+  background: hsl(var(--nav-surface));
+  color: hsl(var(--nav-text));
+}
+
+.navigation-item,
+.navigation-tab {
+  color: hsl(var(--nav-text-muted));
+  background: transparent;
+  text-decoration: none;
+}
+
+.navigation-item:hover,
+.navigation-tab:hover {
+  background: hsl(var(--nav-hover-surface));
+  color: hsl(var(--nav-hover-text));
+}
+
+.navigation-item[aria-current="page"],
+.navigation-tab[data-state="active"] {
+  background: hsl(var(--nav-active-surface));
+  color: hsl(var(--nav-active-text));
+  box-shadow: 0 1px 2px hsl(var(--nav-active-surface) / 0.18);
+  font-weight: 650;
+}
+
+.navigation-item:focus-visible,
+.navigation-tab:focus-visible {
+  outline: 2px solid hsl(var(--nav-focus-ring));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px hsl(var(--nav-surface));
+}
+
+.navigation-item:disabled,
+.navigation-tab:disabled,
+.navigation-item[aria-disabled="true"],
+.navigation-tab[aria-disabled="true"] {
+  color: hsl(var(--nav-disabled-text));
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .shipment-workspace {

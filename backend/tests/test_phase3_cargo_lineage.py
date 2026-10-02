@@ -515,6 +515,49 @@ def test_progressive_correction_is_audited_and_authority_fails_closed(cargo_line
         assert all(not rule.startswith("/api/customer") for rule in internal_cargo_rules)
 
 
+def test_actual_and_planned_updates_remain_independent_and_audited(cargo_lineage_app):
+    app, ctx = cargo_lineage_app
+    client = app.test_client()
+    owner = _headers(ctx["tokens"]["owner"])
+    created = client.post(
+        f"/api/internal/operational-shipments/{ctx['shipment']}/cargo-items",
+        headers=owner,
+        json=_base_payload(ctx, 10, ctx["customers"][0]),
+    )
+    assert created.status_code == 201
+    item = created.get_json()["item"]
+    assert item["quantities"]["planned"] == "10.000000"
+    assert item["quantities"]["actual"] is None
+
+    actual = client.patch(
+        f"/api/internal/operational-shipments/{ctx['shipment']}/cargo-items/{item['public_id']}",
+        headers=owner,
+        json={"version": item["version"], "actual_quantity": "10"},
+    )
+    assert actual.status_code == 200
+    actual_item = actual.get_json()["item"]
+    assert actual_item["quantities"]["planned"] == "10.000000"
+    assert actual_item["quantities"]["actual"] == "10.000000"
+
+    planned = client.patch(
+        f"/api/internal/operational-shipments/{ctx['shipment']}/cargo-items/{item['public_id']}",
+        headers=owner,
+        json={"version": actual_item["version"], "planned_quantity": "11"},
+    )
+    assert planned.status_code == 200
+    planned_item = planned.get_json()["item"]
+    assert planned_item["quantities"]["planned"] == "11.000000"
+    assert planned_item["quantities"]["actual"] == "10.000000"
+
+    history = client.get(
+        f"/api/internal/operational-shipments/{ctx['shipment']}/cargo-items/{item['public_id']}/history",
+        headers=owner,
+    ).get_json()["history"]
+    assert history[-2]["changed_fields"] == ["actual_quantity"]
+    assert set(history[-1]["changed_fields"]) == {"planned_quantity", "quantity"}
+    assert "actual_quantity" not in history[-1]["changed_fields"]
+
+
 def test_p3_02_openapi_matches_runtime_routes(cargo_lineage_app):
     app, _ctx = cargo_lineage_app
     document = yaml.safe_load(

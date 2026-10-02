@@ -79,6 +79,13 @@ const quantityText = (value: string | null) =>
   value === null ? "نامشخص" : formatQuantity(value);
 const unitLabel = (value: string | null | undefined) =>
   formatUnitSymbol(value, "fa-IR");
+const normalizeCargoQuantityInput = (value: string) =>
+  value
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[٬,]/g, "")
+    .replace("٫", ".");
+const validQuantity = (value: string) => /^\d+(?:\.\d+)?$/.test(value);
 const incompleteLabel: Record<string, string> = {
   HS_CODE: "HS",
   PACKAGING_TYPE: "نوع بسته‌بندی",
@@ -110,6 +117,7 @@ export default function ShipmentCargoItems({
     packaging_types: Option[];
   }>({ catalog: [], cargo_types: [], uoms: [], packaging_types: [] });
   const [error, setError] = useState("");
+  const [cargoNotice, setCargoNotice] = useState("");
   const [form, setForm] = useState({
     line_number: "1",
     catalog_item_public_id: "",
@@ -406,8 +414,15 @@ export default function ShipmentCargoItems({
   const saveCargo = async (item: ShipmentCargoItem) => {
     if (savingCargo[item.public_id]) return;
     const edit = editFor(item);
+    if (!validQuantity(edit.planned_quantity) || (edit.actual_quantity && !validQuantity(edit.actual_quantity))) {
+      setError("مقدار برنامه‌ریزی‌شده و مقدار واقعی باید عدد مثبت معتبر باشند.");
+      setCargoNotice("");
+      return;
+    }
     setSavingCargo((current) => ({ ...current, [item.public_id]: true }));
     try {
+      setError("");
+      setCargoNotice("");
       const saved = await updateShipmentCargoItem(
         shipmentPublicId,
         item.public_id,
@@ -447,6 +462,21 @@ export default function ShipmentCargoItems({
         delete next[item.public_id];
         return next;
       });
+      const actualChanged = saved.item.quantities.actual !== item.quantities.actual;
+      const plannedChanged = saved.item.quantities.planned !== item.quantities.planned;
+      if (actualChanged && saved.item.quantities.actual) {
+        setCargoNotice(
+          `مقدار واقعی کالا ثبت شد: ${formatQuantity(saved.item.quantities.actual)} ${unitLabel(saved.item.uom_symbol_snapshot)}`,
+        );
+      } else if (plannedChanged && saved.item.quantities.planned) {
+        setCargoNotice(
+          `مقدار برنامه‌ریزی‌شده کالا ثبت شد: ${formatQuantity(saved.item.quantities.planned)} ${unitLabel(saved.item.uom_symbol_snapshot)}`,
+        );
+      } else if (saved.item.version > item.version) {
+        setCargoNotice("اطلاعات تکمیلی کالا ثبت شد.");
+      } else {
+        setError("هیچ تغییر تازه‌ای ثبت نشد. مقدار واقعی یا برنامه‌ریزی‌شده مورد نظر را بررسی کنید.");
+      }
       await load();
       if (historyByCargo[item.public_id]) await showCargoHistory(item);
     } catch {
@@ -493,6 +523,11 @@ export default function ShipmentCargoItems({
               className="rounded bg-red-50 p-3 text-red-700"
             >
               {error}
+            </p>
+          )}
+          {cargoNotice && (
+            <p aria-live="polite" className="rounded bg-blue-50 p-3 text-blue-950">
+              {cargoNotice}
             </p>
           )}
           {!canManage && (
@@ -1061,33 +1096,41 @@ export default function ShipmentCargoItems({
                             })
                           }
                         />
-                        <Input
-                          disabled={closed}
-                          aria-label={`ویرایش مقدار برنامه‌ریزی‌شده ردیف ${item.line_number}`}
-                          type="number"
-                          min="0.000001"
-                          step="any"
-                          placeholder="برنامه‌ریزی‌شده"
-                          value={editFor(item).planned_quantity}
-                          onChange={(event) =>
-                            changeEdit(item, {
-                              planned_quantity: event.target.value,
-                            })
-                          }
-                        />
-                        <Input
-                          aria-label={`ویرایش مقدار واقعی ردیف ${item.line_number}`}
-                          type="number"
-                          min="0.000001"
-                          step="any"
-                          placeholder="واقعی"
-                          value={editFor(item).actual_quantity}
-                          onChange={(event) =>
-                            changeEdit(item, {
-                              actual_quantity: event.target.value,
-                            })
-                          }
-                        />
+                        <label className="grid gap-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-900">
+                          <span>مقدار برنامه‌ریزی‌شده</span>
+                          <span className="text-xs font-normal text-slate-600">برنامه عملیات؛ مقدار واقعی را تغییر نمی‌دهد.</span>
+                          <Input
+                            disabled={closed}
+                            aria-label={`ویرایش مقدار برنامه‌ریزی‌شده ردیف ${item.line_number}`}
+                            type="text"
+                            inputMode="decimal"
+                            dir="ltr"
+                            placeholder="100"
+                            value={editFor(item).planned_quantity}
+                            onChange={(event) =>
+                              changeEdit(item, {
+                                planned_quantity: normalizeCargoQuantityInput(event.target.value),
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="grid gap-1 rounded-xl border border-blue-200 bg-blue-50/60 p-3 text-sm font-semibold text-blue-950">
+                          <span>مقدار واقعی</span>
+                          <span className="text-xs font-normal text-blue-900">واقعیت حمل‌شده؛ مقدار برنامه‌ریزی‌شده را تغییر نمی‌دهد.</span>
+                          <Input
+                            aria-label={`ویرایش مقدار واقعی ردیف ${item.line_number}`}
+                            type="text"
+                            inputMode="decimal"
+                            dir="ltr"
+                            placeholder="هنوز ثبت نشده"
+                            value={editFor(item).actual_quantity}
+                            onChange={(event) =>
+                              changeEdit(item, {
+                                actual_quantity: normalizeCargoQuantityInput(event.target.value),
+                              })
+                            }
+                          />
+                        </label>
                         <Input
                           aria-label={`ویرایش دلیل تغییر کالای ردیف ${item.line_number}`}
                           placeholder={
@@ -1216,7 +1259,9 @@ export default function ShipmentCargoItems({
                           variant="outline"
                           disabled={
                             !editFor(item).cargo_owner_customer_id ||
-                            !editFor(item).planned_quantity ||
+                            !validQuantity(editFor(item).planned_quantity) ||
+                            (Boolean(editFor(item).actual_quantity) &&
+                              !validQuantity(editFor(item).actual_quantity)) ||
                             Boolean(editFor(item).gross_weight) !==
                               Boolean(
                                 editFor(item).gross_weight_uom_public_id,

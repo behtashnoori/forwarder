@@ -274,13 +274,13 @@ export default function OperationalShipmentDetail() {
           </header>
 
           <OperationsNav />
-          <nav aria-label="بخش‌های پرونده حمل" className="sticky top-2 z-20 overflow-x-auto rounded-xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
+          <nav aria-label="بخش‌های پرونده حمل" className="navigation-surface sticky top-2 z-20 overflow-x-auto rounded-xl border p-2 shadow-sm">
             <div className="flex min-w-max items-center gap-1">
               {[
                 ["summary", "خلاصه"], ["route", "مسیر و اجرا"], ["stages", "مراحل عملیاتی"], ["cargo", "کالا و تخصیص"],
                 ["documents", "اسناد"], ["tracking", "پیگیری و ETA"], ["delivery", "تحویل"],
                 ["closure", "تکمیل و بستن"], ["history", "تاریخچه"],
-              ].map(([section, label]) => <Link key={section} to={`/operations/shipments/${shipmentPublicId}/${section}`} aria-current={activeSection===section?"page":undefined} className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${activeSection===section?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-100"}`}>{label}</Link>)}
+              ].map(([section, label]) => <Link key={section} to={`/operations/shipments/${shipmentPublicId}/${section}`} aria-current={activeSection===section?"page":undefined} className="navigation-item inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium">{label}</Link>)}
             </div>
           </nav>
           {(activeSection === "summary" || legacyOverview) && data.operational_projection && <OperationalGuidance projection={data.operational_projection} locale={locale} closed={data.status === "closed"} />}

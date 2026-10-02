@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
@@ -33,6 +33,23 @@ async function token(page: Page) {
   const value = await page.evaluate(() => localStorage.getItem("expert_token"));
   expect(value).toBeTruthy();
   return value!;
+}
+
+async function expectSemanticNavigation(locator: Locator, active = false) {
+  await expect(locator).toHaveClass(/navigation-(?:item|tab)/);
+  const colors = await locator.evaluate(element => {
+    const style = getComputedStyle(element);
+    return {
+      active: element.getAttribute("aria-current") === "page" || element.getAttribute("data-state") === "active",
+      color: style.color,
+      background: style.backgroundColor,
+    };
+  });
+  expect(colors.color).not.toBe("rgba(0, 0, 0, 0)");
+  if (active) {
+    expect(colors.active).toBe(true);
+    expect(colors.background).not.toBe("rgba(0, 0, 0, 0)");
+  }
 }
 
 test("P3-14 Expert context navigation and Workspace/Tower shared truth", async ({ browser }, info) => {
@@ -82,16 +99,18 @@ test("P3-14 Expert context navigation and Workspace/Tower shared truth", async (
     sourceWatermark: workspaceMatch.freshness.source_watermark,
   });
 
-  await page.goto(`/operations/shipments/${fixture.p304_shipment}`);
-  await expect(page.getByRole("heading", { name: "خلاصه محموله", exact: true })).toBeVisible();
+  await page.goto(`/operations/shipments/${fixture.p304_shipment}/summary`);
   const navigation = page.getByRole("navigation", { name: "بخش‌های پرونده حمل" });
+  await expect(navigation).toBeVisible();
   await expect(navigation.getByRole("link", { name: "خلاصه", exact: true })).toHaveAttribute("href", `/operations/shipments/${fixture.p304_shipment}/summary`);
   await expect(navigation.getByRole("link", { name: "تکمیل و بستن", exact: true })).toHaveAttribute("href", `/operations/shipments/${fixture.p304_shipment}/closure`);
   await expect(navigation.getByRole("link", { name: "تاریخچه", exact: true })).toHaveAttribute("href", `/operations/shipments/${fixture.p304_shipment}/history`);
+  await expectSemanticNavigation(navigation.getByRole("link", { name: "خلاصه", exact: true }), true);
   await expect(page.getByText("مرحله فعلی و تازگی پرونده", { exact: true })).toBeVisible();
   await navigation.getByRole("link", { name: "مسیر و اجرا", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/operations/shipments/${fixture.p304_shipment}/route$`));
   await expect(page.getByRole("heading", { name: "مسیر و اجرای عملیاتی", exact: true })).toBeVisible();
+  await expectSemanticNavigation(navigation.getByRole("link", { name: "مسیر و اجرا", exact: true }), true);
   await navigation.getByRole("link", { name: "تاریخچه", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/operations/shipments/${fixture.p304_shipment}/history$`));
   await page.setViewportSize({ width: 390, height: 844 });
@@ -105,6 +124,9 @@ test("P3-14 Organization Admin reaches account support through normal navigation
   const context = await browser.newContext({ locale: "fa-IR" });
   const page = await context.newPage();
   await loginExpert(page, "admin");
+  const adminTabs = page.getByRole("tablist", { name: "حوزه‌های مدیریت" });
+  await expect(adminTabs).toHaveClass(/navigation-surface/);
+  await expectSemanticNavigation(adminTabs.getByRole("tab").first(), true);
   const support = page.getByRole("button", { name: "پشتیبانی حساب‌های پرتال", exact: true });
   await expect(support).toBeVisible();
   await support.click();
@@ -131,6 +153,7 @@ test("P3-14 Customer mobile projection keeps section navigation and privacy", as
   await expect(page.getByRole("heading", { name: "کالاهای من", exact: true })).toBeVisible();
   const navigation = page.getByRole("navigation", { name: "بخش‌های پرونده حمل مشتری" });
   await expect(navigation).toBeVisible();
+  await expect(navigation).toHaveClass(/navigation-surface/);
   await expect(navigation.getByRole("link", { name: "اسناد", exact: true })).toHaveAttribute("href", "#customer-shipment-documents");
   await expect(navigation.getByRole("link", { name: "تحویل", exact: true })).toHaveAttribute("href", "#customer-shipment-deliveries");
   await expect(page.getByText("این حمل به‌صورت مشترک انجام می‌شود.", { exact: true })).toBeVisible();

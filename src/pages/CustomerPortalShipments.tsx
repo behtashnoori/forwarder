@@ -93,9 +93,9 @@ export function CustomerPortalShipmentDetail() {
         {item.evidence.length ? item.evidence.map(document => <Button key={document.public_id} variant="outline" className="h-auto whitespace-normal" onClick={() => download(document.public_id, document.filename)}>مدرک تحویل · نسخه {document.version}</Button>) : <p className="text-sm text-slate-600">مدرکی برای این تحویل در دسترس شما نیست.</p>}
       </article>) : <p>تحویلی در این صفحه ثبت نشده است.</p>}<Pages label="صفحه‌بندی تحویل‌ها" value={data.deliveries} onChange={value => page("deliveries_page", value)} /></CardContent></Card>
       <Card id="customer-shipment-timeline" className="scroll-mt-24"><CardHeader><h2 className="text-2xl font-semibold leading-none tracking-tight">تاریخچه حمل</h2></CardHeader><CardContent className="space-y-3">{data.timeline.items.length ? data.timeline.items.map(report => <Report key={report.public_id} report={report} />) : <p>گزارشی در این صفحه برای شما در دسترس نیست.</p>}<Pages label="صفحه‌بندی تاریخچه" value={data.timeline} onChange={value => page("timeline_page", value)} /></CardContent></Card>
-      <nav aria-label="بخش‌های پرونده حمل مشتری" className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-md rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-lg backdrop-blur md:hidden">
-        <div className="grid grid-cols-5 gap-1 text-center text-xs font-medium text-slate-700">
-          {[["#customer-shipment-summary", "خلاصه"], ["#customer-shipment-cargo", "کالا"], ["#customer-shipment-documents", "اسناد"], ["#customer-shipment-deliveries", "تحویل"], ["#customer-shipment-timeline", "تاریخچه"]].map(([href, label]) => <a key={href} href={href} className="flex min-h-11 items-center justify-center rounded-xl px-1 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">{label}</a>)}
+      <nav aria-label="بخش‌های پرونده حمل مشتری" className="navigation-surface fixed inset-x-3 bottom-3 z-40 mx-auto max-w-md rounded-2xl border p-1.5 shadow-lg backdrop-blur md:hidden">
+        <div className="grid grid-cols-5 gap-1 text-center text-xs font-medium">
+          {[["#customer-shipment-summary", "خلاصه"], ["#customer-shipment-cargo", "کالا"], ["#customer-shipment-documents", "اسناد"], ["#customer-shipment-deliveries", "تحویل"], ["#customer-shipment-timeline", "تاریخچه"]].map(([href, label]) => <a key={href} href={href} className="navigation-item flex min-h-11 items-center justify-center rounded-xl px-1">{label}</a>)}
         </div>
       </nav>
     </>}

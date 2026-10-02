@@ -581,3 +581,19 @@ No migration, data repair, new in-transit human scenario, production action or
 release is included. The external `FINAL-HANDOFF.md` / `final-receipt.json`
 bind the post-evidence commit, canonical 0/0, refreshed runtime and final
 preservation comparison. HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS; RELEASE_READY=NO.
+
+## Actual Cargo save and navigation colors — 2026-10-02
+
+Authority: [mission record](HUMAN-WALKTHROUGH-ACTUAL-CARGO-NAV-COLORS-AUTHORITY.md).
+Entry candidate `e5ff5e9dd70b6d05cb83321086d851e790b78946`; schema remains
+`20261017_document_type_ownership` with no migration.
+
+| ID | Severity | Root cause | Correction and recurrence guard | Status |
+|---|---|---|---|---|
+| HW_ACTUAL_CARGO_SAVE_001 | HIGH | The preserved request reached the existing Cargo PATCH route with unchanged planned quantity and null actual quantity. The backend correctly treated that payload as a no-op, but the adjacent placeholder-only inputs did not make the intended fact binding clear and the UI gave no saved/no-change result. | Keep the existing planned/actual SOR and PATCH contract; render explicit planned and actual labels/explanations, normalize Persian/Arabic decimal input, validate the bound field, and show fact-specific saved or no-change feedback. Backend, component, PostgreSQL 18 and real-browser tests cover null→value, correction, planned-only, actual-only, history, reload, authorization and tenant isolation. | IMPLEMENTED — QUALIFICATION PENDING |
+| HW_NAV_COLOR_001 | MEDIUM | Equivalent navigation states were expressed independently with raw slate, blue, primary, muted and component-variant colors across global, Shipment, Customer/Request and Admin surfaces. | Shared semantic HSL roles now govern surface, inactive, hover, active, focus-visible and disabled navigation states. Deterministic WCAG AA contrast tests and desktop/narrow RTL browser evidence cover representative surfaces; status and alert colors and the font system remain unchanged. | IMPLEMENTED — QUALIFICATION PENDING |
+
+The mission protects every preserved walkthrough business fact, including the
+new ETA Shipment with unknown Actual Cargo and no basis, Execution, Allocation,
+departure or arrival. Human Product validation remains IN_PROGRESS and Release
+Ready remains NO.

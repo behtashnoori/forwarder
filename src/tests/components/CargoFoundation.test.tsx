@@ -281,7 +281,7 @@ describe("Cargo foundation UI", () => {
     );
     expect(screen.getByLabelText("ویرایش مقدار واقعی ردیف 1")).toBeDisabled();
     expect(screen.getByLabelText("ویرایش مقدار برنامه‌ریزی‌شده ردیف 1")).toHaveValue(
-      95,
+      "95",
     );
     // Even a delayed old list cannot undo the acknowledged newer version.
     await act(async () => finishRefresh({ items: [initial] }));
@@ -305,6 +305,43 @@ describe("Cargo foundation UI", () => {
         }),
       ),
     );
+    expect(screen.getByText("مقدار واقعی کالا ثبت شد: 115 عدد")).toBeInTheDocument();
+  });
+
+  it("normalizes Persian digits and persists Actual without changing Planned", async () => {
+    const plannedOnly = {
+      ...shipmentItem,
+      cargo_owner: { id: 1, label: "Customer A" },
+      quantities: { ...shipmentItem.quantities, planned: "100", actual: null },
+    };
+    const savedActual = {
+      ...plannedOnly,
+      quantities: { ...plannedOnly.quantities, actual: "100" },
+      version: 2,
+    };
+    api.listShipmentCargoItems
+      .mockResolvedValueOnce({ items: [plannedOnly] })
+      .mockResolvedValue({ items: [savedActual] });
+    api.updateShipmentCargoItem.mockResolvedValue({ item: savedActual });
+
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" />);
+    const actual = await screen.findByLabelText("ویرایش مقدار واقعی ردیف 1");
+    fireEvent.change(actual, { target: { value: "۱۰۰" } });
+    expect(actual).toHaveValue("100");
+    fireEvent.click(screen.getByRole("button", { name: "ذخیره اطلاعات کالا" }));
+
+    await waitFor(() =>
+      expect(api.updateShipmentCargoItem).toHaveBeenCalledWith(
+        "shipment-1",
+        "line-1",
+        expect.objectContaining({
+          planned_quantity: "100",
+          actual_quantity: "100",
+          version: 1,
+        }),
+      ),
+    );
+    expect(await screen.findByText("مقدار واقعی کالا ثبت شد: 100 عدد")).toBeInTheDocument();
   });
 
   it("opens shipment usage and renders quantity, status, and location", async () => {

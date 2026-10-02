@@ -83,6 +83,7 @@ describe("OperationsNav tenant customer maintenance", () => {
     renderNav("EXPERT", ["operational_shipment.read", "operational_shipment.create_direct"], "/expert/requests/request-public-id");
     await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
     expect(screen.getByRole("link", { name: "درخواست‌ها و قیمت‌ها" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "درخواست‌ها و قیمت‌ها" })).toHaveClass("navigation-item");
     expect(screen.getByRole("link", { name: /عملیات جدید/ })).not.toHaveAttribute("aria-current");
   });
 });
