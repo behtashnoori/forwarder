@@ -76,8 +76,11 @@ test("P3-10 normal Admin reference → Expert pinned basis → future version an
   await expect(expert.getByText("مسیر برای فعال‌سازی معتبر است.",{exact:true})).toBeVisible();
   const activated=expert.waitForResponse(response=>response.request().method()==="POST"&&response.url().endsWith("/activate"));
   await expert.getByRole("button",{name:"فعال‌سازی مسیر",exact:true}).click();expect((await activated).status()).toBe(200);
+  await expect(expert.getByText("برنامه مسیر فعال",{exact:true})).toBeVisible();
   const basisSummary=expert.locator("summary",{hasText:"زمان مرجع و مبنای برنامه"});
-  if(!(await basisSummary.locator("xpath=..").getAttribute("open")))await basisSummary.click();
+  const basisDetails=basisSummary.locator("xpath=..");
+  if(!(await basisDetails.getAttribute("open")))await basisSummary.click();
+  await basisDetails.getByRole("button",{name:"بررسی دوباره مراجع",exact:true}).click();
   await expert.getByRole("button",{name:"ثبت این نسخه برای برنامه",exact:true}).click();
   await expect(expert.getByRole("status")).toContainText("با موفقیت");
   await expect(expert.getByText(/قبلاً تثبیت شده است/)).toBeVisible();
