@@ -325,7 +325,7 @@ def test_exact_closure_refusal_warning_only_success_and_unified_history(operatio
         assert all(item["business_label"] in {"مرحله عملیاتی شروع شد", "مرحله عملیاتی کامل شد"} for item in stage_items)
         assert all(item["stage_label"] for item in stage_items)
         assert any(item["category"] == "DELIVERY" and item["business_label"] == "تحویل نهایی محموله ثبت شد" for item in history["items"])
-        assert any(item["category"] == "CLOSURE" and "الزامات" in item["business_label"] for item in history["items"])
+        assert any(item["category"] == "CLOSURE" and item["business_label"] == "پرونده بسته شد" for item in history["items"])
         assert CargoDelivery.query.filter_by(is_final=True).count() == 1
 
         with pytest.raises(OperationalError):
