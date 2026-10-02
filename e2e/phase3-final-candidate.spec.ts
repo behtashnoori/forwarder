@@ -232,13 +232,13 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await expect(expert.getByText(/اصفهان/).first()).toBeVisible();
     await expect(expert.getByText(/بندرعباس/).first()).toBeVisible();
     await expertContext.close();
-    const detailOrder = await page.evaluate(() => {
+    const commercialOrder = await page.evaluate(() => {
       const headings = [...document.querySelectorAll("h3")];
       const cargo = headings.find((node) => node.textContent?.includes("اقلام کالا"));
       const quote = headings.find((node) => node.textContent?.includes("پیشنهاد (قیمت)"));
-      return Boolean(cargo && quote && (cargo.compareDocumentPosition(quote) & Node.DOCUMENT_POSITION_FOLLOWING));
+      return Boolean(cargo && quote && (quote.compareDocumentPosition(cargo) & Node.DOCUMENT_POSITION_FOLLOWING));
     });
-    expect(detailOrder).toBe(true);
+    expect(commercialOrder).toBe(true);
     await expect(page.getByText("هنوز پیشنهاد رسمی ثبت نشده است.").first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("customer-request-detail.png"), fullPage: true });
 
