@@ -65,9 +65,14 @@ test("Phase 1 — Admin catalog → owning Expert file → reopen → deactivate
   row = expert.getByRole("article").filter({hasText: "cmr-phase1.pdf"});
   await expect(row).toContainText("نوع سند غیرفعال؛ فایل محفوظ است");
   await expect(expert.getByLabel("نوع سند", {exact: true}).locator(`option[value="${kind.public_id}"]`)).toHaveCount(0);
-  const download = expert.waitForResponse(r => r.url().endsWith(`/documents/${doc.public_id}/download`));
+  const download = expert.waitForEvent("download");
+  const downloadResponse = expert.waitForResponse(r => r.request().method() === "GET" && r.url().endsWith(`/documents/${doc.public_id}/download`));
   await row.getByRole("button", {name: "دریافت", exact: true}).click();
-  const downloaded = await download; expect(downloaded.status()).toBe(200); expect(await downloaded.body()).toEqual(pdf);
+  const downloaded = await download;
+  expect((await downloadResponse).status()).toBe(200);
+  expect(downloaded.suggestedFilename()).toBe("cmr-phase1.pdf");
+  expect(await downloaded.failure()).toBeNull();
+  expect(readFileSync((await downloaded.path())!)).toEqual(pdf);
   await expert.setViewportSize({width: 390, height: 844});
   await expect(row).toBeVisible();
   expect(await expert.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
