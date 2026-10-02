@@ -57,7 +57,7 @@ function expectClean(evidence: BrowserEvidence) {
 
 async function chooseSelect(page: Page, controlIndex: number, optionIndex: number) {
   await page.getByRole("combobox").nth(controlIndex).click();
-  await page.getByRole("option").nth(optionIndex).click();
+  await page.locator('[role="option"]:not([aria-disabled="true"])').nth(optionIndex).click();
 }
 
 async function chooseNamed(page: Page, label: string, option: string) {
