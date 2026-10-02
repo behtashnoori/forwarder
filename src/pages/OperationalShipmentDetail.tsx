@@ -331,8 +331,8 @@ export default function OperationalShipmentDetail() {
               </div>}
               <div className="space-y-5">
               {activeSection === "route" && data.source.type !== "direct" && <RequestedEndpointComparison requested={data.operational_projection?.identity.requested_endpoints}
-                origin={{label: displayedLegs[0]?.origin.display_name || "ثبت نشده", reference: displayedLegs[0]?.origin.canonical_reference}}
-                destination={{label: displayedLegs.at(-1)?.destination.display_name || "ثبت نشده", reference: displayedLegs.at(-1)?.destination.canonical_reference}} />}
+                origin={{label: displayedLegs[0]?.origin.display_name || "ثبت نشده", reference: displayedLegs[0]?.origin.facility?.logistics_point_public_id ? {source_type:"logistics_point",source_id:displayedLegs[0].origin.facility.logistics_point_public_id} : displayedLegs[0]?.origin.canonical_reference}}
+                destination={{label: displayedLegs.at(-1)?.destination.display_name || "ثبت نشده", reference: displayedLegs.at(-1)?.destination.facility?.logistics_point_public_id ? {source_type:"logistics_point",source_id:displayedLegs.at(-1)!.destination.facility!.logistics_point_public_id} : displayedLegs.at(-1)?.destination.canonical_reference}} />}
               <Card hidden={activeSection!=="route"}><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? "عملیات مستقیم" : "درخواست"}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ? "پیشنهاد پذیرفته‌شده مرتبط" : t("operations.notApplicable")}</p></CardContent></Card>
 
           <section hidden={activeSection!=="route"} aria-labelledby="issues-heading" className="space-y-3">

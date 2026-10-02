@@ -42,7 +42,7 @@ describe("canonical location picker", () => {
   it("walks the governed hierarchy and emits structured city and organization identities", async () => {
     const onChange = vi.fn();
     await chooseCity(onChange);
-    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "city", source_id: 20, display_label:"اصفهان" }));
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "city", source_id: 20, display_label:"اصفهان · اصفهان · ایران" }));
     await screen.findByRole("option", { name: "مکان سازمان — انبار مشتری · در انتظار بررسی" });
     fireEvent.change(screen.getByLabelText("مبدأ مکان سازمان"), { target: { value: "point-1" } });
     expect(onChange).toHaveBeenLastCalledWith({ country_id: 1, source_type: "logistics_point", source_id: "point-1", display_label:"انبار مشتری" });

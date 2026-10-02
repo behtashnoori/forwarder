@@ -50,7 +50,7 @@ def _assert_owned_database() -> None:
     if os.environ.get("APP_ENV") != "uat":
         raise RuntimeError("Quote communication E2E seed requires APP_ENV=uat")
     parsed = make_url(os.environ["DATABASE_URL"])
-    if parsed.host != "127.0.0.1" or parsed.database != "forwarder_integrated_cert_quote_communication_e2e":
+    if parsed.host != "127.0.0.1" or parsed.database not in {"forwarder_integrated_cert_quote_communication_e2e", "forwarder_integrated_cert_consolidated_findings_e2e"}:
         raise RuntimeError("Quote communication E2E seed is restricted to its owned loopback database")
 
 

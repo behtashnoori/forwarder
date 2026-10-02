@@ -29,6 +29,7 @@ test("shared canonical geography and inline Expert location → Admin review at 
   await choose(expert,"مبدأ","418862","418863","اصفهان");
   await expert.getByLabel("مقصد روش تعیین مکان").selectOption("geography");
   await choose(expert,"مقصد","131222","141681","بندرعباس");
+  await expert.locator("summary",{hasText:/بندرعباس.*مشاهده یا تغییر/}).click();
   await expect(expert.getByLabel("مقصد استان",{exact:true}).locator("option:checked")).toHaveText("استان — هرمزگان");
   await expect(expert.getByLabel("روش حمل",{exact:true}).locator("option:checked")).not.toHaveText("road");
   await expect(expert.getByLabel("زمان برنامه‌ریزی‌شده حرکت")).toHaveAttribute("placeholder","سال-ماه-روز ساعت:دقیقه (میلادی)");
@@ -40,6 +41,7 @@ test("shared canonical geography and inline Expert location → Admin review at 
   const directReview=expert.getByRole("heading",{name:/بازبینی|مرور|Review/}).locator("xpath=../..");
   await expect(directReview).toContainText("اصفهان");
   await expect(directReview).toContainText("بندرعباس");
+  await expert.locator("summary",{hasText:/اصفهان.*مشاهده یا تغییر/}).click();
   const picker=expert.getByRole("group",{name:"مبدأ",exact:true});
   await picker.getByRole("button",{name:"افزودن مکان جدید",exact:true}).click();
   await picker.getByLabel("نام مکان",{exact:true}).fill("انبار اصفهان آزمون یکپارچه");
@@ -47,6 +49,7 @@ test("shared canonical geography and inline Expert location → Admin review at 
   await picker.getByRole("button",{name:"ایجاد و استفاده فوری"}).click();const response=await created;expect(response.status()).toBe(201);
   const point=(await response.json()).item;
   expect(point.governance_state).toBe("PENDING_REVIEW");expect(point.city.geoname_id).toBe(418863);
+  await expert.locator("summary",{hasText:/انبار اصفهان آزمون یکپارچه.*مشاهده یا تغییر/}).click();
   await expect(expert.getByLabel("مبدأ مکان سازمان",{exact:true})).toHaveValue(point.public_id);
   await expert.screenshot({path:info.outputPath("direct-operation-inline-location-desktop.png"),fullPage:true});
   await login(admin,"admin");await admin.getByRole("tab",{name:"شبکه لجستیکی سازمان",exact:true}).click();

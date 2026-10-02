@@ -354,7 +354,7 @@ try {
     ) -CustomerPassword
     Invoke-BrowserJourney -Name 'P315-CORE' -DatabaseName "forwarder_workspace_phase1_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_final_candidate_e2e.py' -Specs @('e2e/phase3-final-candidate.spec.ts') -PostAudit 'scripts/uat/audit_phase3_final_candidate_e2e.py' -CustomerPassword
     Invoke-BrowserJourney -Name 'HW-GEO008' -DatabaseName "forwarder_workspace_phase1_geo008_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_country_selection_contract_e2e.py' -Specs @('e2e/country-selection-contract.spec.ts') -CustomerPassword
-    Invoke-BrowserJourney -Name 'HW-CONSOLIDATED' -DatabaseName 'forwarder_integrated_cert_quote_communication_e2e' -Seed 'scripts/uat/seed_consolidated_findings_e2e.py' -Specs @('e2e/consolidated-findings.spec.ts')
+    Invoke-BrowserJourney -Name 'HW-CONSOLIDATED' -DatabaseName 'forwarder_integrated_cert_consolidated_findings_e2e' -Seed 'scripts/uat/seed_consolidated_findings_e2e.py' -Specs @('e2e/consolidated-findings.spec.ts')
     Invoke-BrowserJourney -Name 'HW-COMMERCIAL' -DatabaseName 'forwarder_integrated_cert_quote_communication_e2e' -Seed 'scripts/uat/seed_quote_communication_e2e.py' -Specs @('e2e/quote-communication.spec.ts') -PostAudit 'scripts/uat/audit_quote_communication_e2e.py'
     Invoke-BrowserJourney -Name 'IPJ04' -DatabaseName "forwarder_integrated_cert_p3_06_documents_p313_ipj04_$($runId.Substring(8, 8))" -Seed 'scripts/uat/seed_phase3_owner_transfer_e2e.py' -Specs @('e2e/phase3-owner-transfer.spec.ts') -RestrictedOwnerRuntime -MidJourneySeed 'scripts/uat/advance_phase3_ipj04_e2e.py' -FollowUpSpecs @('e2e/phase3-ipj04-history-closure.spec.ts')
     if (-not $script:browserSelectionStarted) {
