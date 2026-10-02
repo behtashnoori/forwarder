@@ -184,6 +184,34 @@ one file with an optional note; refresh verifies persistence; Admin deactivates
 the type; Expert verifies the historical file is readable and the type is absent
 from new upload choices. No example type has been seeded into the preserved DB.
 
-Controlled integration and the preserved-runtime receipt are recorded below after
-the source/schema refresh. The refresh must compare every original row/column,
-sequence and the four named protected facts, with zero business actions.
+## Controlled integration and preservation
+
+Fresh canonical fetch confirmed the authorized entry SHA, clean working tree and
+0/0 alignment. The controlled branch fast-forwarded to qualification evidence
+`7131f23bbd780a07ad46ba90104d2ccd01c4cc24`; explicit push and fetch confirmed 0/0.
+The final documentation commit containing this preservation receipt is integrated
+and pushed by the same fast-forward process. It changes no product source.
+
+The existing walkthrough PostgreSQL and app processes were stopped when inspected;
+the manifest contained stale process IDs. Before starting the SAME PostgreSQL 18
+data directory, a cold copy of all 2,741 files was hash-verified. No initialization,
+reset or replacement database was used. A separate custom-format logical backup
+was then taken. Source fast-forwarded in the existing walkthrough source checkout,
+the sole new additive migration was explicitly applied, and the local app was
+started with the same loopback addresses and existing secrets.
+
+`DOCUMENT-MANAGEMENT-PHASE1-PRESERVATION-20261002.json` records the refresh identity,
+backup hash and outcome. All original columns/rows across 189 tables and every
+sequence matched exactly before/after. Combined original-column data digest:
+`5d5197d38c98ba60d5a68a41354956ad7a9bb4e5cb2082bb446ba4c97b433aad`.
+Only Alembic metadata and the two additive nullable links changed. The original
+CLOSED Shipment, second OPEN Shipment, approved location and Route Reference V1
+match their pre-refresh protected facts. Customer request count remains 1.
+Organization types created = 0; classified files created = 0; all walkthrough
+business actions = 0. Readiness probes returned HTTP 200 and the sole current head
+is `20261017_document_type_ownership` with no pending migration.
+
+The runtime manifest and external final receipt are aligned to the final pushed
+evidence SHA after this documentation-only commit. Final fetch/cleanliness and
+read-only preservation checks bind that alignment without another business action.
+Human Product Walkthrough remains IN_PROGRESS and Release Ready remains NO.
