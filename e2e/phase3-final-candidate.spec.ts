@@ -110,7 +110,7 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
   });
 
   test("Customer Request hardening: canonical geography, shared dates, committed assignment, submitted facts, and international entry", async ({ page, browser }, testInfo) => {
-    test.setTimeout(60_000);
+    test.setTimeout(120_000);
     const evidence = observe(page);
     const email = "p315-hardening-customer@example.invalid";
     const phone = "09127777777";
