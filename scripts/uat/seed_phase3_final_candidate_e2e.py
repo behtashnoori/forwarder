@@ -21,6 +21,7 @@ from backend.models import (
     UnitOfMeasure,
 )
 from backend.services.customer_account_lifecycle_service import issue_recovery_token
+from scripts.uat.canonical_geography_fixture import ensure_canonical_geography
 from scripts.uat.seed_operational_workspace_phase1_e2e import main as seed_workspace
 
 
@@ -44,6 +45,7 @@ def main() -> None:
     app = create_app(skip_startup=True)
 
     with app.app_context():
+        ensure_canonical_geography()
         if CargoType.query.filter_by(immutable_code="P315_HW_PARTS").one_or_none() is None:
             db.session.add(CargoType(
                 immutable_code="P315_HW_PARTS",
