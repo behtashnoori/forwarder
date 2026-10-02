@@ -32,6 +32,8 @@ def phase1(tmp_path):
             assert 180000 <= int(connection.execute(sa.text("SHOW server_version_num")).scalar_one()) < 190000
         command.upgrade(alembic_config(url), "20261016_active_route_basis")
         # Preserve every pre-existing data column, including seeded generic types.
+        # This disposable migration census must include protected rows as well;
+        # use the existing read-only certification option on these SELECTs only.
         before = {}
         with engine.connect() as connection:
             inspector = sa.inspect(connection)
@@ -39,11 +41,12 @@ def phase1(tmp_path):
                 if name == "alembic_version":
                     continue
                 table = sa.Table(name, sa.MetaData(), autoload_with=connection)
-                before[name] = (table, sorted(repr(tuple(row)) for row in connection.execute(sa.select(table))))
+                statement = sa.select(table).execution_options(include_quarantined_for_certification=True)
+                before[name] = (statement, sorted(repr(tuple(row)) for row in connection.execute(statement)))
         command.upgrade(alembic_config(url), "head")
         with engine.connect() as connection:
-            for table, records in before.values():
-                assert sorted(repr(tuple(row)) for row in connection.execute(sa.select(table))) == records
+            for statement, records in before.values():
+                assert sorted(repr(tuple(row)) for row in connection.execute(statement)) == records
         engine.dispose()
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": url,
                       "DOCUMENT_STORAGE_ROOT": str(tmp_path / "files"), "SECRET_KEY": "disposable-document-phase1"}, skip_startup=True)
