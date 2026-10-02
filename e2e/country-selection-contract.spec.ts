@@ -14,6 +14,7 @@ if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_work
 
 const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8")) as {
   portal_customer_email: string;
+  usernames: { owner: string };
 };
 
 type Country = {
@@ -138,7 +139,7 @@ test.describe.serial("HW_GEO_008 country selection contract", () => {
     const expert = await expertContext.newPage();
     await expert.goto("/");
     await expert.getByRole("button", { name: "ورود به سامانه" }).first().click();
-    await expert.getByLabel("نام کاربری").fill("workspace_phase1_peer");
+    await expert.getByLabel("نام کاربری").fill(fixture.usernames.owner);
     await expert.getByLabel("رمز عبور").fill(expertPassword!);
     await expert.getByRole("dialog").getByRole("button", { name: "ورود", exact: true }).click();
     await expect(expert).not.toHaveURL(/\/$/);
