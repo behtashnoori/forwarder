@@ -1,0 +1,131 @@
+{
+  "evidence_root": "D:\\1-webapp\\forwarder-dev\\consolidated-walkthrough-evidence",
+  "product_sha": "bc167ef1285f21df76024c265028168fcb3adfbd",
+  "qualification_candidate_sha": "d9487187efe72dad7ccb1f2ef6baa4a442ea2f3f",
+  "frontend_tree": "731e462a854cc75304436e57a43e776321bb2c4b",
+  "backend_tree": "7dca38a7f0b27f1decd28421e2ef079812eaf45d",
+  "source_equivalence": [
+    "All backend code/tests/migrations are identical to a34e3b8d PostgreSQL/focused qualification.",
+    "Full frontend518 qualification at6dd65ada differs only in OperationalShipmentDetail placement; its32 tests reran after final placement; final TypeScript/build pass.",
+    "Clean core browser32907ea1 differs only in consolidated/commercial fixture/specs, none used by those five stages; both changed journeys reran on final clean candidate."
+  ],
+  "proofs": [
+    {
+      "name": "backend",
+      "path": "backend-candidate1.log",
+      "sha256": "ad4bacc98af979518837df7afebb4fb70383cf3ef05f2635b2d39b033565e211",
+      "result": "53 PASS; backend tree byte-identical to final candidate"
+    },
+    {
+      "name": "postgresql",
+      "path": "postgres-candidate1/result.json",
+      "sha256": "97685150f3857d074f012992a0c660618fb426195eabe623bf8ba12cc1083be3",
+      "result": "8 PG contracts + migration chain + public tracking PASS"
+    },
+    {
+      "name": "postgresql-customer-location",
+      "path": "pg-location-candidate1.log",
+      "sha256": "90da254ca8edb5c6ea4c0ba9571ce64a825df551d363f54683893ddc88657b94",
+      "result": "1 PASS"
+    },
+    {
+      "name": "frontend",
+      "path": "frontend-candidate2.log",
+      "sha256": "33dd3558a264378639d740864039779d3f56a9071847f18c04074771c1750f04",
+      "result": "109 files / 518 PASS"
+    },
+    {
+      "name": "final-shipment-detail",
+      "path": "shipment-visible-final.log",
+      "sha256": "4c1538e11be85fa059fdd260d34c8f07a3221dc4467c6b0452672f3f2095c8cb",
+      "result": "32 PASS after final component placement"
+    },
+    {
+      "name": "typescript",
+      "path": "typescript-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result": "PASS"
+    },
+    {
+      "name": "lint",
+      "path": "lint-candidate2.log",
+      "sha256": "fd07664cc36ec5e009bf7dee5741afa88837a7b97fcd276fea12e05cf2f719ff",
+      "result": "0 errors /16 existing warnings"
+    },
+    {
+      "name": "build",
+      "path": "build-final.log",
+      "sha256": "973c8bc1150ffa906e6cebefe5c58ea211f67b5644c19ab2b6a5e31e16b20f92",
+      "result": "PASS"
+    },
+    {
+      "name": "structure",
+      "path": "structure-candidate2.log",
+      "sha256": "9ae031b52a4f5c386196c803ae4c316aae74487288f01314da2b294e8faa3c43",
+      "result": "PASS"
+    },
+    {
+      "name": "browser-core",
+      "path": "browser-exact-final/result.json",
+      "sha256": "c12f2fb2bcc3a215e43cc17f81910aaee99553f174aab173dd7107c1f6e2ee36",
+      "result": "5 stages /11 tests PASS on clean32907ea1"
+    },
+    {
+      "name": "browser-handoff-commercial",
+      "path": "browser-commercial-certified/result.json",
+      "sha256": "a84f535362d43bad27844aa0b23589a4dd59cc48fd5f9e67e84b6c2c8926d1a7",
+      "result": "2 stages /7 tests PASS on clean final candidate"
+    },
+    {
+      "name": "baseline-frontend-failures",
+      "path": "baseline-reproducers.log",
+      "sha256": "50487d43cedd7b9dd12a379e264ca27fea830adc04a848519a9e2c816a156d4e",
+      "result": "Failing-before evidence; not qualification"
+    },
+    {
+      "name": "baseline-backend-failure",
+      "path": "before-backend.log",
+      "sha256": "fad7e9da3a1f5d369959e7045b28ca2ef0b8ffd9ef5c0fa6198bbba2661a8a5e",
+      "result": "Missing known basis fails on original baseline"
+    },
+    {
+      "name": "restored-exact-human-state",
+      "path": "restored-eta-proof.json",
+      "sha256": "26cfd823cda41e8f74c7536832a8c0a2ec01b849c4801f70a061383c42efa513",
+      "result": "READ ONLY exact restored combination PASS"
+    },
+    {
+      "name": "backup-recovery",
+      "path": "recovery-validation/result.json",
+      "sha256": "ddb66d84cf686a14db98ef6edffc8f8e43157fba05e7ba0378be658712eef079",
+      "result": "All190 tables/schema/sequences/facts match"
+    },
+    {
+      "name": "preservation-before",
+      "path": "preserved-pre.json",
+      "sha256": "151b5b92af9a48824a63d3826af2080920d4340e7360a3e79b581b8e382bf827",
+      "result": "Full read-only baseline"
+    },
+    {
+      "name": "preservation-pre-integration",
+      "path": "preserved-pre-integration.json",
+      "sha256": "151b5b92af9a48824a63d3826af2080920d4340e7360a3e79b581b8e382bf827",
+      "result": "Unchanged before integration"
+    }
+  ],
+  "nonqualifying_attempts_retained": [
+    "browser-candidate1",
+    "browser-candidate2",
+    "browser-core-final",
+    "browser-handoff-final",
+    "browser-handoff-qualified",
+    "browser-commercial-final"
+  ],
+  "preserved_business_actions": 0,
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "human_product_walkthrough": "IN_PROGRESS",
+  "release_ready": false
+}

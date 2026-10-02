@@ -528,3 +528,56 @@ Preserved facts: all three Shipments, both Request histories, four Quotes,
 reference version1 and basis1, allocations, events, closed decision and PDF are
 captured externally in `consolidated-walkthrough-evidence`. No human business
 command is part of qualification. Human walkthrough remains IN_PROGRESS.
+
+### Consolidated qualification reconciliation — 2026-10-02
+
+Final clean qualification candidate `d9487187efe72dad7ccb1f2ef6baa4a442ea2f3f`.
+Product code ends at `bc167ef1285f21df76024c265028168fcb3adfbd`; later commits
+correct disposable fixtures and browser navigation/selectors only. Detailed
+causes, required scenario matrix, source equivalence and hashed receipts are in
+[the qualification report](HUMAN-WALKTHROUGH-CONSOLIDATED-FINDINGS-QUALIFICATION.md)
+and [evidence manifest](HUMAN-WALKTHROUGH-CONSOLIDATED-FINDINGS-EVIDENCE.json).
+
+| Finding | Final automated status | Evidence / recurrence guard |
+|---|---|---|
+| HW_ETA_BASIS_PROPAGATION_001 | RESOLVED | Exact restored human combination in a READ ONLY transaction; PG E1–E10, backend current/read immutability, CargoEta tests and P311 real browser. Current known basis/completion remain distinct from unavailable saved Cargo forecast. |
+| HW_GEO_010 | NOT_A_DEFECT_WITH_EVIDENCE | Shaoxing exists under Zhejiang; different Shanghai filter correctly excludes it. Request and third Shipment retained their distinct exact IDs. |
+| HW_HANDOFF_LOCATION_VARIANCE_001 | RESOLVED | PG exact identity persistence; real browser explicit reuse, correct-parent search, stale child clearing, deliberate variance and visible persisted comparison. Different location precision is neutral. |
+| HW_REQUEST_CUSTOMER_LINK_001 | RESOLVED | Request view/reload at desktop and narrow width distinguishes absent requester name from linked CRM Customer; commercial linking regression passes. |
+| HW_QUOTE_DATE_001 | RESOLVED | Optional date-only unit test and real calendar switch → Quote creation → reload with unchanged YYYY-MM-DD. |
+| HW_DOC_TYPE_ADMIN_001 | RESOLVED | Separate bidi-isolated English line; Admin catalog browser and screenshot inspection. |
+| HW_DOC_TYPE_EXPERT_001 | RESOLVED | Optional acronym/English retained in selector; component and document browser assertions. |
+| HW_DOC_CONTEXT_001 | RESOLVED | Current Shipment read-only binding; other contexts preserved; component/PG/P306 checks. |
+| HW_DOC_VISIBILITY_001 | RESOLVED | Explicit eligible-recipient checkboxes; INTERNAL default, exact download bytes, revocation and customer privacy verified. |
+| HW_DOC_002 / DOCUMENT_UPLOAD_HELP_COPY | RESOLVED | Bounded copy; upload does not satisfy a Request-file-version requirement or override independent readiness. |
+| HW_GEO_DATA_001 | RESOLVED | Existing Shanghai GeoNames1796236 gets the Persian presentation/search erratum; PG matches the same existing identity. No import or row rewrite. |
+| HW_REQUEST_LOCATION_SUMMARY_001 | RESOLVED | Local spacing change; actual Request view and narrow screenshot checked. |
+| HW_ROUTE_BASIS_COPY_001 | RESOLVED | Local natural-language explanation; immutable pin/version regression and real route browser pass. |
+| HW_LOCATION_SELECTION_COLLAPSE_001 | RESOLVED | Selected endpoint summary, explicit reopening, parent reset and retained identity exercised in real creation browser. |
+| HW_ROUTE_EVENT_TIME_001 | RESOLVED | Baseline failure, successor-action reset, seconds-bearing default and duplicate-submit guard; affected detail tests pass. This does not attribute the human's same-time events to a double-click. |
+
+Counts: 14 starting observations, one newly discovered defect, 15 total;
+14 RESOLVED, one NOT_A_DEFECT_WITH_EVIDENCE. Three confirmed HIGH items are
+resolved (ETA presentation, handoff treated conservatively as HIGH, occurrence
+form); zero confirmed HIGH remain. No current observation is deferred or
+unverified in the automated scope. Human Product validation remains pending.
+
+Qualification: focused backend 53 PASS; PostgreSQL selected contracts 8 PASS,
+customer-location contract 1 PASS, public tracking 1 PASS and fresh migration
+chain PASS; frontend 109 files / 518 tests PASS plus 32 affected detail tests
+after final placement; TypeScript/build/structure PASS; ESLint 0 errors with the
+existing 16 warnings. Seven browser stages / 18 tests PASS, including independent
+commercial conclusion and immutable Quote history. Final retained receipts are
+`browser-exact-final` and `browser-commercial-certified`.
+
+The browser proof caught a comparison initially placed in collapsed details;
+it is now visible in the main route view. Obsolete browser selectors/disclosure
+assumptions and incomplete synthetic Quote responses were corrected without
+changing Product behavior. Failed/interrupted attempts remain as evidence and
+are excluded from the final PASS. Earlier evidence is reused only with the
+explicit source-equivalence proof in the manifest.
+
+No migration, data repair, new in-transit human scenario, production action or
+release is included. The external `FINAL-HANDOFF.md` / `final-receipt.json`
+bind the post-evidence commit, canonical 0/0, refreshed runtime and final
+preservation comparison. HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS; RELEASE_READY=NO.
