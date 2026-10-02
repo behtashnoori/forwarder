@@ -237,11 +237,14 @@ def test_post_closure_document_append_replace_preserve_missing_and_owner_authori
         sid = shipment.public_id; original = row.assessment
     client = app.test_client(); path = f"/api/internal/operational-shipments/{sid}/documents"
     headers = {**_auth(app),"Idempotency-Key":str(uuid4())}
-    first = client.post(path, headers=headers, data={"title":"Late evidence", "file":(io.BytesIO(PDF),"late.pdf")})
+    # Phase 1 makes the already separate repair intent explicit at the API boundary.
+    refused = client.post(path, headers=headers, data={"title":"Normal upload", "file":(io.BytesIO(PDF),"normal.pdf")})
+    assert refused.status_code == 409
+    first = client.post(path, headers=headers, data={"historical_repair":"true", "title":"Late evidence", "file":(io.BytesIO(PDF),"late.pdf")})
     assert first.status_code == 201
     public_id = first.get_json()["data"]["public_id"]
     second = client.post(path, headers={**_auth(app),"Idempotency-Key":str(uuid4())},
-        data={"title":"Corrected evidence", "file":(io.BytesIO(PDF),"corrected.pdf"),"replaces_document_public_id":public_id})
+        data={"historical_repair":"true", "title":"Corrected evidence", "file":(io.BytesIO(PDF),"corrected.pdf"),"replaces_document_public_id":public_id})
     assert second.status_code == 201
     denied = client.post(path, headers={**_auth(app,"verifier"),"Idempotency-Key":str(uuid4())},
         data={"title":"Admin cannot upload", "file":(io.BytesIO(PDF),"admin.pdf")})

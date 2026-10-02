@@ -210,7 +210,7 @@ try {
     }
   }
   $schemaHead = (python -m scripts.browser_migration_contract repository-head).Trim()
-  if ($LASTEXITCODE -ne 0 -or $schemaHead -ne '20261016_active_route_basis') {
+  if ($LASTEXITCODE -ne 0 -or $schemaHead -ne '20261017_document_type_ownership') {
     throw "Unexpected migration head: $schemaHead"
   }
   foreach ($tool in @('initdb.exe', 'pg_ctl.exe', 'createdb.exe')) {
@@ -270,7 +270,9 @@ try {
     $env:CONTROL_TOWER_DISPOSABLE_POSTGRES_URL = New-OwnedDatabase 'forwarder_control_tower_build'
     $env:HUMAN_OPEN_FINDINGS_POSTGRES_URL = New-OwnedDatabase "forwarder_human_open_findings_$($runId.Substring(0, 8))"
     $env:ORG_SHIPMENT_STAGES_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_org_stages_$($runId.Substring(0, 8))"
+    $env:DOCUMENT_PHASE1_POSTGRES_URL = New-OwnedDatabase "forwarder_document_phase1_$($runId.Substring(0, 8))"
     $postgresSpecs = @(
+      'backend/tests/test_document_phase1.py',
       'backend/tests/test_human_open_findings_postgresql.py',
       'backend/tests/test_organization_shipment_stages_postgresql.py',
       'backend/tests/test_phase3_reference_catalog_postgresql.py',
@@ -334,6 +336,7 @@ try {
       Invoke-BrowserJourney -Name $journey.Name -DatabaseName $databaseName -Seed $journey.Seed -Specs @($journey.Spec) -RestrictedOwnerRuntime:([bool]$journey.Restricted)
     }
 
+    Invoke-BrowserJourney -Name 'DOC-PHASE1' -DatabaseName "forwarder_integrated_cert_p3_06_documents_phase1_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_document_context_e2e.py' -Specs @('e2e/document-phase1.spec.ts')
     Invoke-BrowserJourney -Name 'HW-GEO' -DatabaseName "forwarder_integrated_cert_p3_06_documents_hwgeo_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_cargo_delivery_e2e.py' -Specs @('e2e/human-open-findings-geography.spec.ts')
     Invoke-BrowserJourney -Name 'HW-STAGES' -DatabaseName "forwarder_integrated_cert_p3_06_documents_hwstages_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_organization_shipment_stages_e2e.py' -Specs @('e2e/organization-shipment-stages.spec.ts')
     Invoke-BrowserJourney -Name 'MT3'  -DatabaseName "forwarder_mt3_browser_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_mt3_public_tracking_e2e.py' -Specs @('e2e/mt3-public-tracking-security.spec.ts')

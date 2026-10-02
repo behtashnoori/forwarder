@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import unicodedata
+from uuid import uuid4
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -211,7 +212,7 @@ def serialize(
 
 
 def list_catalog(filters: dict[str, str]) -> list[dict[str, Any]]:
-    query = DocumentDefinition.query
+    query = DocumentDefinition.query.filter_by(organization_id=None)
     search = normalize_alias(filters.get("q", ""))
     if search:
         alias_ids = db.session.query(
@@ -291,6 +292,81 @@ def list_catalog(filters: dict[str, str]) -> list[dict[str, Any]]:
         else {}
     )
     return [serialize(row, related, countries) for row in definitions]
+
+
+def visible_to_organization(organization_id: int | None):
+    """Shared definitions plus only the authenticated organization's definitions."""
+    if organization_id is None:
+        return DocumentDefinition.organization_id.is_(None)
+    return or_(DocumentDefinition.organization_id.is_(None),
+               DocumentDefinition.organization_id == organization_id)
+
+
+def serialize_type(row: DocumentDefinition) -> dict:
+    return {"public_id": row.public_id, "code": row.code,
+            "name_fa": row.name_fa or row.title, "name_en": row.name_en,
+            "description": row.description, "is_active": row.is_active,
+            "ownership": "SYSTEM" if row.organization_id is None else "ORGANIZATION",
+            "revision": row.revision}
+
+
+def organization_types(organization_id: int, *, active_only: bool = False) -> list[dict]:
+    query = DocumentDefinition.query.filter(visible_to_organization(organization_id))
+    if active_only:
+        query = query.filter(DocumentDefinition.is_active.is_(True))
+    return [serialize_type(row) for row in query.order_by(DocumentDefinition.sort_order, DocumentDefinition.id).all()]
+
+
+def save_organization_type(organization_id: int, actor_id: int, payload: dict,
+                           idempotency_key: str, public_id: str | None = None) -> dict:
+    """Simple tenant configuration; platform lifecycle and requirement policy stay separate."""
+    from backend.services.case_document_service import FORMAT_CATALOG
+    if not isinstance(payload, dict) or set(payload) - {"name_fa", "name_en", "description", "is_active", "expected_revision"}:
+        raise CatalogError("فقط نام، توضیح و وضعیت نوع سند قابل تنظیم است")
+    if not idempotency_key or len(idempotency_key) > 100:
+        raise CatalogError("شناسه امن ثبت تغییر الزامی است")
+    request_payload = {**payload, "organization_id": organization_id, "target": public_id}
+    prior = DocumentCatalogAuditEvent.query.filter_by(idempotency_key=idempotency_key).one_or_none()
+    if prior:
+        row = DocumentDefinition.query.filter_by(public_id=prior.definition_public_id, organization_id=organization_id).one_or_none()
+        if not row or prior.request_hash != _hash(request_payload):
+            raise CatalogError("شناسه ثبت تغییر قبلاً استفاده شده است", 409)
+        return serialize_type(row)
+    row = None
+    if public_id:
+        row = DocumentDefinition.query.filter_by(public_id=public_id, organization_id=organization_id).with_for_update().one_or_none()
+        if row is None:
+            raise CatalogError("نوع سند سازمان یافت نشد", 404)
+        _require_revision(row, payload)
+    def field(name, maximum, required=False):
+        value = payload.get(name, getattr(row, name, None) if row else None)
+        if value is not None and not isinstance(value, str):
+            raise CatalogError("نام و توضیح باید متن باشند")
+        value = (value or "").strip()
+        if (required and not value) or len(value) > maximum:
+            raise CatalogError("نام فارسی الزامی است و طول نام یا توضیح باید در محدوده مجاز باشد")
+        return value or None
+    name_fa, name_en, description = field("name_fa", 200, True), field("name_en", 200), field("description", 1000)
+    active = payload.get("is_active", row.is_active if row else True)
+    if not isinstance(active, bool):
+        raise CatalogError("وضعیت فعال باید معتبر باشد")
+    previous_revision, previous_lifecycle = (row.revision, row.catalog_lifecycle_status) if row else (0, "DRAFT")
+    if row is None:
+        row = DocumentDefinition(organization_id=organization_id, code=f"org_{uuid4().hex}",
+            allowed_formats=json.dumps(sorted(FORMAT_CATALOG)), max_file_size_bytes=25 * 1024 * 1024,
+            max_active_file_count=100, is_required=False, applicability_scope="all",
+            catalog_lifecycle_status="DRAFT", created_by=actor_id, revision=1)
+        db.session.add(row)
+    else:
+        row.revision += 1
+    row.name_fa, row.title, row.name_en, row.description = name_fa, name_fa, name_en, description
+    row.is_active, row.updated_by = active, actor_id
+    db.session.flush()
+    _audit(row, actor_id, "ORGANIZATION_TYPE_UPDATED" if public_id else "ORGANIZATION_TYPE_CREATED",
+           previous_revision=previous_revision, previous_lifecycle=previous_lifecycle,
+           payload=request_payload, idempotency_key=idempotency_key)
+    db.session.commit()
+    return serialize_type(row)
 
 
 def _replace_simple(

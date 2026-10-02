@@ -1655,6 +1655,13 @@ export const setDocumentDefinitionActive = (id: number, is_active: boolean) =>
     { method: "POST", body: JSON.stringify({ is_active }) },
   );
 export type OrganizationDocumentRequirementLevel = "REQUIRED" | "OPTIONAL" | "CONDITIONAL" | "DISABLED";
+export interface OrganizationDocumentType {
+  public_id: string; code: string; name_fa: string; name_en: string | null;
+  description: string | null; is_active: boolean; ownership: "SYSTEM" | "ORGANIZATION"; revision: number;
+}
+export const fetchOrganizationDocumentTypes = () => request<{items: OrganizationDocumentType[]}>("/api/admin/organization-document-types");
+export const saveOrganizationDocumentType = (payload: {name_fa?: string; name_en?: string; description?: string; is_active?: boolean; expected_revision?: number}, key: string, publicId?: string) =>
+  request<OrganizationDocumentType>(`/api/admin/organization-document-types${publicId ? `/${encodeURIComponent(publicId)}` : ""}`, {method: publicId ? "PATCH" : "POST", headers: {"Idempotency-Key": key}, body: JSON.stringify(payload)});
 export interface OrganizationDocumentPolicyItem {
   document_definition_public_id: string;
   code: string;
@@ -1752,10 +1759,10 @@ export interface OperationalLocationRef {
   source_id: number | string;
 }
 export interface ShipmentDocumentContext { public_id:string; type:"SHIPMENT"|"CARGO"|"ROUTE_LEG"|"EXECUTION_UNIT"|"DELIVERY"; target_public_id:string|null; visibility:"INTERNAL"|"CARGO_OWNER"|"EXPLICIT_SHARED"; version:number; audiences:string[]; }
-export interface ShipmentDocument { public_id:string; business_document_type:string; filename:string; version:number; recorded_at:string; actor?:string|null; owner:"REQUEST"|"SHIPMENT"; lifecycle_state:"active"|"superseded"|"deleted"; description?:string|null; references:Array<{public_id:string;type:string;display_value:string;lifecycle_status:string}>; requirements:Array<{public_id:string;title:string;association_state:string}>; context?:ShipmentDocumentContext|null; }
+export interface ShipmentDocument { public_id:string; business_document_type:string; document_definition_public_id?:string|null; document_type_active?:boolean|null; filename:string; version:number; recorded_at:string; actor?:string|null; owner:"REQUEST"|"SHIPMENT"; lifecycle_state:"active"|"superseded"|"deleted"; description?:string|null; references:Array<{public_id:string;type:string;display_value:string;lifecycle_status:string}>; requirements:Array<{public_id:string;title:string;association_state:string}>; context?:ShipmentDocumentContext|null; }
 export interface DocumentContextOption { id:string; label:string; }
 export interface DocumentContextOptions { shipment:DocumentContextOption[]; cargo:DocumentContextOption[]; route_leg:DocumentContextOption[]; execution_unit:DocumentContextOption[]; delivery?:DocumentContextOption[]; audience:DocumentContextOption[]; }
-export const fetchShipmentDocuments=(shipmentId:string)=>request<{data:ShipmentDocument[];can_manage_documents:boolean}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents`);
+export const fetchShipmentDocuments=(shipmentId:string)=>request<{data:ShipmentDocument[];can_manage_documents:boolean;document_types:OrganizationDocumentType[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents`);
 export const fetchDocumentContextOptions=(shipmentId:string)=>request<{data:DocumentContextOptions}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/document-context-options`);
 export const uploadShipmentDocument=(shipmentId:string,form:FormData,idempotencyKey:string)=>request<{data:ShipmentDocument}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents`,{method:"POST",headers:{"Idempotency-Key":idempotencyKey},body:form});
 export const changeShipmentDocumentContext=(shipmentId:string,documentId:string,payload:{expected_version:number;context_type?:ShipmentDocumentContext["type"];context_target_public_id?:string;visibility?:ShipmentDocumentContext["visibility"];audience_public_ids?:string[];reason?:string})=>request<{data:ShipmentDocumentContext;version:number}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents/${encodeURIComponent(documentId)}/context`,{method:"PATCH",body:JSON.stringify(payload)});

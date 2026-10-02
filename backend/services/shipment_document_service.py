@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from backend.extensions import db
 from backend.external_reference_models import OperationalShipmentExternalReference
 from backend.mdpm_models import ArtifactAssociation, OperationalDocumentRequirement
-from backend.models import CaseDocumentFile, CaseDocumentRequirement, ExpertUser
+from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentDefinition, ExpertUser
 from backend.operational_models import OperationalAudit, OperationalIdempotency, OperationalShipment
 from backend.services.case_document_service import DocumentError, FORMAT_CATALOG, _safe_original, detect_format
 from backend.services.document_storage_service import PrivateDocumentStorage
@@ -62,9 +62,12 @@ def documents(shipment: OperationalShipment) -> list[dict]:
     for row in rows:
         actor = db.session.get(ExpertUser, row.uploaded_by) if row.uploaded_by else None
         legacy_requirement = db.session.get(CaseDocumentRequirement, row.case_requirement_id) if row.case_requirement_id else None
+        definition = db.session.get(DocumentDefinition, row.document_definition_id) if row.document_definition_id else None
         result.append({
             "public_id": row.public_id,
-            "business_document_type": legacy_requirement.title if legacy_requirement else row.custom_title or "سند حمل",
+            "business_document_type": (definition.name_fa or definition.title) if definition else legacy_requirement.title if legacy_requirement else row.custom_title or "سند حمل",
+            "document_definition_public_id": definition.public_id if definition else None,
+            "document_type_active": definition.is_active if definition else None,
             "filename": row.original_filename, "version": row.version_number,
             "recorded_at": row.uploaded_at.isoformat(),
             "actor": (actor.full_name or actor.username) if actor else None,
@@ -85,7 +88,8 @@ def _actor_context(actor: dict[str, Any] | int) -> tuple[dict[str, Any], int]:
 
 def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: FileStorage, title: str, description: str | None, key: str, replacement: CaseDocumentFile | None = None,
            *, context_type: str | None = None, target_public_id: str | None = None,
-           visibility: str = "INTERNAL", audience_public_ids: list[str] | None = None) -> CaseDocumentFile:
+           visibility: str = "INTERNAL", audience_public_ids: list[str] | None = None,
+           definition_public_id: str | None = None, historical_repair: bool = False) -> CaseDocumentFile:
     actor_context, actor_id = _actor_context(actor)
     shipment = db.session.scalar(select(OperationalShipment).where(
         OperationalShipment.id == shipment.id
@@ -95,6 +99,19 @@ def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: Fil
             "شما مجاز به مدیریت اسناد این محموله نیستید", 403,
             "DOCUMENT_MUTATION_FORBIDDEN",
         )
+    if shipment.lifecycle_status == "closed" and not historical_repair:
+        raise DocumentError("پرونده بسته فقط از مسیر صریح اصلاح سوابق اسناد قابل تکمیل است", 409, "CLOSED_DOCUMENT_READONLY")
+    from backend.services.document_catalog_service import visible_to_organization
+    definition = None
+    if definition_public_id:
+        definition = db.session.scalar(select(DocumentDefinition).where(
+            DocumentDefinition.public_id == definition_public_id,
+            visible_to_organization(shipment.organization_id),
+            DocumentDefinition.is_active.is_(True),
+        ).with_for_update())
+        if definition is None:
+            raise DocumentError("نوع سند فعال در دسترس نیست", 404, "DOCUMENT_TYPE_UNAVAILABLE")
+        title = definition.name_fa or definition.title
     title = str(title or "").strip()
     if not title:
         raise DocumentError("نوع یا عنوان تجاری سند الزامی است")
@@ -120,13 +137,18 @@ def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: Fil
             target_public_id = old_context["target_public_id"]
     context_type = context_type or "SHIPMENT"
     prepared = contexts.prepare(shipment, context_type, target_public_id, visibility, audience_public_ids)
-    policy_fingerprint = json.dumps({
+    policy = {
         "type": prepared["type"], "target": prepared["target_public_id"],
         "visibility": prepared["visibility"],
         "audiences": sorted(row.public_id for row in prepared["audiences"]),
         "replaces": replacement.public_id if replacement is not None else None,
-    }, sort_keys=True)
-    request_hash = hashlib.sha256((title + "\0" + (description or "") + "\0" + policy_fingerprint + "\0").encode() + data).hexdigest()
+    }
+    # Keep pre-Phase-1 free-title retry hashes byte-compatible. Catalog retries
+    # bind to identity rather than a display name an Admin may subsequently edit.
+    if definition_public_id:
+        policy["document_definition_public_id"] = definition_public_id
+    policy_fingerprint = json.dumps(policy, sort_keys=True)
+    request_hash = hashlib.sha256(((definition_public_id or title) + "\0" + (description or "") + "\0" + policy_fingerprint + "\0").encode() + data).hexdigest()
     replay = db.session.scalar(select(OperationalIdempotency).where(
         OperationalIdempotency.organization_id == shipment.organization_id,
         OperationalIdempotency.operation == "shipment_document.upload",
@@ -158,6 +180,7 @@ def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: Fil
         storage_key, size, digest = storage.write(f"shipment-{shipment.id}", extension, io.BytesIO(data), 25 * 1024 * 1024)
         version = locked_replacement.version_number + 1 if locked_replacement is not None else 1
         row = CaseDocumentFile(owner_type="SHIPMENT", operational_shipment_id=shipment.id,
+            document_definition_id=definition.id if definition else None,
             shipment_request_id=shipment.shipment_request_id, operational_organization_id=shipment.organization_id,
             is_miscellaneous=True, custom_title=title, description=str(description or "").strip() or None,
             original_filename=original[:255], safe_download_filename=original[:255], storage_key=storage_key,
@@ -173,6 +196,8 @@ def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: Fil
         db.session.add(OperationalAudit(organization_id=shipment.organization_id, actor_user_id=actor_id,
             action="shipment_document.uploaded", entity_type="CaseDocumentFile", entity_id=row.id,
             metadata_json={"shipment_id": shipment.id, "owner": "SHIPMENT", "version": version,
+                           "document_definition_public_id": definition.public_id if definition else None,
+                           "historical_repair": historical_repair,
                            "supersedes_document_public_id": locked_replacement.public_id if locked_replacement else None}))
         db.session.commit()
         return row

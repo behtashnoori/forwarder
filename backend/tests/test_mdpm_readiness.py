@@ -28,7 +28,10 @@ pytest_plugins = ("backend.tests.test_operational_execution_190",)
 
 
 def _seed(app, *, level="REQUIRED", assessment="APPROVED"):
-    membership = db.session.get(OperationalMembership, 1)
+    # Readiness administration is an explicit governed capability, not intrinsic
+    # owning-Expert authority. The separate negative test retains the Expert.
+    administrator = db.session.get(ExpertUser, app.config["ctx"]["verifier"])
+    membership = OperationalMembership.query.filter_by(user_id=administrator.id).one()
     membership.permissions = list(membership.permissions) + [
         "document_readiness.read",
         "document_readiness.manage",
@@ -66,7 +69,7 @@ def _seed(app, *, level="REQUIRED", assessment="APPROVED"):
         shipment.public_id, {"expected_shipment_version": 1}, actor(app)
     )
     requirements, _ = docs.materialize(
-        shipment.public_id, {"expected_shipment_version": 2}, actor(app)
+        shipment.public_id, {"expected_shipment_version": 2}, actor(app, "verifier")
     )
     return shipment, milestones[0], requirements[0], definition
 
@@ -124,7 +127,7 @@ def test_missing_and_unapproved_block_then_approval_allows(execution_app):
                 "artifact_public_id": artifact.public_id,
                 "expected_requirement_version": 1,
             },
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         assert (
             docs.transition_readiness(shipment, milestone, "READY")[
@@ -136,7 +139,7 @@ def test_missing_and_unapproved_block_then_approval_allows(execution_app):
             shipment.public_id,
             requirement.public_id,
             {"decision": "APPROVED"},
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         assert docs.transition_readiness(shipment, milestone, "READY")["allowed"]
 
@@ -175,7 +178,7 @@ def test_verification_conditional_replacement_and_single_use_override(execution_
                 "reason": "Applies",
                 "expected_requirement_version": 1,
             },
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         artifact = _artifact(shipment, definition)
         docs.associate(
@@ -185,13 +188,13 @@ def test_verification_conditional_replacement_and_single_use_override(execution_
                 "artifact_public_id": artifact.public_id,
                 "expected_requirement_version": 2,
             },
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         docs.assess(
             shipment.public_id,
             requirement.public_id,
             {"decision": "APPROVED"},
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         assert (
             docs.transition_readiness(shipment, milestone, "READY")[
@@ -208,7 +211,7 @@ def test_verification_conditional_replacement_and_single_use_override(execution_
                 "authority": "Duty manager",
                 "reason": "Urgent release",
             },
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         execution.transition(
             shipment.public_id,
@@ -234,7 +237,7 @@ def test_eligible_projection_status_and_remove_are_exact_versioned(execution_app
         shipment, _, requirement, definition = _seed(execution_app)
         artifact = _artifact(shipment, definition)
         eligible = docs.list_eligible_artifacts(
-            shipment.public_id, requirement.public_id, actor(execution_app)
+            shipment.public_id, requirement.public_id, actor(execution_app, "verifier")
         )
         assert eligible == [
             {
@@ -250,7 +253,7 @@ def test_eligible_projection_status_and_remove_are_exact_versioned(execution_app
                 "artifact_public_id": artifact.public_id,
                 "expected_requirement_version": 1,
             },
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         assert associated["readiness_status"] == "PENDING_REVIEW"
         assert associated["artifact"]["version"] == 1
@@ -258,7 +261,7 @@ def test_eligible_projection_status_and_remove_are_exact_versioned(execution_app
             shipment.public_id,
             requirement.public_id,
             {"expected_requirement_version": 2},
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         assert removed["artifact"] is None
         assert removed["readiness_status"] == "MISSING"
@@ -271,11 +274,11 @@ def test_append_and_unassociated_replace_do_not_change_readiness_but_associated_
         docs.associate(
             shipment.public_id, requirement.public_id,
             {"artifact_public_id": associated.public_id, "expected_requirement_version": 1},
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         docs.assess(
             shipment.public_id, requirement.public_id,
-            {"decision": "APPROVED"}, actor(execution_app),
+            {"decision": "APPROVED"}, actor(execution_app, "verifier"),
         )
         assert docs.transition_readiness(shipment, milestone, "READY")["allowed"]
 
@@ -320,7 +323,7 @@ def test_file_without_proven_tenant_is_not_eligible(execution_app):
         db.session.commit()
         assert (
             docs.list_eligible_artifacts(
-                shipment.public_id, requirement.public_id, actor(execution_app)
+                shipment.public_id, requirement.public_id, actor(execution_app, "verifier")
             )
             == []
         )
@@ -332,7 +335,7 @@ def test_file_without_proven_tenant_is_not_eligible(execution_app):
                     "artifact_public_id": artifact.public_id,
                     "expected_requirement_version": 1,
                 },
-                actor(execution_app),
+                actor(execution_app, "verifier"),
             )
         except Exception as exc:
             assert getattr(exc, "code", None) == "ARTIFACT_NOT_ELIGIBLE"
@@ -371,7 +374,7 @@ def test_same_request_file_can_satisfy_independent_shipment_requirements(executi
         second_requirements, _ = docs.materialize(
             second.public_id,
             {"expected_shipment_version": 1},
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         first_projection = docs.associate(
             first.public_id,
@@ -380,7 +383,7 @@ def test_same_request_file_can_satisfy_independent_shipment_requirements(executi
                 "artifact_public_id": artifact.public_id,
                 "expected_requirement_version": 1,
             },
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         second_projection = docs.associate(
             second.public_id,
@@ -389,7 +392,7 @@ def test_same_request_file_can_satisfy_independent_shipment_requirements(executi
                 "artifact_public_id": artifact.public_id,
                 "expected_requirement_version": 1,
             },
-            actor(execution_app),
+            actor(execution_app, "verifier"),
         )
         assert first_projection["artifact"]["artifact_public_id"] == artifact.public_id
         assert second_projection["artifact"]["artifact_public_id"] == artifact.public_id

@@ -16,6 +16,7 @@ import {
   type DocumentContextOptions,
   type ShipmentDocumentContext,
   type ShipmentDocument,
+  type OrganizationDocumentType,
 } from "@/lib/api";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
@@ -256,11 +257,15 @@ function ContextEditor({
 export default function ShipmentDocuments({
   shipmentPublicId,
   readOnly = false,
+  historicalRepair = false,
 }: {
   shipmentPublicId: string;
   readOnly?: boolean;
+  historicalRepair?: boolean;
 }) {
   const [rows, setRows] = useState<ShipmentDocument[]>([]);
+  const [documentTypes, setDocumentTypes] = useState<OrganizationDocumentType[]>([]);
+  const [definitionId, setDefinitionId] = useState("");
   const [canManage, setCanManage] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [options, setOptions] = useState<DocumentContextOptions | null>(null);
@@ -283,6 +288,8 @@ export default function ShipmentDocuments({
     try {
       const payload = await fetchShipmentDocuments(shipmentPublicId);
       setRows(payload.data);
+      setDocumentTypes(payload.document_types || []);
+      setDefinitionId(current => (payload.document_types || []).some(item => item.public_id === current) ? current : "");
       setCanManage(payload.can_manage_documents);
       if (payload.can_manage_documents)
         setOptions((await fetchDocumentContextOptions(shipmentPublicId)).data);
@@ -300,7 +307,7 @@ export default function ShipmentDocuments({
   }, [load]);
 
   const upload = async () => {
-    if (readOnly || !files.length || !title.trim()) return;
+    if (readOnly || !files.length || (!definitionId && !title.trim())) return;
     try {
       setBusy(true);
       setError("");
@@ -310,6 +317,8 @@ export default function ShipmentDocuments({
         const form = new FormData();
         form.append("file", file);
         form.append("title", title.trim());
+        if (definitionId) form.append("document_definition_public_id", definitionId);
+        if (historicalRepair) form.append("historical_repair", "true");
         if (description.trim()) form.append("description", description.trim());
         form.append("context_type", contextType);
         form.append(
@@ -342,6 +351,7 @@ export default function ShipmentDocuments({
       setFiles(failed);
       if (!failed.length) {
         setTitle("");
+        setDefinitionId("");
         setDescription("");
         setReplaceId(null);
       }
@@ -414,12 +424,19 @@ export default function ShipmentDocuments({
                 </Button>
               </p>
             )}
-            <Input
+            <label className="text-sm">نوع سند
+              <select aria-label="نوع سند" className="mt-1 min-h-10 w-full rounded border px-2" value={definitionId}
+                onChange={event => { setDefinitionId(event.target.value); setTitle(""); }}>
+                <option value="">انتخاب نوع سند</option>
+                {documentTypes.filter(item => item.is_active).map(item => <option key={item.public_id} value={item.public_id}>{item.name_fa}</option>)}
+              </select>
+            </label>
+            {!definitionId && <Input
               aria-label="نوع یا دسته تجاری سند"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="نوع یا دسته تجاری سند"
-            />
+              placeholder="یا عنوان دلخواه (روش قبلی ثبت سند)"
+            />}
             <Input
               aria-label="توضیح سند"
               value={description}
@@ -540,7 +557,7 @@ export default function ShipmentDocuments({
                 !options ||
                 !files.length ||
                 (Boolean(replaceId) && files.length !== 1) ||
-                !title.trim() ||
+                (!definitionId && !title.trim()) ||
                 !target ||
                 (visibility === "EXPLICIT_SHARED" && !audiences.length)
               }
@@ -566,15 +583,16 @@ export default function ShipmentDocuments({
             هنوز سندی برای این محموله ثبت نشده است.
           </p>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y rounded border">
             {rows.map((row) => (
               <article
                 key={row.public_id}
-                className="min-w-0 rounded border p-3"
+                className="min-w-0 p-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <strong>{row.business_document_type}</strong>
+                    {row.document_type_active === false && <span className="ms-2 text-xs text-slate-500">نوع سند غیرفعال؛ فایل محفوظ است</span>}
                     <p dir="ltr" className="break-all text-sm">
                       {row.filename}
                     </p>
@@ -644,6 +662,7 @@ export default function ShipmentDocuments({
                           onClick={() => {
                             setReplaceId(row.public_id);
                             setTitle(row.business_document_type);
+                            setDefinitionId(documentTypes.some(item => item.public_id === row.document_definition_public_id && item.is_active) ? row.document_definition_public_id || "" : "");
                             setContextType(row.context?.type || "SHIPMENT");
                             setTarget(
                               row.context?.target_public_id || shipmentPublicId,

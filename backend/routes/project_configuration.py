@@ -88,6 +88,9 @@ def reference_selector():
         documents = request.path.endswith("document-definitions")
         model = DocumentDefinition if documents else ServiceType
         query = db.session.query(model).filter(model.is_active.is_(True))
+        if documents:
+            from backend.services.document_catalog_service import visible_to_organization
+            query = query.filter(visible_to_organization(svc.organization_for_user(user()["id"])))
         if q:
             columns = (model.code, model.title) if documents else (model.immutable_code, model.fa_name, model.en_name)
             query = query.filter(or_(*(column.ilike(f"%{q}%") for column in columns)))

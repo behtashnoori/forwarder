@@ -231,8 +231,10 @@ def create_service(owner, p, user):
 
 
 def create_document(owner, p, user):
+    from backend.services.document_catalog_service import visible_to_organization
     ref = db.session.scalar(
         select(DocumentDefinition).where(
+            visible_to_organization(owner.organization_id),
             DocumentDefinition.public_id == p.get("document_definition_public_id"),
             DocumentDefinition.is_active.is_(True),
         )

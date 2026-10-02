@@ -112,4 +112,19 @@ describe("contextual Shipment documents", () => {
     expect(api.upload).not.toHaveBeenCalled();
   });
 
+  it("sends the selected catalog identity and preserves explicit historical repair intent", async () => {
+    api.list.mockResolvedValue({data: [{...document, document_type_active: false}], can_manage_documents: true,
+      document_types: [{public_id: "type-1", name_fa: "راهنامه CMR", is_active: true}, {public_id: "inactive", name_fa: "نوع غیرفعال", is_active: false}]});
+    render(<ShipmentDocuments shipmentPublicId="shipment-1" historicalRepair />);
+    await screen.findByLabelText("نوع سند");
+    expect(screen.queryByRole("option", {name: "نوع غیرفعال"})).not.toBeInTheDocument();
+    expect(screen.getByText("نوع سند غیرفعال؛ فایل محفوظ است")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("نوع سند"), {target: {value: "type-1"}});
+    fireEvent.change(screen.getByLabelText("انتخاب فایل سند"), {target: {files: [new File(["%PDF-1.4"], "cmr.pdf", {type: "application/pdf"})]}});
+    fireEvent.click(screen.getByRole("button", {name: "بارگذاری سند"}));
+    await waitFor(() => expect(api.upload).toHaveBeenCalledTimes(1));
+    expect(api.upload.mock.calls[0][1].get("document_definition_public_id")).toBe("type-1");
+    expect(api.upload.mock.calls[0][1].get("historical_repair")).toBe("true");
+  });
+
 });

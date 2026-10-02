@@ -1,0 +1,80 @@
+import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { openShipmentSection } from "./helpers/shipment-workspace";
+
+const password = process.env.FORWARDER_E2E_PASSWORD!;
+const fixture = JSON.parse(readFileSync(process.env.FORWARDER_E2E_FIXTURE_PATH!, "utf8"));
+const pdf = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF");
+test.setTimeout(180_000);
+async function login(page: Page, persona: string) {
+  await page.goto("/");
+  await page.getByRole("button", {name: "ورود به سامانه"}).first().click();
+  await page.getByLabel("نام کاربری").fill(`shared_transport_e2e_${persona}`);
+  await page.getByLabel("رمز عبور").fill(password);
+  await page.getByRole("dialog").getByRole("button", {name: "ورود", exact: true}).click();
+  await expect(page).not.toHaveURL(/\/$/);
+}
+async function documents(page: Page) {
+  await page.getByRole("link", {name: "پرونده‌های عملیاتی حمل", exact: true}).click();
+  await page.getByRole("link", {name: /^مشاهده محموله عملیاتی /}).and(page.locator(`a[href="/operations/shipments/${fixture.p304_shipment}"]`)).click();
+  await openShipmentSection(page, "documents", fixture.p304_shipment);
+}
+
+test("Phase 1 — Admin catalog → owning Expert file → reopen → deactivate → historical download", async ({browser}, info) => {
+  const admin = await browser.newPage({locale: "fa-IR", timezoneId: "Asia/Tehran", viewport: {width: 1440, height: 1000}});
+  const expert = await browser.newPage({locale: "fa-IR", timezoneId: "UTC", viewport: {width: 1440, height: 1000}});
+  const foreign = await browser.newPage({locale: "fa-IR"});
+  const errors: string[] = [];
+  for (const page of [admin, expert, foreign]) page.on("pageerror", error => errors.push(error.message));
+  await login(admin, "admin");
+  await admin.getByRole("tab", {name: "الزامات مستندات", exact: true}).click();
+  const catalog = admin.getByRole("region", {name: "انواع اسناد سازمان"});
+  await expect(catalog.getByRole("heading", {name: "انواع اسناد سازمان"})).toBeVisible();
+  await catalog.getByLabel("نام فارسی", {exact: true}).fill("راهنامه CMR");
+  await catalog.getByLabel("نام انگلیسی (اختیاری)").fill("CMR");
+  const createdResponse = admin.waitForResponse(r => r.request().method() === "POST" && r.url().endsWith("/organization-document-types"));
+  await catalog.getByRole("button", {name: "افزودن نوع سند"}).click();
+  const created = await createdResponse; expect(created.status()).toBe(201);
+  const kind = await created.json();
+  await expect(catalog.getByText("راهنامه CMR", {exact: true})).toBeVisible();
+  await admin.screenshot({path: info.outputPath("admin-catalog.png"), fullPage: true});
+  await login(expert, "restricted"); await documents(expert);
+  await expect(expert.getByLabel("نوع سند", {exact: true}).locator(`option[value="${kind.public_id}"]`)).toHaveText("راهنامه CMR");
+  await expert.getByLabel("نوع سند", {exact: true}).selectOption(kind.public_id);
+  await expert.getByLabel("توضیح سند", {exact: true}).fill("یادداشت آزمایشی فاز یک");
+  await expert.getByLabel("انتخاب فایل سند", {exact: true}).setInputFiles({name: "cmr-phase1.pdf", mimeType: "application/pdf", buffer: pdf});
+  const uploadResponse = expert.waitForResponse(r => r.request().method() === "POST" && r.url().endsWith(`/operational-shipments/${fixture.p304_shipment}/documents`));
+  await expert.getByRole("button", {name: "بارگذاری سند", exact: true}).click();
+  const uploaded = await uploadResponse; expect(uploaded.status()).toBe(201);
+  const doc = (await uploaded.json()).data;
+  expect(doc.document_definition_public_id).toBe(kind.public_id);
+  expect(doc.actor).toBeTruthy(); expect(doc.recorded_at).toBeTruthy();
+  let row = expert.getByRole("article").filter({hasText: "cmr-phase1.pdf"});
+  await expect(row).toContainText("راهنامه CMR");
+  await expect(row).toContainText("یادداشت آزمایشی فاز یک");
+  await expect(row).toContainText(`ثبت‌کننده: ${doc.actor}`);
+  await expect(row.locator("time")).toHaveAttribute("dateTime", doc.recorded_at);
+  await documents(expert); await expect(row).toBeVisible();
+  await expert.reload(); await openShipmentSection(expert, "documents", fixture.p304_shipment);
+  await expect(row).toBeVisible();
+  await expert.screenshot({path: info.outputPath("expert-document-desktop.png"), fullPage: true});
+  const ownRow = catalog.getByRole("listitem").filter({hasText: "راهنامه CMR"});
+  await ownRow.getByRole("button", {name: "غیرفعال کردن"}).click();
+  await expect(ownRow.getByText("غیرفعال", {exact: true})).toBeVisible();
+  await expert.reload(); await openShipmentSection(expert, "documents", fixture.p304_shipment);
+  row = expert.getByRole("article").filter({hasText: "cmr-phase1.pdf"});
+  await expect(row).toContainText("نوع سند غیرفعال؛ فایل محفوظ است");
+  await expect(expert.getByLabel("نوع سند", {exact: true}).locator(`option[value="${kind.public_id}"]`)).toHaveCount(0);
+  const download = expert.waitForResponse(r => r.url().endsWith(`/documents/${doc.public_id}/download`));
+  await row.getByRole("button", {name: "دریافت", exact: true}).click();
+  const downloaded = await download; expect(downloaded.status()).toBe(200); expect(await downloaded.body()).toEqual(pdf);
+  await expert.setViewportSize({width: 390, height: 844});
+  await expect(row).toBeVisible();
+  expect(await expert.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expert.screenshot({path: info.outputPath("expert-document-mobile.png"), fullPage: true});
+  await login(foreign, "foreign");
+  await foreign.getByRole("tab", {name: "الزامات مستندات", exact: true}).click();
+  await expect(foreign.getByRole("region", {name: "انواع اسناد سازمان"}).getByText("راهنامه CMR", {exact: true})).toHaveCount(0);
+  expect(errors).toEqual([]);
+  await Promise.all([admin.context().close(), expert.context().close(), foreign.context().close()]);
+});

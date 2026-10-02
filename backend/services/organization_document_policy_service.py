@@ -4,6 +4,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from backend.extensions import db
 from backend.models import DocumentDefinition, OrganizationDocumentRequirement
+from backend.services.document_catalog_service import visible_to_organization
 
 LEVELS = frozenset({"REQUIRED", "OPTIONAL", "CONDITIONAL", "DISABLED"})
 
@@ -27,7 +28,7 @@ def serialize(policy, definition: DocumentDefinition) -> dict:
 
 
 def list_policy(organization_id: int) -> dict:
-    definitions = db.session.scalars(select(DocumentDefinition).order_by(DocumentDefinition.sort_order, DocumentDefinition.id)).all()
+    definitions = db.session.scalars(select(DocumentDefinition).where(visible_to_organization(organization_id)).order_by(DocumentDefinition.sort_order, DocumentDefinition.id)).all()
     policies = db.session.scalars(select(OrganizationDocumentRequirement).where(
         OrganizationDocumentRequirement.operational_organization_id == organization_id)).all()
     by_definition = {row.document_definition_id: row for row in policies}
@@ -39,6 +40,7 @@ def upsert(organization_id: int, definition_public_id: str, payload: dict, actor
     if "organization_id" in payload or "operational_organization_id" in payload:
         raise PolicyError("Organization is derived from the authenticated membership.")
     definition = db.session.scalar(select(DocumentDefinition).where(
+        visible_to_organization(organization_id),
         DocumentDefinition.public_id == definition_public_id, DocumentDefinition.is_active.is_(True)))
     if not definition:
         raise PolicyError("Active document definition not found.", 404)
@@ -70,13 +72,14 @@ def upsert(organization_id: int, definition_public_id: str, payload: dict, actor
 def effective_definitions(organization_id: int | None, shipping_type: str, project_id: int | None = None):
     """Return (definition, level) using project > organization > compatibility fallback."""
     applicable = list(db.session.scalars(select(DocumentDefinition).where(
+        visible_to_organization(organization_id),
         DocumentDefinition.is_active.is_(True),
         DocumentDefinition.applicability_scope.in_(["all", shipping_type])).order_by(
             DocumentDefinition.sort_order, DocumentDefinition.id)).all())
     def fallback(definition):
         return "REQUIRED" if definition.is_required else "OPTIONAL"
     if organization_id is None:
-        return [(definition, fallback(definition)) for definition in applicable]
+        return [(definition, fallback(definition)) for definition in applicable if definition.organization_id is None]
     policies = list(db.session.scalars(select(OrganizationDocumentRequirement).where(
         OrganizationDocumentRequirement.operational_organization_id == organization_id)).all())
     if policies:
@@ -86,7 +89,7 @@ def effective_definitions(organization_id: int | None, shipping_type: str, proje
                   and by_definition[definition.id].is_active
                   and by_definition[definition.id].requirement_level != "DISABLED"}
     else:
-        result = {definition.id: (definition, fallback(definition)) for definition in applicable}
+        result = {definition.id: (definition, fallback(definition)) for definition in applicable if definition.organization_id is None}
     if project_id is not None:
         from backend.project_configuration_models import ProjectDocumentRequirement
         from backend.operational_models import Project

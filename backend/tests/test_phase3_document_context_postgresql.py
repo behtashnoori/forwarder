@@ -1,5 +1,6 @@
 """Disposable PostgreSQL 18 proof for P3-06 legacy-safe migration."""
 import os
+from datetime import datetime, timezone
 
 from alembic import command
 import pytest
@@ -37,7 +38,9 @@ def test_postgresql18_legacy_document_upgrade_downgrade_guard():
     with app.app_context():
         fixture = _seed_runtime(app)
         shipment = OperationalShipment.query.filter_by(public_id=fixture["shipment"]).one()
-        legacy = CaseDocumentFile(
+        # Reflect the historical table; the current ORM has later additive fields.
+        legacy_table = sa.Table("case_document_file", sa.MetaData(), autoload_with=db.session.connection())
+        legacy_values = dict(
             owner_type="SHIPMENT", operational_shipment_id=shipment.id,
             operational_organization_id=shipment.organization_id,
             is_miscellaneous=True, custom_title="Legacy internal",
@@ -46,10 +49,11 @@ def test_postgresql18_legacy_document_upgrade_downgrade_guard():
             canonical_extension="pdf", detected_mime_type="application/pdf",
             file_size_bytes=10, sha256_hash="0" * 64, version_number=1,
             uploaded_by=fixture["owner"],
+            public_id="8c6a4d64-4b69-4d53-81db-26ec03b35199", status="active",
+            uploaded_at=datetime.now(timezone.utc),
         )
-        db.session.add(legacy)
+        legacy_id = db.session.execute(legacy_table.insert().values(**legacy_values).returning(legacy_table.c.id)).scalar_one()
         db.session.commit()
-        legacy_id = legacy.id
         db.session.remove()
         db.engine.dispose()
 

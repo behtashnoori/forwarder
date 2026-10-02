@@ -28,7 +28,7 @@ from backend.tests.test_phase3_transport_execution_postgresql import _seed_runti
 URL = os.environ.get("P3_CLOSURE_POSTGRES_URL", "")
 HEAD = "20261010_phase3_closure"
 PREVIOUS = "20261009_phase3_route_time"
-REPOSITORY_HEAD = "20261016_active_route_basis"
+REPOSITORY_HEAD = "20261017_document_type_ownership"
 pytestmark = pytest.mark.skipif(not URL, reason="requires explicit owned P3_CLOSURE_POSTGRES_URL")
 
 

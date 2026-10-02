@@ -2110,6 +2110,7 @@ class DocumentDefinition(db.Model):
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
     code = db.Column(db.String(64), nullable=False, unique=True, index=True)
     title = db.Column(db.String(200), nullable=False)
@@ -2338,6 +2339,7 @@ class CaseDocumentFile(db.Model):
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    document_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=True, index=True)
     operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
     owner_type = db.Column(db.String(16), nullable=False, default="REQUEST", server_default="REQUEST", index=True)

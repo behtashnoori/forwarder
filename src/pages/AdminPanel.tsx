@@ -33,6 +33,7 @@ import TrackingLocationsAdminTab from "@/components/TrackingLocationsAdminTab";
 import LocationsAdminTab from "@/components/LocationsAdminTab";
 import DocumentDefinitionsTab from "@/components/DocumentDefinitionsTab";
 import OrganizationDocumentPolicyTab from "@/components/OrganizationDocumentPolicyTab";
+import OrganizationDocumentTypes from "@/components/OrganizationDocumentTypes";
 import OrganizationSlaRulesTab from "@/components/OrganizationSlaRulesTab";
 import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 import OrganizationReferenceCatalogTab from "@/components/OrganizationReferenceCatalogTab";
@@ -497,7 +498,7 @@ const AdminPanel = () => {
           {isPlatformAdmin && <TabsContent value="locations" className="space-y-4"><LocationsAdminTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="documents" className="space-y-4"><DocumentDefinitionsTab /></TabsContent>}
-          {isOrganizationAdmin && <TabsContent value="organization-documents" className="space-y-4"><OrganizationDocumentPolicyTab /></TabsContent>}
+          {isOrganizationAdmin && <TabsContent value="organization-documents" className="space-y-4"><OrganizationDocumentTypes /><OrganizationDocumentPolicyTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="organization-sla" className="space-y-4"><OrganizationSlaRulesTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="customer-access" className="space-y-4"><CustomerAccessTab /></TabsContent>}

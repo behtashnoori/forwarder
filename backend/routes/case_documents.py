@@ -181,6 +181,7 @@ def shipment_document_list(shipment_id: str):
     return error if error else jsonify({
         "data": shipment_documents.documents(shipment),
         "can_manage_documents": authorize_document_management(_current(), shipment).allowed,
+        "document_types": catalog_service.organization_types(shipment.organization_id, active_only=True),
     })
 
 
@@ -209,6 +210,8 @@ def shipment_document_upload(shipment_id: str):
             context_type=request.form.get("context_type") or None,
             target_public_id=request.form.get("context_target_public_id") or None,
             visibility=request.form.get("visibility", "INTERNAL"),
+            definition_public_id=request.form.get("document_definition_public_id") or None,
+            historical_repair=request.form.get("historical_repair") == "true",
             audience_public_ids=request.form.getlist("audience_public_ids"))
         item = next(item for item in shipment_documents.documents(shipment) if item["public_id"] == row.public_id)
         return jsonify({"data": item}), 201
@@ -405,7 +408,8 @@ def customer_document_download(document_id: str):
 @document_bp.get("/api/admin/document-definitions")
 @require_organization_admin_context()
 def definitions_list():
-    rows = DocumentDefinition.query.order_by(DocumentDefinition.sort_order, DocumentDefinition.id).all()
+    organization_id = g.organization_context.organization_id if g.organization_context else None
+    rows = DocumentDefinition.query.filter(catalog_service.visible_to_organization(organization_id)).order_by(DocumentDefinition.sort_order, DocumentDefinition.id).all()
     return jsonify({"items": [service.serialize_definition(row) for row in rows]})
 
 
@@ -434,14 +438,15 @@ def definitions_create():
 @document_bp.get("/api/admin/document-definitions/<int:definition_id>")
 @require_organization_admin_context()
 def definitions_read(definition_id: int):
-    row = db.session.get(DocumentDefinition, definition_id)
+    organization_id = g.organization_context.organization_id if g.organization_context else None
+    row = DocumentDefinition.query.filter(catalog_service.visible_to_organization(organization_id), DocumentDefinition.id == definition_id).one_or_none()
     return (jsonify(service.serialize_definition(row)), 200) if row else (jsonify({"error": "تعریف یافت نشد"}), 404)
 
 
 @document_bp.patch("/api/admin/document-definitions/<int:definition_id>")
 @require_platform_admin()
 def definitions_update(definition_id: int):
-    row = db.session.get(DocumentDefinition, definition_id)
+    row = DocumentDefinition.query.filter_by(id=definition_id, organization_id=None).one_or_none()
     if not row:
         return jsonify({"error": "تعریف یافت نشد"}), 404
     actor = _current()
@@ -463,7 +468,7 @@ def definitions_update(definition_id: int):
 @document_bp.post("/api/admin/document-definitions/<int:definition_id>/activation")
 @require_platform_admin()
 def definitions_activation(definition_id: int):
-    row = db.session.get(DocumentDefinition, definition_id)
+    row = DocumentDefinition.query.filter_by(id=definition_id, organization_id=None).one_or_none()
     if not row:
         return jsonify({"error": "تعریف یافت نشد"}), 404
     actor = _current()
@@ -490,14 +495,14 @@ def document_catalog_list():
 @document_bp.get("/api/platform/document-catalog/<definition_public_id>")
 @require_platform_admin()
 def document_catalog_detail(definition_public_id: str):
-    row = DocumentDefinition.query.filter_by(public_id=definition_public_id).one_or_none()
+    row = DocumentDefinition.query.filter_by(public_id=definition_public_id, organization_id=None).one_or_none()
     return (jsonify(catalog_service.serialize(row)), 200) if row else (jsonify({"error": "Definition not found"}), 404)
 
 
 @document_bp.patch("/api/platform/document-catalog/<definition_public_id>")
 @require_platform_admin()
 def document_catalog_update(definition_public_id: str):
-    row = DocumentDefinition.query.filter_by(public_id=definition_public_id).with_for_update().one_or_none()
+    row = DocumentDefinition.query.filter_by(public_id=definition_public_id, organization_id=None).with_for_update().one_or_none()
     if not row:
         return jsonify({"error": "Definition not found"}), 404
     try:
@@ -517,7 +522,7 @@ def document_catalog_update(definition_public_id: str):
 @document_bp.post("/api/platform/document-catalog/<definition_public_id>/lifecycle")
 @require_platform_admin()
 def document_catalog_lifecycle(definition_public_id: str):
-    row = DocumentDefinition.query.filter_by(public_id=definition_public_id).with_for_update().one_or_none()
+    row = DocumentDefinition.query.filter_by(public_id=definition_public_id, organization_id=None).with_for_update().one_or_none()
     if not row:
         return jsonify({"error": "Definition not found"}), 404
     try:
@@ -529,6 +534,29 @@ def document_catalog_lifecycle(definition_public_id: str):
     except catalog_service.CatalogError as exc:
         db.session.rollback()
         return jsonify({"error": exc.message}), exc.status
+
+
+@document_bp.get("/api/admin/organization-document-types")
+@require_organization_admin_context(allow_platform=False)
+def organization_document_types_list():
+    return jsonify({"items": catalog_service.organization_types(g.organization_context.organization_id)})
+
+
+@document_bp.post("/api/admin/organization-document-types")
+@document_bp.patch("/api/admin/organization-document-types/<definition_public_id>")
+@require_organization_admin_context(allow_platform=False)
+def organization_document_type_save(definition_public_id=None):
+    try:
+        item = catalog_service.save_organization_type(g.organization_context.organization_id,
+            _current()["id"], request.get_json(silent=True) or {},
+            request.headers.get("Idempotency-Key", "").strip(), definition_public_id)
+        return jsonify(item), 200 if definition_public_id else 201
+    except catalog_service.CatalogError as exc:
+        db.session.rollback()
+        return jsonify({"error": exc.message}), exc.status
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "ثبت هم‌زمان تغییر تداخل داشت؛ دوباره تلاش کنید"}), 409
 
 
 @document_bp.get("/api/admin/organization-document-policy")
