@@ -1,6 +1,6 @@
 """Human-walkthrough gap: exact structured progress qualifies ETA, text never does."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import uuid4
 
@@ -9,9 +9,10 @@ import pytest
 from backend.cargo_models import ExecutionUnitCargoAllocation, ShipmentCargoItem
 from backend.extensions import db
 from backend.eta_models import CargoEtaSnapshot
-from backend.operational_models import ExecutionUnit, OperationalShipment, RoutePlan, RouteStageExecution
+from backend.operational_models import ExecutionUnit, Milestone, OperationalShipment, RoutePlan, RouteStageExecution
 from backend.reported_fact_models import OperationalEventRouteProgress
-from backend.services import eta_service as eta, reported_fact_service as reports
+from backend.services import eta_service as eta, operational_service as operations, reported_fact_service as reports
+from backend.services import occurrence_projection_service as occurrences
 from backend.services import route_orchestration_service as routes
 from backend.tests.test_operational_vertical_slice import _user, operational_app
 from backend.tests.test_phase3_eta import setup
@@ -50,10 +51,10 @@ def _fixture(app, *, planned_distance_km="100.000"):
     return ctx
 
 
-def _progress(app, ctx, remaining, *, location="نزدیک مرز"):
+def _progress(app, ctx, remaining, *, location="نزدیک مرز", occurred_at=None):
     row, _ = reports.create(ctx["shipment"], _user(app), {
         "scope": "EXECUTION_UNIT", "target_public_id": ctx["unit"],
-        "kind": "PROGRESS", "source": "DRIVER_REPORT", "occurred_at": ctx["occurred_at"],
+        "kind": "PROGRESS", "source": "DRIVER_REPORT", "occurred_at": occurred_at or ctx["occurred_at"],
         "location": {"location_text": location} if location else None,
         "route_progress": {"stage_execution_public_id": ctx["stage"],
                            "distance_remaining_km": str(remaining)},
@@ -98,6 +99,39 @@ def test_exact_remaining_distance_prorates_only_the_active_leg(operational_app):
         assert eta.times.instant(snapshot.result["final"]["earliest"]) == observed + timedelta(minutes=90)
         assert eta.times.instant(snapshot.result["final"]["latest"]) == observed + timedelta(minutes=180)
         assert "نزدیک مرز" not in str(snapshot.source_basis)
+
+
+def test_zero_remaining_is_an_eta_input_and_does_not_create_arrival(operational_app):
+    with operational_app.app_context():
+        ctx = _fixture(operational_app)
+        _progress(operational_app, ctx, "0")
+        observed = eta.times.instant(ctx["occurred_at"])
+        snapshot = eta.ensure_current_eta(ctx["shipment"], ctx["cargo"], user=_user(operational_app))
+        arrival = db.session.scalar(db.select(Milestone).where(
+            Milestone.route_plan_id == ctx["plan"],
+            Milestone.route_leg_id == ctx["root"],
+            Milestone.milestone_type == "arrival",
+        ))
+        assert snapshot.result["next"]["available"]
+        # Zero means the unit is at this leg's destination. It remains an ETA
+        # observation rather than an Arrival and retains the next-leg stop.
+        assert snapshot.result["basis_label"] == "پیشرفت ساختاریافته مسیر"
+        assert eta.times.instant(snapshot.result["next"]["earliest"]) == observed + timedelta(minutes=60)
+        assert eta.times.instant(snapshot.result["next"]["latest"]) == observed + timedelta(minutes=120)
+        assert occurrences.effective_occurrence(arrival) is None
+
+
+def test_latest_applicable_progress_wins_without_rewriting_history(operational_app):
+    with operational_app.app_context():
+        ctx = _fixture(operational_app)
+        first_at = eta.times.instant(ctx["occurred_at"])
+        second_at = first_at
+        _progress(operational_app, ctx, "75", occurred_at=first_at.isoformat())
+        _progress(operational_app, ctx, "25", occurred_at=second_at.isoformat())
+        snapshot = eta.ensure_current_eta(ctx["shipment"], ctx["cargo"], user=_user(operational_app))
+        assert OperationalEventRouteProgress.query.count() == 2
+        assert eta.times.instant(snapshot.result["next"]["earliest"]) == second_at + timedelta(minutes=15)
+        assert eta.times.instant(snapshot.result["next"]["latest"]) == second_at + timedelta(minutes=30)
 
 
 def test_customer_receives_safe_eta_without_distance_or_private_progress_provenance(operational_app):
@@ -163,5 +197,45 @@ def test_invalid_stage_identity_and_distance_outside_baseline_fail_closed(operat
         assert missing.value.code == "REPORT_PROGRESS_STAGE_NOT_FOUND"
         with pytest.raises(eta.base.OperationalError):
             _progress(operational_app, ctx, "100.001")
+        db.session.rollback()
+        assert OperationalEventRouteProgress.query.count() == 0
+
+
+def test_progress_occurring_at_or_after_authoritative_arrival_is_denied(operational_app):
+    with operational_app.app_context():
+        ctx = _fixture(operational_app)
+        arrival = db.session.scalar(db.select(Milestone).where(
+            Milestone.route_plan_id == ctx["plan"],
+            Milestone.route_leg_id == ctx["root"],
+            Milestone.milestone_type == "arrival",
+        ))
+        departure = db.session.scalar(db.select(Milestone).where(
+            Milestone.route_plan_id == ctx["plan"],
+            Milestone.route_leg_id == ctx["root"],
+            Milestone.milestone_type == "departure",
+        ))
+        plan = db.session.get(RoutePlan, ctx["plan"])
+        plan.effective_at = datetime.now(timezone.utc) - timedelta(minutes=2)
+        departure_at = eta.times.aware(plan.effective_at) + timedelta(seconds=30)
+        arrival_at = departure_at + timedelta(seconds=30)
+        db.session.commit()
+        operations.record_event(ctx["shipment_id"], departure.id,
+            {"occurred_at": departure_at.isoformat()}, _user(operational_app), str(uuid4()))
+        db.session.commit()
+        operations.record_event(ctx["shipment_id"], arrival.id,
+            {"occurred_at": arrival_at.isoformat()}, _user(operational_app), str(uuid4()))
+        db.session.commit()
+        with pytest.raises(eta.base.OperationalError) as denied:
+            reports.create(ctx["shipment"], _user(operational_app), {
+                "scope": "EXECUTION_UNIT", "target_public_id": ctx["unit"],
+                "kind": "PROGRESS", "source": "INTERNAL_EXPERT",
+                # Even a retroactive in-transit time is a new command after an
+                # authoritative Arrival; no historical-repair authority exists.
+                "occurred_at": (departure_at + timedelta(seconds=15)).isoformat(),
+                "route_progress": {"stage_execution_public_id": ctx["stage"],
+                                   "distance_remaining_km": "10"},
+                "impacted_cargo_public_ids": [],
+            }, str(uuid4()))
+        assert denied.value.code == "REPORT_PROGRESS_AFTER_ARRIVAL"
         db.session.rollback()
         assert OperationalEventRouteProgress.query.count() == 0

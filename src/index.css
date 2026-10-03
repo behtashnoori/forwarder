@@ -58,8 +58,9 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
     --nav-surface: 0 0% 100%;
     --nav-text: 220 20% 25%;
     --nav-text-muted: 220 12% 38%;
-    --nav-active-surface: 215 85% 35%;
-    --nav-active-text: 0 0% 100%;
+    --nav-active-surface: 214 100% 96%;
+    --nav-active-text: 215 78% 28%;
+    --nav-active-indicator: 215 85% 42%;
     --nav-hover-surface: 215 60% 95%;
     --nav-hover-text: 215 75% 28%;
     --nav-border: 220 15% 84%;
@@ -352,7 +353,7 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
 .navigation-tab[data-state="active"] {
   background: hsl(var(--nav-active-surface));
   color: hsl(var(--nav-active-text));
-  box-shadow: 0 1px 2px hsl(var(--nav-active-surface) / 0.18);
+  box-shadow: inset 0 -2px 0 hsl(var(--nav-active-indicator)), 0 1px 2px hsl(220 20% 20% / 0.04);
   font-weight: 650;
 }
 
@@ -412,6 +413,41 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
 
 .shipment-workspace :where(details, article, [data-ui="card"]) {
   box-shadow: 0 1px 2px hsl(220 20% 20% / 0.035);
+}
+
+.page-heading {
+  font-size: clamp(1.5rem, 2.2vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.45;
+  color: hsl(var(--foreground));
+}
+
+.section-heading {
+  font-size: clamp(1.125rem, 1.6vw, 1.25rem);
+  font-weight: 650;
+  line-height: 1.55;
+  color: hsl(var(--foreground));
+}
+
+.subsection-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.65;
+  color: hsl(var(--foreground));
+}
+
+.form-group {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  background: hsl(var(--muted) / 0.42);
+  padding: 0.875rem;
+}
+
+.entity-card {
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px hsl(220 20% 20% / 0.04);
 }
 
 .form-helper,

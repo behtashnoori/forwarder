@@ -21,7 +21,8 @@ def no_store(response):
 @require_auth
 def listing(shipment_id):
     try:
-        return jsonify({"data": service.listing(str(shipment_id), get_current_user(), request.args.get("page", 1))})
+        return jsonify({"data": service.listing(str(shipment_id), get_current_user(),
+            request.args.get("page", 1), request.args.get("kind"))})
     except OperationalError as exc:
         db.session.rollback()
         return jsonify({"error": {"code": exc.code, "message": exc.message}}), exc.status

@@ -46,7 +46,7 @@ import RouteAuthoringSection from "@/components/RouteAuthoringSection";
 import RouteReferenceTimes from "@/components/RouteReferenceTimes";
 import RouteActualSection from "@/components/RouteActualSection";
 import RouteStageTransportExecutionSection from "@/components/RouteStageTransportExecutionSection";
-import ReportedFactsSection from "@/components/ReportedFactsSection";
+import ReportedFactsSection, { RouteProgressSection } from "@/components/ReportedFactsSection";
 import ShipmentClosure from "@/components/ShipmentClosure";
 import DeliverySection from "@/components/DeliverySection";
 import ShipmentOperationalStages from "@/components/ShipmentOperationalStages";
@@ -111,6 +111,7 @@ export default function OperationalShipmentDetail() {
   useEffect(()=>setDocumentRepair(false),[routeShipmentPublicId]);
   const [referenceTimesOpen, setReferenceTimesOpen] = useState(false);
   const [etaOpen, setEtaOpen] = useState(false);
+  const [progressOpen, setProgressOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   const [deliveriesOpen, setDeliveriesOpen] = useState(false);
   const [closureOpen, setClosureOpen] = useState(false);
@@ -193,6 +194,7 @@ export default function OperationalShipmentDetail() {
     // established overview behavior and does not issue a surprise subrequest.
     setReferenceTimesOpen(params.section === "route");
     setEtaOpen(activeSection === "tracking");
+    setProgressOpen(activeSection === "tracking");
     setReportsOpen(activeSection === "tracking");
     setDeliveriesOpen(activeSection === "delivery");
     setClosureOpen(activeSection === "closure");
@@ -296,7 +298,7 @@ export default function OperationalShipmentDetail() {
             })}</div>}
           </section>
           <section hidden={!(["route","cargo","tracking","delivery"] as string[]).includes(activeSection)} id="shipment-route" aria-labelledby="route-workspace-heading" className="scroll-mt-28 space-y-3">
-          <div><p className="text-xs font-semibold text-slate-500">فضای کار محموله</p><h2 id="route-workspace-heading" className="text-xl font-bold">{activeSection==="cargo"?"کالا و تخصیص":activeSection==="tracking"?"پیگیری و زمان تقریبی رسیدن":activeSection==="delivery"?"تحویل":"مسیر و اجرای عملیاتی"}</h2></div>
+          <div><p className="text-xs font-semibold text-slate-500">فضای کار محموله</p><h2 id="route-workspace-heading" className="page-heading">{activeSection==="cargo"?"کالا و تخصیص":activeSection==="tracking"?"پیگیری و زمان تقریبی رسیدن":activeSection==="delivery"?"تحویل":"مسیر و اجرای عملیاتی"}</h2></div>
           {activeSection === "route" && data.source.type !== "direct" && <RequestedEndpointComparison requested={data.operational_projection?.identity.requested_endpoints}
             origin={{label: displayedLegs[0]?.origin.display_name || "ثبت نشده", reference: displayedLegs[0]?.origin.facility?.logistics_point_public_id ? {source_type:"logistics_point",source_id:displayedLegs[0].origin.facility.logistics_point_public_id} : displayedLegs[0]?.origin.canonical_reference}}
             destination={{label: displayedLegs.at(-1)?.destination.display_name || "ثبت نشده", reference: displayedLegs.at(-1)?.destination.facility?.logistics_point_public_id ? {source_type:"logistics_point",source_id:displayedLegs.at(-1)!.destination.facility!.logistics_point_public_id} : displayedLegs.at(-1)?.destination.canonical_reference}} />}
@@ -316,8 +318,9 @@ export default function OperationalShipmentDetail() {
             {cargoTraceOpen && <div className="border-t p-3 sm:p-4"><CargoAllocationTraceSection shipmentId={shipmentPublicId} planId={activePlan.id} closed={data.status === "closed"} /></div>}
           </details>}
           {activeSection==="route" && plan && <RouteActualSection shipmentId={shipmentPublicId} plan={plan} reload={load} />}
-          {activeSection==="tracking" && <details open className="rounded-xl border bg-white" onToggle={event => setEtaOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">زمان تقریبی رسیدن کالاها</summary>{etaOpen && <ShipmentEta shipmentId={shipmentPublicId} />}</details>}
-          {activeSection==="tracking" && <details open className="rounded-xl border bg-white" onToggle={event => setReportsOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">گزارش موقعیت و تغییرات حمل</summary>{reportsOpen && <div className="border-t p-3 sm:p-4"><ReportedFactsSection shipmentId={shipmentPublicId} /></div>}</details>}
+          {activeSection==="tracking" && <details open className="entity-card" onToggle={event => setEtaOpen(event.currentTarget.open)}><summary className="section-heading cursor-pointer p-3 sm:p-4">زمان تقریبی رسیدن کالاها</summary>{etaOpen && <ShipmentEta shipmentId={shipmentPublicId} />}</details>}
+          {activeSection==="tracking" && <details open className="entity-card" onToggle={event => setProgressOpen(event.currentTarget.open)}><summary className="section-heading cursor-pointer p-3 sm:p-4">پیشرفت مسیر</summary>{progressOpen && <div className="border-t border-slate-200 p-3 sm:p-4"><RouteProgressSection shipmentId={shipmentPublicId} /></div>}</details>}
+          {activeSection==="tracking" && <details open className="entity-card" onToggle={event => setReportsOpen(event.currentTarget.open)}><summary className="section-heading cursor-pointer p-3 sm:p-4">گزارش موقعیت و تغییرات حمل</summary>{reportsOpen && <div className="border-t border-slate-200 p-3 sm:p-4"><ReportedFactsSection shipmentId={shipmentPublicId} /></div>}</details>}
           {activeSection==="delivery" && <details open id="shipment-deliveries" className="rounded-xl border bg-white" onToggle={event => setDeliveriesOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">تحویل کالاها</summary>{deliveriesOpen && <div className="border-t p-3 sm:p-4"><DeliverySection shipmentId={shipmentPublicId} /></div>}</details>}
           </section>
 

@@ -9,7 +9,7 @@ from sqlalchemy import and_, func, or_, select
 from backend.extensions import db
 from backend.cargo_models import ShipmentCargoItem, ExecutionUnitCargoAllocation
 from backend.models import Customer, ExpertUser
-from backend.operational_models import (ExecutionTransportRevision, ExecutionUnit, OperationalEvent,
+from backend.operational_models import (ExecutionTransportRevision, ExecutionUnit, Milestone, OperationalEvent,
     OperationalIdempotency, OperationalShipment, RouteCargoDestination, RouteLeg, RoutePlan, RouteStageExecution)
 from backend.reported_fact_models import (OperationalEventCargoImpact as Impact,
     OperationalEventReportContext as Context, OperationalEventRouteProgress as RouteProgress,
@@ -29,6 +29,7 @@ FIELDS = {"scope", "target_public_id", "kind", "source", "occurred_at", "locatio
 
 
 from backend.services import closure_commands as closure_guard
+from backend.services import occurrence_projection_service as occurrences
 from backend.services import route_time_service as route_times
 
 
@@ -135,6 +136,17 @@ def _route_progress(shipment, targets, kind, payload, occurred):
         fail("پیشرفت فقط برای نسخه فعال برنامه مسیر ثبت می‌شود.", 409, "REPORT_PROGRESS_PLAN_INACTIVE")
     if plan.effective_at is not None and occurred < route_times.aware(plan.effective_at):
         fail("زمان پیشرفت پیش از اعتبار این نسخه برنامه مسیر است.", 409, "REPORT_PROGRESS_REVISION_MISMATCH")
+    arrival_milestone = db.session.scalar(select(Milestone).where(
+        Milestone.organization_id == shipment.organization_id,
+        Milestone.operational_shipment_id == shipment.id,
+        Milestone.route_plan_id == plan.id,
+        Milestone.route_leg_id == leg.id,
+        Milestone.milestone_type == "arrival",
+    ))
+    arrival = occurrences.effective_occurrence(arrival_milestone) if arrival_milestone else None
+    if arrival is not None:
+        fail("پس از ثبت رسیدن این بخش مسیر، پیشرفت درون‌مسیر تازه پذیرفته نمی‌شود.",
+             409, "REPORT_PROGRESS_AFTER_ARRIVAL")
     remaining = _distance(value.get("distance_remaining_km"))
     basis = db.session.scalar(select(RouteLegTimeBasis).where(
         RouteLegTimeBasis.route_leg_id == leg.id,
@@ -353,12 +365,16 @@ def options(shipment):
             "CARGO": cargo_options, "SHIPMENT": [], "progress_stages": progress_stages}
 
 
-def listing(shipment_public_id, user, page=1):
+def listing(shipment_public_id, user, page=1, kind=None):
     shipment = scoped_shipment(shipment_public_id, user)
     try: page = max(1, int(page))
     except (ValueError, TypeError): fail("شماره صفحه معتبر نیست.")
+    if kind is not None and kind not in KINDS:
+        fail("نوع گزارش برای نمایش معتبر نیست.")
     order = (OperationalEvent.occurred_at.desc(), OperationalEvent.recorded_at.desc(), OperationalEvent.id.desc())
     base = _contexts(shipment)
+    if kind is not None:
+        base = base.where(Context.kind == kind)
     total = db.session.scalar(select(func.count()).select_from(base.subquery())) or 0
     page_rows = db.session.scalars(base.order_by(*order).offset((page-1)*20).limit(20)).all()
     successors = select(OperationalEvent.supersedes_event_id).join(Context,

@@ -49,7 +49,7 @@ export default function CommercialProgress({
     >
       <header className="border-b border-blue-100 bg-blue-50/70 px-5 py-4 sm:px-6">
         <p className="text-xs font-semibold text-blue-700">{eyebrow}</p>
-        <h2 className="mt-1 text-xl font-bold text-slate-950">{title}</h2>
+        <h2 className="page-heading mt-1 text-slate-950">{title}</h2>
       </header>
 
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">

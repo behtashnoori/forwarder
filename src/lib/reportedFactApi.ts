@@ -41,7 +41,11 @@ export interface ReportList {
   };
 }
 const path = (shipment: string) => `/api/operational-shipments/${encodeURIComponent(shipment)}/reported-facts`;
-export const listReportedFacts = (shipment: string, page = 1) => request<{ data: ReportList }>(`${path(shipment)}?page=${page}`, { cache: "no-store" });
+export const listReportedFacts = (shipment: string, page = 1, kind?: ReportKind) => {
+  const query = new URLSearchParams({ page: String(page) });
+  if (kind) query.set("kind", kind);
+  return request<{ data: ReportList }>(`${path(shipment)}?${query.toString()}`, { cache: "no-store" });
+};
 export const recordReportedFact = (shipment: string, draft: ReportDraft, key: string) => request<{ public_id: string; created: boolean }>(path(shipment), {
   method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(draft),
 });

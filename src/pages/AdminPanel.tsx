@@ -272,7 +272,7 @@ const AdminPanel = () => {
                     {t("admin.badge")}
                   </Badge>
                 </div>
-                <h1 className="text-2xl font-bold tracking-normal text-slate-950 sm:text-3xl">{t("admin.title")}</h1>
+                <h1 className="page-heading tracking-normal text-slate-950">{t("admin.title")}</h1>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">
                   {t("admin.description")}
                 </p>

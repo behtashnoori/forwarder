@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ReportedFactsSection from "@/components/ReportedFactsSection";
+import ReportedFactsSection, { RouteProgressSection } from "@/components/ReportedFactsSection";
 import { listReportedFacts, recordReportedFact, type ReportFact, type ReportList } from "@/lib/reportedFactApi";
 
 vi.mock("@/lib/reportedFactApi", () => ({ listReportedFacts: vi.fn(), recordReportedFact: vi.fn() }));
@@ -9,6 +9,27 @@ const fixture = (canManage = true): ReportList => ({ items: [], reported_locatio
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(listReportedFacts).mockResolvedValue({ data: fixture() }); });
 
 describe("scoped operational reports", () => {
+  it("offers a discoverable remaining-distance path backed by the existing progress report", async () => {
+    vi.mocked(recordReportedFact).mockResolvedValue({ public_id: "progress", created: true });
+    render(<RouteProgressSection shipmentId="shipment" />);
+    expect(await screen.findByText("هنوز فاصله باقی‌مانده‌ای ثبت نشده است.")).toBeInTheDocument();
+    expect(listReportedFacts).toHaveBeenCalledWith("shipment", 1, "PROGRESS");
+    fireEvent.click(screen.getByRole("button", { name: "ثبت فاصله باقی‌مانده" }));
+    expect(screen.getByText("فاصله باقی‌مانده", { selector: "p" })).toBeInTheDocument();
+    expect(screen.queryByText("DISTANCE_REMAINING_KM")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("فاصله باقی‌مانده مسیر"), { target: { value: "450" } });
+    fireEvent.change(screen.getByLabelText("زمان ثبت پیشرفت مسیر"), { target: { value: "2026-10-03T10:30" } });
+    fireEvent.change(screen.getByLabelText("یادداشت داخلی پیشرفت مسیر"), { target: { value: "ثبت دستی کارشناس" } });
+    fireEvent.click(screen.getByRole("button", { name: "ثبت پیشرفت مسیر" }));
+    await waitFor(() => expect(recordReportedFact).toHaveBeenCalled());
+    expect(vi.mocked(recordReportedFact).mock.calls[0][1]).toMatchObject({
+      kind: "PROGRESS", scope: "EXECUTION_UNIT", target_public_id: "unit-a",
+      source: "INTERNAL_EXPERT", impacted_cargo_public_ids: [],
+      route_progress: { stage_execution_public_id: "stage-a", distance_remaining_km: "450" },
+      internal_note: "ثبت دستی کارشناس",
+    });
+  });
+
   it("captures one explicit stage distance without deriving it from human location text", async () => {
     vi.mocked(recordReportedFact).mockResolvedValue({ public_id: "progress", created: true });
     render(<ReportedFactsSection shipmentId="shipment" />);

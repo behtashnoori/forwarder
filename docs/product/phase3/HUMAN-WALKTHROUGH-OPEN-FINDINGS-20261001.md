@@ -602,3 +602,19 @@ Exact Product candidate `fe20ea67d0714ed288cf48bcb8d94e9121cccc73` passed
 the evidence matrix in
 [the qualification report](HUMAN-WALKTHROUGH-ACTUAL-CARGO-NAV-COLORS-QUALIFICATION.md)
 and [manifest](HUMAN-WALKTHROUGH-ACTUAL-CARGO-NAV-COLORS-EVIDENCE.json).
+
+## Structured ETA progress and visual hierarchy — 2026-10-03
+
+Authority: [mission record](HUMAN-WALKTHROUGH-ETA-PROGRESS-VISUAL-HIERARCHY-AUTHORITY.md).
+The visual work builds on `HW_NAV_COLOR_001`; it does not reopen or duplicate
+that finding.
+
+| ID | Severity | Observation / root cause | Correction and tests | Status |
+|---|---|---|---|---|
+| HW_ETA_PROGRESS_ENTRY_001 | HIGH | `DISTANCE_REMAINING_KM` already had an immutable, execution/leg/basis-bound reported-fact model, command, API and ETA resolver, but the only Expert entry point was nested inside the generic fresh-report type selector. The canonical capability was therefore not discoverable in Tracking & ETA. | Reuse the same reported-fact command and history through a dedicated expandable `پیشرفت مسیر` section. The form presents remaining distance, kilometres, occurred-at, unambiguous execution/leg resolution and optional internal note. Existing lower/upper bounds remain authoritative; a new command guard rejects progress at or after authoritative Arrival. Focused backend/frontend tests, PostgreSQL 18 E1–E10 coverage, 900/450 numeric proof and a no-submit browser journey pass. | RESOLVED |
+| HW_VISUAL_HIERARCHY_001 | MEDIUM UX | Shared semantic navigation colors existed, but active surfaces retained excessive visual weight and page/section/subsection, form-group, entity-card and CTA levels were not consistently expressed. | Extend the existing shared tokens/components with a light-blue active surface plus non-color indicator, restrained page/section/subsection scale, subtle form groups/entity cards and solid semantic primary/success CTAs. Preserve the Vazirmatn stack, information architecture and business actions. Contrast tests, representative desktop screenshots and a 390 px RTL browser journey pass. | RESOLVED |
+
+No migration, ETA-math change, new progress subsystem, preserved-runtime
+business command, production action, deployment or release is part of this
+correction. Human Product Walkthrough remains `IN_PROGRESS` and
+`RELEASE_READY=NO`.

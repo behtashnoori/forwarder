@@ -251,7 +251,7 @@ const CustomerRequestDetail: React.FC = () => {
                     {shippingTypeLabel(requestDetail.shipping_type, { full: true })}
                   </Badge>
                 </div>
-                <h1 className="break-words text-2xl font-bold tracking-normal text-foreground sm:text-3xl">
+                <h1 className="page-heading break-words tracking-normal text-foreground">
                   {t("customer.requestDetails")} #{requestDetail.id}
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">

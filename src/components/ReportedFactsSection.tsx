@@ -65,6 +65,135 @@ function ReportForm({ data, initial, pending, onSubmit, onCancel }: {
   </form>;
 }
 
+function progressDraft(data: ReportList, initial?: ReportFact): ReportDraft {
+  const execution = initial?.target_public_id || (data.options.EXECUTION_UNIT.length === 1 ? data.options.EXECUTION_UNIT[0].public_id : null);
+  const stages = execution ? data.options.progress_stages[execution] || [] : [];
+  return {
+    scope: "EXECUTION_UNIT",
+    target_public_id: execution,
+    kind: "PROGRESS",
+    source: initial?.source || "INTERNAL_EXPERT",
+    occurred_at: initial ? localTime(initial.occurred_at) : "",
+    location: null,
+    route_progress: {
+      stage_execution_public_id: initial?.route_progress?.stage_execution_public_id || (stages.length === 1 ? stages[0].public_id : ""),
+      distance_remaining_km: initial?.route_progress?.distance_remaining_km || "",
+    },
+    internal_note: initial?.internal_note || null,
+    customer_message: null,
+    customer_effect: "CHANGE",
+    impacted_cargo_public_ids: [],
+    ...(initial ? { corrects_public_id: initial.public_id, reason: null } : {}),
+  };
+}
+
+function ProgressForm({ data, initial, pending, onSubmit, onCancel }: {
+  data: ReportList; initial?: ReportFact; pending: boolean;
+  onSubmit: (draft: ReportDraft) => Promise<void>; onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState<ReportDraft>(() => progressDraft(data, initial));
+  const stages = draft.target_public_id ? data.options.progress_stages[draft.target_public_id] || [] : [];
+  const canSubmit = Boolean(draft.target_public_id && draft.route_progress?.stage_execution_public_id
+    && draft.route_progress.distance_remaining_km !== "" && draft.occurred_at);
+  const selectClass = "min-h-11 w-full rounded-md border bg-white px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600";
+  return <form className="form-group grid gap-4 sm:grid-cols-2" onSubmit={(event) => {
+    event.preventDefault();
+    if (!canSubmit) return;
+    const occurred = initial && draft.occurred_at === localTime(initial.occurred_at)
+      ? initial.occurred_at : new Date(draft.occurred_at).toISOString();
+    void onSubmit({ ...draft, occurred_at: occurred });
+  }}>
+    <div className="sm:col-span-2">
+      <h3 className="subsection-heading">{initial ? "اصلاح پیشرفت با حفظ سابقه" : "ثبت فاصله باقی‌مانده"}</h3>
+      <p className="form-helper mt-1">این ثبت به اجرای حمل، نسخه فعال برنامه و بخش دقیق مسیر متصل می‌شود.</p>
+    </div>
+    <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+      <p className="text-xs text-slate-600">نوع پیشرفت</p>
+      <p className="mt-1 font-semibold text-blue-900">فاصله باقی‌مانده</p>
+    </div>
+    <label className="space-y-1 text-sm font-medium">اجرای حمل مرتبط
+      <select required aria-label="اجرای حمل برای پیشرفت مسیر" className={selectClass} value={draft.target_public_id || ""} onChange={event => {
+        const target = event.target.value || null;
+        const targetStages = target ? data.options.progress_stages[target] || [] : [];
+        setDraft({ ...draft, target_public_id: target, route_progress: {
+          stage_execution_public_id: targetStages.length === 1 ? targetStages[0].public_id : "",
+          distance_remaining_km: draft.route_progress?.distance_remaining_km || "",
+        }});
+      }}><option value="">انتخاب کنید</option>{data.options.EXECUTION_UNIT.map(option => <option key={option.public_id} value={option.public_id}>{option.label}</option>)}</select>
+    </label>
+    <label className="space-y-1 text-sm font-medium">بخش مسیر
+      <select required aria-label="بخش مسیر برای پیشرفت" className={selectClass} value={draft.route_progress?.stage_execution_public_id || ""} onChange={event => setDraft({ ...draft, route_progress: {
+        stage_execution_public_id: event.target.value,
+        distance_remaining_km: draft.route_progress?.distance_remaining_km || "",
+      }})}><option value="">انتخاب کنید</option>{stages.map(option => <option key={option.public_id} value={option.public_id}>{option.label}</option>)}</select>
+    </label>
+    <label className="space-y-1 text-sm font-medium">مقدار
+      <div className="flex items-center gap-2"><Input required aria-label="فاصله باقی‌مانده مسیر" type="number" min="0" step="0.001" inputMode="decimal" value={draft.route_progress?.distance_remaining_km || ""} onChange={event => setDraft({ ...draft, route_progress: {
+        stage_execution_public_id: draft.route_progress?.stage_execution_public_id || "",
+        distance_remaining_km: event.target.value,
+      }})}/><span className="shrink-0 text-sm text-slate-600">کیلومتر</span></div>
+    </label>
+    <label className="space-y-1 text-sm font-medium">زمان ثبت پیشرفت
+      <LocalizedDateTimeInput required aria-label="زمان ثبت پیشرفت مسیر" type="datetime-local" step="0.001" dir="ltr" value={draft.occurred_at} onChange={event => setDraft({ ...draft, occurred_at: event.target.value })} />
+      <span className="form-helper block">زمان وقوع واقعی؛ ثبت دیرهنگام با حفظ زمان وقوع مجاز است.</span>
+    </label>
+    <label className="space-y-1 text-sm font-medium sm:col-span-2">یادداشت داخلی (اختیاری)
+      <textarea aria-label="یادداشت داخلی پیشرفت مسیر" className={`${selectClass} py-2`} maxLength={4000} value={draft.internal_note || ""} onChange={event => setDraft({ ...draft, internal_note: event.target.value || null })} />
+    </label>
+    <p className="form-helper sm:col-span-2">مقدار منفی یا بیشتر از فاصله مبنای پین‌شده پذیرفته نمی‌شود. این ثبت Arrival ایجاد نمی‌کند و متن آزاد به فاصله تبدیل نمی‌شود.</p>
+    <div className="flex flex-wrap gap-2 sm:col-span-2"><Button type="submit" disabled={pending || !canSubmit}>{pending ? "در حال ثبت…" : initial ? "ثبت اصلاح پیشرفت" : "ثبت پیشرفت مسیر"}</Button><Button type="button" variant="outline" disabled={pending} onClick={onCancel}>انصراف</Button></div>
+  </form>;
+}
+
+export function RouteProgressSection({ shipmentId }: { shipmentId: string }) {
+  const [data, setData] = useState<ReportList>();
+  const [page, setPage] = useState(1);
+  const [form, setForm] = useState<ReportFact | "new" | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const command = useRef<{ body: string; key: string }>();
+  const load = useCallback(async () => {
+    try { setError(""); setData((await listReportedFacts(shipmentId, page, "PROGRESS")).data); }
+    catch (caught) { setData(undefined); setError(message(caught)); }
+  }, [shipmentId, page]);
+  useEffect(() => { void load(); }, [load]);
+  const submit = async (draft: ReportDraft) => {
+    const body = JSON.stringify(draft);
+    if (command.current?.body !== body) command.current = { body, key: crypto.randomUUID() };
+    try {
+      setPending(true); setError(""); setNotice("");
+      await recordReportedFact(shipmentId, draft, command.current.key);
+      command.current = undefined; setForm(null);
+      setNotice(draft.corrects_public_id ? "اصلاح پیشرفت ثبت شد؛ اصل آن در سابقه محفوظ است." : "پیشرفت مسیر ثبت شد.");
+      await load();
+    } catch (caught) { setError(message(caught)); }
+    finally { setPending(false); }
+  };
+  return <section aria-label="پیشرفت مسیر" className="space-y-4" dir="rtl">
+    <p className="text-sm text-slate-600">فاصله باقی‌مانده یک واقعیت عددی و قابل ممیزی است. سامانه آن را از موقعیت متنی، GPS یا زمان سپری‌شده حدس نمی‌زند.</p>
+    {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}<Button variant="outline" className="mr-2" onClick={() => void load()}>تازه‌سازی</Button></div>}
+    {notice && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
+    {!data && !error && <p role="status">در حال دریافت پیشرفت مسیر…</p>}
+    {data && <>
+      {!data.can_manage && <p className="text-sm text-slate-600">نمای فقط‌خواندنی؛ ثبت و اصلاح با کارشناس مسئول است.</p>}
+      {data.can_manage && !form && <Button onClick={() => setForm("new")}>ثبت فاصله باقی‌مانده</Button>}
+      {data.can_manage && form && <ProgressForm key={form === "new" ? "new" : form.public_id} data={data} initial={form === "new" ? undefined : form} pending={pending} onSubmit={submit} onCancel={() => setForm(null)} />}
+      <div className="space-y-3"><h3 className="subsection-heading">سابقه پیشرفت مسیر</h3>
+        {data.items.length === 0 && <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50/50 p-4 text-sm text-slate-600">هنوز فاصله باقی‌مانده‌ای ثبت نشده است.</p>}
+        {data.items.map(item => <article key={item.public_id} className="entity-card space-y-2 p-4" data-progress-id={item.public_id}>
+          <div className="flex flex-wrap items-start justify-between gap-2"><h4 className="subsection-heading">{item.route_progress?.route_label}</h4><span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">{item.status === "SUPERSEDED" ? "اصلاح‌شده؛ محفوظ در سابقه" : item.corrects_public_id ? "نسخه اصلاحی جاری" : "ثبت جاری"}</span></div>
+          <p className="text-lg font-semibold text-blue-900">{Number(item.route_progress?.distance_remaining_km).toLocaleString("fa-IR", { maximumFractionDigits: 3 })} کیلومتر باقی‌مانده</p>
+          <p className="form-meta">وقوع: {time(item.occurred_at)} · ثبت: {time(item.recorded_at)} · ثبت‌کننده: {item.actor_label}</p>
+          {item.internal_note && <p className="whitespace-pre-wrap text-sm">یادداشت داخلی: {item.internal_note}</p>}
+          {data.can_manage && item.status === "CURRENT" && <Button variant="outline" size="sm" disabled={pending} onClick={() => setForm(item)}>اصلاح پیشرفت</Button>}
+        </article>)}
+      </div>
+      {data.total > 20 && <nav aria-label="صفحه‌های پیشرفت مسیر" className="flex items-center gap-3"><Button variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>قبلی</Button><span>صفحه {page}</span><Button variant="outline" disabled={page * 20 >= data.total} onClick={() => setPage(page + 1)}>بعدی</Button></nav>}
+    </>}
+  </section>;
+}
+
 export default function ReportedFactsSection({ shipmentId }: { shipmentId: string }) {
   const [data, setData] = useState<ReportList>();
   const [page, setPage] = useState(1);

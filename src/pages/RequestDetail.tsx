@@ -854,7 +854,7 @@ const RequestDetail = () => {
                     {request.commercial.request_status_label_fa}
                   </Badge>
                 </div>
-                <h1 className="break-words text-2xl font-bold text-slate-950 sm:text-3xl">
+                <h1 className="page-heading break-words text-slate-950">
                   {request.tracking_number}
                 </h1>
                 <p className="mt-2 text-sm text-slate-500 sm:text-base">
