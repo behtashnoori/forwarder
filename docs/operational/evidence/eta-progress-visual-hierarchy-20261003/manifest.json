@@ -1,0 +1,55 @@
+{
+  "mission": "FORWARDER — STRUCTURED ETA PROGRESS + VISUAL HIERARCHY / COLOR SYSTEM PASS",
+  "date": "2026-10-03",
+  "entry_canonical_sha": "b0e82ba825536d33188b3b85318ec9851f452a67",
+  "product_sha": "8e71060d6d806f9612c09fa78ae1eeacbb52bbc1",
+  "evidence_sha": "THIS_COMMIT",
+  "alembic": {
+    "head": "20261017_document_type_ownership",
+    "head_count": 1,
+    "migration_required": false
+  },
+  "results": {
+    "focused_backend": "30 passed",
+    "postgresql18": "1 passed",
+    "frontend_full": "111 files / 529 tests passed",
+    "frontend_focused": "5 files / 38 tests passed",
+    "typescript": "PASS",
+    "build": "PASS",
+    "lint": "PASS — 0 errors / 16 existing warnings",
+    "structure": "PASS",
+    "browser": "PASS"
+  },
+  "eta_numeric_proof": {
+    "planned_distance_km": 900,
+    "remaining_distance_km": 450,
+    "movement_min_minutes": 720,
+    "movement_max_minutes": 960,
+    "remaining_fraction": 0.5,
+    "expected_earliest_hours": 6,
+    "expected_latest_hours": 8,
+    "ruleset": "ETA_RULESET_V2"
+  },
+  "browser_assertions": {
+    "baseline_progress_entry_absent": true,
+    "candidate_progress_section_visible": true,
+    "candidate_progress_form_visible": true,
+    "raw_enum_hidden": true,
+    "active_tab_aria_current": "page",
+    "narrow_horizontal_overflow": false
+  },
+  "preserved_runtime_pre_integration": {
+    "shipment_public_id": "c71ca04e-fee6-48ed-88b0-2b20255b11cc",
+    "actual_cargo": 100,
+    "route_basis_km": 900,
+    "execution_count": 1,
+    "planned_allocation": 100,
+    "actual_allocation": 100,
+    "departure_event_count": 1,
+    "arrival_event_count": 0,
+    "structured_progress_count": 0,
+    "eta_snapshot_count": 0
+  },
+  "human_product_walkthrough": "IN_PROGRESS",
+  "release_ready": false
+}

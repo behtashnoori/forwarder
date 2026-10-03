@@ -1,0 +1,22 @@
+{
+  "desktop": {
+    "tracking": "فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل",
+    "cargo": "فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل",
+    "route": "فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل",
+    "summary": "فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل",
+    "request": "/expert/requests/c4b50e13-8f2c-4e59-b7e3-f527f9a1f333",
+    "admin": "فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل",
+    "customer_request": "/customer/requests/c4b50e13-8f2c-4e59-b7e3-f527f9a1f333"
+  },
+  "narrow": {
+    "tracking": true
+  },
+  "assertions": {
+    "progress_section_visible": true,
+    "raw_enum_hidden": true,
+    "active_tab": "page",
+    "progress_form_visible": true,
+    "progress_form_has_km_unit": true,
+    "narrow_has_horizontal_overflow": false
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "baseline_sha": "b0e82ba825536d33188b3b85318ec9851f452a67",
+  "assertions": {
+    "progress_entry_absent": true
+  },
+  "pages": {
+    "tracking": "/operations/shipments/c71ca04e-fee6-48ed-88b0-2b20255b11cc/tracking",
+    "cargo": "/operations/shipments/c71ca04e-fee6-48ed-88b0-2b20255b11cc/cargo",
+    "route": "/operations/shipments/c71ca04e-fee6-48ed-88b0-2b20255b11cc/route",
+    "summary": "/operations/shipments/c71ca04e-fee6-48ed-88b0-2b20255b11cc/summary",
+    "request": "/expert/requests/c4b50e13-8f2c-4e59-b7e3-f527f9a1f333"
+  }
+}
